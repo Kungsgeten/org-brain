@@ -50,13 +50,46 @@ If you add children to a file with =org-brain-visualize=, the links to the child
 
 * Other useful packages
 
-There's some missing functionality in =org-brain=, which could be useful, especially regarding finding text etc. However, there are many other packages for =org-mode= which might implement some of the features you seek. Here's some suggestions:
+There's some missing functionality in =org-brain=, which could be useful, especially regarding finding text etc. However, there are many other packages for =org-mode= which might implement some of the features you seek. Below are some suggestions (feel free to create an issue or send a pull request if you have more examples).
 
-- [[http://jblevins.org/projects/deft/][deft]] :: An Emacs mode for quickly browsing, filtering, and editing directories of plain text notes, inspired by Notational Velocity.
+** [[http://jblevins.org/projects/deft/][deft]]
 
-- [[https://github.com/alphapapa/helm-org-rifle][helm-org-rifle]] :: It searches both headings and contents of entries in Org buffers, and it displays entries that match all search terms, whether the terms appear in the heading, the contents, or both.
+#+BEGIN_QUOTE
+An Emacs mode for quickly browsing, filtering, and editing directories of plain text notes, inspired by Notational Velocity.
+#+END_QUOTE
 
-- [[https://github.com/scallywag/org-board][org-board]] :: org-board is a bookmarking and web archival system for Emacs Org mode, building on ideas from Pinboard. It archives your bookmarks so that you can access them even when you're not online, or when the site hosting them goes down.
+You can add the function below to your init-file.
+
+#+BEGIN_SRC emacs-lisp
+  (defun org-brain-deft ()
+    "Use `deft' for files in `org-brain-path'."
+    (interactive)
+    (let ((deft-directory org-brain-path)
+          (deft-recursive t)
+          (deft-extensions '("org")))
+      (deft)))
+#+END_SRC
+
+** [[https://github.com/alphapapa/helm-org-rifle][helm-org-rifle]]
+
+#+BEGIN_QUOTE
+It searches both headings and contents of entries in Org buffers, and it displays entries that match all search terms, whether the terms appear in the heading, the contents, or both.
+#+END_QUOTE
+
+You can add the function below to your init-file.
+
+#+BEGIN_SRC emacs-lisp
+  (defun helm-org-rifle-brain ()
+    "Rifle files in `org-brain-path'."
+    (interactive)
+    (helm-org-rifle-directories (list org-brain-path)))
+#+END_SRC
+
+** [[https://github.com/scallywag/org-board][org-board]]
+
+#+BEGIN_QUOTE
+org-board is a bookmarking and web archival system for Emacs Org mode, building on ideas from Pinboard. It archives your bookmarks so that you can access them even when you're not online, or when the site hosting them goes down.
+#+END_QUOTE
 
 * Disclaimer
 
