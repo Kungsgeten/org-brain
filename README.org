@@ -1,0 +1,49 @@
+#+TITLE:org-brain
+
+=org-brain= implements a variant of [[https://en.wikipedia.org/wiki/Concept_map][concept mapping]] in Emacs, using [[http://orgmode.org/][org-mode]]. It is heavily inspired by a piece of software called [[http://thebrain.com/][The Brain]] (but currently with a more limited feature set), you can view an introduction to that program [[https://www.youtube.com/watch?v=GFqLUBKCFdA][here]].
+
+You can think of =org-brain= as a combination of a wiki and a mind map, where each wiki page / mind-map node is an =org-mode= file which resides in your =org-brain-path= (a directory containing all your =org-brain= files). These files are called /entries/. Entries can link to other entries, and you can then view the network of links as a mind map, using =M-x org-brain-visualize=.
+
+#+BEGIN_EXAMPLE
+PINNED:  Index
+
+
+               / Python              Game development / Game design
+               / Programming books           |
+   Programming / Emacs                       |
+         |                                   |
+         *-----------------*-----------------*
+                           |
+                           V
+                    Game programming
+
+Game Maker  Unity
+
+-----------------------------------------------
+
+/* Gamasutra Articles
+/* Brainchildren
+#+END_EXAMPLE
+
+Above is a visualization of the /game programming/ entry (as can be seen in the middle). Above the entry title we can see that the entry has two parents (other entries which link to game programming): /programming/ and /game development/. You can also see the siblings and which parent they come from: /python/, /programming books/, /emacs/, and /game design/. Below the entry title we can see the children of the entry: /Game Maker/ and /Unity/. At the bottom the entry's table of contents is shown, and at the very top you'll find pinned entries (entries which will be shown independent of the visualized entry). All of the connected entries can be clicked, in order to visualize them instead.
+
+* Setup and requirements
+
+1. =org-brain= requires Emacs 25, org-mode 9 and [[https://github.com/magnars/dash.el][dash]]. These need to be part of your Emacs.
+2. Download =org-brain.el=, add it to your load-path, and put =(require 'org-brain)= in your init-file.
+3. Configure =org-brain-path= (defaults to =/brain= in your =org-directory=) to a directory where you want to put your =org-brain= files.
+
+* Usage
+
+You can use =M-x org-brain-open= to open an entry (or create a new one) in your =org-brain= for editing. In order to link to other entries, use an =org-mode= link with =brain:= type, its easiest to use =C-c C-l brain: TAB= or =M-x org-brain-insert-link=. If you want to pin an entry, add a line =#+BRAIN_PIN:= in the entry file. You can use =M-x org-brain-visualize= to choose an entry which will be visualized. =M-x org-brain-agenda= can be used to run =org-agenda= on your =org-brain= files.
+
+While in =org-brain-visualize-mode= you can easily navigate your =org-brain=, add children/parents etc, using the following keybindings:
+
+| j/TAB   | Goto next link                        |
+| k/S-TAB | Goto previous link                    |
+| c       | Add child                             |
+| p       | Add parent                            |
+| o       | Open and edit the visualized entry    |
+| f       | Find/visit another entry to visualize |
+
+If you add children to a file with =org-brain-visualize=, the links to the child entries will be added under the first headline in the file with the =brainchildren= tag. If this headline doesn't exist, a headline named /Brainchildren/ will be created and will be given the tag. If you want another default name for these headlines, you can customize =org-brain-children-headline-default-name=.
