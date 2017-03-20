@@ -323,8 +323,8 @@ ignore certain sibling links to show."
                                                  :raw-value headline)))))
           (insert "\n")))
       ;; Finishing
-      (display-buffer "*org-brain*")
       (org-brain-visualize-mode)
+      (pop-to-buffer "*org-brain*")
       (goto-char entry-pos)))
   (setq org-brain--visualizing-entry entry))
 
