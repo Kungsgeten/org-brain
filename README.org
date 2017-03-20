@@ -60,4 +60,4 @@ There's some missing functionality in =org-brain=, which could be useful, especi
 
 * Disclaimer
 
-=org-brain= is a new package, and it may have spee issues if the number of org-mode entries get high (I haven't tried it with thousands of entries). The package isn't on Melpa yet, since I want it to mature a bit (perhaps other useful features, optimization etc) before sending a pull request.
+=org-brain= is a new package, and it may have speed issues if the number of org-mode entries get high (I haven't tried it with thousands of entries). The package isn't on Melpa yet, since I want it to mature a bit (perhaps other useful features, optimization etc) before sending a pull request.
