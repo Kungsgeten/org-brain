@@ -47,3 +47,17 @@ While in =org-brain-visualize-mode= you can easily navigate your =org-brain=, ad
 | f       | Find/visit another entry to visualize |
 
 If you add children to a file with =org-brain-visualize=, the links to the child entries will be added under the first headline in the file with the =brainchildren= tag. If this headline doesn't exist, a headline named /Brainchildren/ will be created and will be given the tag. If you want another default name for these headlines, you can customize =org-brain-children-headline-default-name=.
+
+* Other useful packages
+
+There's some missing functionality in =org-brain=, which could be useful, especially regarding finding text etc. However, there are many other packages for =org-mode= which might implement some of the features you seek. Here's some suggestions:
+
+- [[http://jblevins.org/projects/deft/][deft]] :: An Emacs mode for quickly browsing, filtering, and editing directories of plain text notes, inspired by Notational Velocity.
+
+- [[https://github.com/alphapapa/helm-org-rifle][helm-org-rifle]] :: It searches both headings and contents of entries in Org buffers, and it displays entries that match all search terms, whether the terms appear in the heading, the contents, or both.
+
+- [[https://github.com/scallywag/org-board][org-board]] :: org-board is a bookmarking and web archival system for Emacs Org mode, building on ideas from Pinboard. It archives your bookmarks so that you can access them even when you're not online, or when the site hosting them goes down.
+
+* Disclaimer
+
+=org-brain= is a new package, and it may have spee issues if the number of org-mode entries get high (I haven't tried it with thousands of entries). The package isn't on Melpa yet, since I want it to mature a bit (perhaps other useful features, optimization etc) before sending a pull request.
