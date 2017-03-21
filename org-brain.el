@@ -130,6 +130,7 @@ You can choose to EXCLUDE an entry from the list."
   (or (cdr (assoc "TITLE" (org-brain-keywords entry)))
       (org-link-unescape (file-name-base entry))))
 
+;;;###autoload
 (defun org-brain-insert-link ()
   "Insert a link to an org-brain entry and suggest a description."
   (interactive)
@@ -205,19 +206,20 @@ You can choose to EXCLUDE an entry from the list."
 (defvar org-brain--visualizing-entry nil
   "The last entry argument to `org-brain-visualize'.")
 
+;;;###autoload
 (defun org-brain-rename-entry (entry newname)
   "Rename org-brain ENTRY to NEWNAME.
 If run interactively the user will be prompted for ENTRY and NEWNAME.
 
 All links to ENTRY in `org-brain-path' files will be converted to
 NEWENTRY. The ENTRY file will also be renamed."
+  (interactive
+   (list (completing-read "Entry to rename: " (org-brain-files t) nil t
+                          (when (equal major-mode 'org-brain-visualize-mode)
+                            org-brain--visualizing-entry))
+         (read-string "New name: ")))
   (let ((oldfile (org-brain-entry-path entry))
         (newfile (org-brain-entry-path newname)))
-    (interactive
-     (list (completing-read "Entry to rename: " (org-brain-files t) nil t
-                            (when (equal major-mode 'org-brain-visualize-mode)
-                              org-brain--visualizing-entry))
-           (read-string "New name: ")))
     (mapc
      (lambda (brainfile)
        (with-temp-buffer
