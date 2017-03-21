@@ -34,6 +34,7 @@
 (require 'org-element)
 (require 'dash)
 (require 'picture)
+(require 'subr-x)
 
 (defgroup org-brain nil
   "Org-mode concept mapping"
