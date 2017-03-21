@@ -35,16 +35,19 @@ Above is a visualization of the /game programming/ entry (as can be seen in the 
 
 * Usage
 
-You can use =M-x org-brain-open= to open an entry (or create a new one) in your =org-brain= for editing. In order to link to other entries, use an =org-mode= link with =brain:= type, its easiest to use =C-c C-l brain: TAB= or =M-x org-brain-insert-link=. If you want to pin an entry, add a line =#+BRAIN_PIN:= in the entry file. You can use =M-x org-brain-visualize= to choose an entry which will be visualized. =M-x org-brain-agenda= can be used to run =org-agenda= on your =org-brain= files.
+You can use =M-x org-brain-open= to open an entry (or create a new one) in your =org-brain= for editing. In order to link to other entries, use an =org-mode= link with =brain:= type, its easiest to use =C-c C-l brain: TAB= or =M-x org-brain-insert-link=. If you want to pin an entry, add a line =#+BRAIN_PIN:= in the entry file.
 
-While in =org-brain-visualize-mode= you can easily navigate your =org-brain=, add children/parents etc, using the following keybindings:
+=M-x org-brain-agenda= can be used to run =org-agenda= on your =org-brain= files. You might also want to rename one of your entries; use =M-x org-brain-rename-entry= to do this. This will only change the filename and entry name, not the =#+TITLE= of the entry.
 
-| j/TAB   | Goto next link                        |
-| k/S-TAB | Goto previous link                    |
-| c       | Add child                             |
-| p       | Add parent                            |
-| o       | Open and edit the visualized entry    |
-| f       | Find/visit another entry to visualize |
+You can use =M-x org-brain-visualize= to choose an entry which will be visualized. While in =org-brain-visualize-mode= you can easily navigate your =org-brain=, add children/parents etc, using the following keybindings:
+
+| j / TAB   | Goto next link                        |
+| k / S-TAB | Goto previous link                    |
+| c         | Add child                             |
+| p         | Add parent                            |
+| o         | Open and edit the visualized entry    |
+| f         | Find/visit another entry to visualize |
+| r         | Rename this, or another, entry        |
 
 If you add children to a file with =org-brain-visualize=, the links to the child entries will be added under the first headline in the file with the =brainchildren= tag. If this headline doesn't exist, a headline named /Brainchildren/ will be created and will be given the tag. If you want another default name for these headlines, you can customize =org-brain-children-headline-default-name=.
 

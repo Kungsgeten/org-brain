@@ -205,6 +205,50 @@ You can choose to EXCLUDE an entry from the list."
 (defvar org-brain--visualizing-entry nil
   "The last entry argument to `org-brain-visualize'.")
 
+(defun org-brain-rename-entry (entry newname)
+  "Rename org-brain ENTRY to NEWNAME.
+If run interactively the user will be prompted for ENTRY and NEWNAME.
+
+All links to ENTRY in `org-brain-path' files will be converted to
+NEWENTRY. The ENTRY file will also be renamed."
+  (let ((oldfile (org-brain-entry-path entry))
+        (newfile (org-brain-entry-path newname)))
+    (interactive
+     (list (completing-read "Entry to rename: " (org-brain-files t) nil t
+                            (when (equal major-mode 'org-brain-visualize-mode)
+                              org-brain--visualizing-entry))
+           (read-string "New name: ")))
+    (mapc
+     (lambda (brainfile)
+       (with-temp-buffer
+         (insert-file-contents brainfile)
+         (let ((data (org-element-parse-buffer)))
+           (when (org-element-map data 'link
+                   (lambda (link)
+                     (let ((link-parts (split-string (org-element-property :path link) "::")))
+                       (when (and (string-equal (car link-parts) entry)
+                                  (string-equal (org-element-property :type link) "brain"))
+                         (org-element-put-property
+                          link :path (string-join (cons newname (cdr link-parts)) "::"))))))
+             (delete-region (point-min) (point-max))
+             (insert (org-element-interpret-data data))
+             (write-region nil nil brainfile)
+             (when (get-file-buffer brainfile)
+               (with-current-buffer (get-file-buffer brainfile)
+                 (find-alternate-file brainfile)))))))
+     (org-brain-files))
+    (when (string-equal org-brain--visualizing-entry entry)
+      (setq org-brain--visualizing-entry newname))
+    (when (file-exists-p oldfile)
+      (make-directory (file-name-directory newfile) t)
+      (cond
+       ((vc-backend oldfile) (vc-rename-file oldfile newfile))
+       (t
+        (rename-file oldfile newfile)
+        (when (get-file-buffer oldfile)
+          (with-current-buffer (get-file-buffer oldfile)
+            (set-visited-file-name newfile t t))))))))
+
 ;;;###autoload
 (defun org-brain-visualize (entry &optional ignored-siblings)
   "View a concept map with ENTRY at the center.
@@ -367,6 +411,7 @@ ignore certain sibling links to show."
 (define-key org-brain-visualize-mode-map [backtab] 'backward-button)
 (define-key org-brain-visualize-mode-map "o" 'org-brain-visualize-open)
 (define-key org-brain-visualize-mode-map "f" 'org-brain-visualize)
+(define-key org-brain-visualize-mode-map "r" 'org-brain-rename-entry)
 
 (provide 'org-brain)
 ;;; org-brain.el ends here
