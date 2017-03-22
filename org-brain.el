@@ -259,7 +259,12 @@ NEWENTRY. The ENTRY file will also be renamed."
 IGNORED-SIBLINGS, a list of org-brain entries, can be provided to
 ignore certain sibling links to show."
   (interactive
-   (list (completing-read "Entry: " (org-brain-files t))))
+   (list (completing-read
+          "Entry: " (org-brain-files t) nil nil
+          (when (and (eq major-mode 'org-mode)
+                     (member (buffer-file-name)
+                             (org-brain-files)))
+            (org-brain-path-entry-name (buffer-file-name))))))
   (with-current-buffer (get-buffer-create "*org-brain*")
     (read-only-mode -1)
     (delete-region (point-min) (point-max))
