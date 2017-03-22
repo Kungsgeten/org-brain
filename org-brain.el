@@ -59,6 +59,7 @@ This will be used by `org-brain-new-child'."
 (defun org-brain-files (&optional relative)
   "Get all org files (recursively) in `org-brain-path'.
 If RELATIVE is t, then return relative paths and remove org extension."
+  (make-directory org-brain-path t)
   (let ((files (directory-files-recursively org-brain-path "\\.org$")))
     (if relative
         (mapcar #'org-brain-path-entry-name files)
