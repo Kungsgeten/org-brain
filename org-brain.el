@@ -254,10 +254,11 @@ NEWENTRY. The ENTRY file will also be renamed."
             (set-visited-file-name newfile t t))))))))
 
 ;;;###autoload
-(defun org-brain-visualize (entry &optional ignored-siblings)
+(defun org-brain-visualize (entry &optional ignored-siblings nofocus)
   "View a concept map with ENTRY at the center.
 IGNORED-SIBLINGS, a list of org-brain entries, can be provided to
-ignore certain sibling links to show."
+ignore certain sibling links to show. Unless NOFOCUS is non-nil,
+the concept map buffer will gain focus."
   (interactive
    (list (completing-read
           "Entry: " (org-brain-files t) nil nil
@@ -377,13 +378,13 @@ ignore certain sibling links to show."
           (insert "\n")))
       ;; Finishing
       (org-brain-visualize-mode)
-      (pop-to-buffer "*org-brain*")
-      (goto-char entry-pos)))
+      (goto-char entry-pos)
+      (unless nofocus (pop-to-buffer "*org-brain*"))))
   (setq org-brain--visualizing-entry entry))
 
 (defun org-brain-visualize-revert (ignore-auto noconfirm)
   "Revert function for `org-brain-visualize-mode'."
-  (org-brain-visualize org-brain--visualizing-entry))
+  (org-brain-visualize org-brain--visualizing-entry nil t))
 
 (defun org-brain-visualize-open ()
   "Open the entry file last visited by `org-brain-visualize'."
