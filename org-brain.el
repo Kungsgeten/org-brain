@@ -56,11 +56,17 @@ This will be used by `org-brain-new-child'."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-files-extension "org"
+  "The extension for entry files in `org-brain-path'."
+  :group 'org-brain
+  :type '(string))
+
 (defun org-brain-files (&optional relative)
   "Get all org files (recursively) in `org-brain-path'.
 If RELATIVE is t, then return relative paths and remove org extension."
   (make-directory org-brain-path t)
-  (let ((files (directory-files-recursively org-brain-path "\\.org$")))
+  (let ((files (directory-files-recursively
+                org-brain-path (format "\\.%s$" org-brain-files-extension))))
     (if relative
         (mapcar #'org-brain-path-entry-name files)
       files)))
@@ -80,7 +86,8 @@ If RELATIVE is t, then return relative paths and remove org extension."
 
 (defun org-brain-entry-path (entry)
   "Get path of org-brain ENTRY."
-  (expand-file-name (org-link-unescape (concat entry ".org")) org-brain-path))
+  (expand-file-name (org-link-unescape (format "%s.%s" entry org-brain-files-extension))
+                    org-brain-path))
 
 (defun org-brain-parents (entry)
   "Get list of org-brain entries which links to ENTRY."
