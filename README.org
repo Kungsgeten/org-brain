@@ -21,11 +21,20 @@ Game Maker  Unity
 
 -----------------------------------------------
 
+- https://en.wikipedia.org/wiki/Game_programming
+
 /* Gamasutra Articles
+   - Passing Through Ghosts in Pac-Man
+   - In-House Engine Development: Technical Tips
+
 /* Brainchildren
 #+END_EXAMPLE
 
-Above is a visualization of the /game programming/ entry (as can be seen in the middle). Above the entry title we can see that the entry has two parents (other entries which link to game programming): /programming/ and /game development/. You can also see the siblings and which parent they come from: /python/, /programming books/, /emacs/, and /game design/. Below the entry title we can see the children of the entry: /Game Maker/ and /Unity/. At the bottom the entry's table of contents is shown, and at the very top you'll find pinned entries (entries which will be shown independent of the visualized entry). All of the connected entries can be clicked, in order to visualize them instead.
+Above is a visualization of the /game programming/ entry (as can be seen in the middle). Above the entry title we can see that the entry has two parents (other entries which link to game programming): /programming/ and /game development/. You can also see the siblings and which parent they come from: /python/, /programming books/, /emacs/, and /game design/. Below the entry title we can see the children of the entry: /Game Maker/ and /Unity/. At the very top you'll find pinned entries (entries which will be shown independent of the visualized entry).
+
+At the bottom the entry's table of contents (headlines in the buffer) is shown: /Gamasutra Articles/ and /Brainchildren/. You can also see the resources of the entry: the two Gamasutra articles and the Wikipedia link. Resources can be =org-mode= links in the entry file, or [[http://orgmode.org/manual/Attachments.html][org attachments]].
+
+The parents, children, siblings, headlines and resources are all links; they can be pressed to visualize other entries, visit resources etc.
 
 * Setup and requirements
 

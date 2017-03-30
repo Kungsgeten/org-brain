@@ -32,6 +32,7 @@
 ;;; Code:
 
 (require 'org-element)
+(require 'org-attach)
 (require 'dash)
 (require 'picture)
 (require 'subr-x)
@@ -260,6 +261,58 @@ NEWENTRY. The ENTRY file will also be renamed."
           (with-current-buffer (get-file-buffer oldfile)
             (set-visited-file-name newfile t t))))))))
 
+(defcustom org-brain-ignored-resource-links '("brain" "fuzzy" "radio")
+  "`org-link-types' which shouldn't be shown as resources in `org-brain-visualize'."
+  :group 'org-brain
+  :type '(repeat string))
+
+(defun org-brain-resources (entry)
+  "Get alist of links in ENTRY, excluding `org-brain-ignored-resource-links'.
+The car is the resource's heading (nil if no heading) and the cdr
+is (raw-link description)."
+  (with-temp-buffer
+    (delay-mode-hooks
+      (org-mode)
+      (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+      (let* ((data (org-element-parse-buffer))
+             (buffer-file-name (org-brain-entry-path entry))
+             (default-directory (file-name-directory buffer-file-name)))
+        (append
+         ;; Attachments
+         (-flatten-n
+          1
+          (org-element-map data 'headline
+            (lambda (headline)
+              (when (member "ATTACH" (org-element-property :tags headline))
+                (goto-char (org-element-property :begin headline))
+                (let ((attach-dir (org-attach-dir t)))
+                  (mapcar (lambda (attachment)
+                            (cons (org-get-heading t)
+                                  (list (format "file:%s"
+                                                (org-link-escape
+                                                 (expand-file-name attachment attach-dir)))
+                                        attachment)))
+                          (org-attach-file-list attach-dir)))))))
+         ;; Links
+         (delete-dups
+          (org-element-map data 'link
+            (lambda (link)
+              (unless (member (org-element-property :type link) org-brain-ignored-resource-links)
+                (cons (progn
+                        (goto-char (org-element-property :begin link))
+                        (ignore-errors (org-get-heading t)))
+                      (list (org-element-property :raw-link link)
+                            (car (org-element-contents link)))))))))))))
+
+(defun org-brain-insert-resource-button (resource &optional indent)
+  "Insert a new line with a RESOURCE button, indented by INDENT spaces."
+  (insert (make-string (or indent 0) ?\ ) "- ")
+  (insert-text-button
+   (or (caddr resource) (cadr resource))
+   'action (lambda (x)
+             (org-open-link-from-string (cadr resource))))
+  (insert "\n"))
+
 ;;;###autoload
 (defun org-brain-visualize (entry &optional ignored-siblings nofocus)
   "View a concept map with ENTRY at the center.
@@ -367,22 +420,33 @@ the concept map buffer will gain focus."
                 (org-brain-insert-visualize-button child)
                 (insert "  ")))
             (org-brain-children entry))
-      ;; Insert headlines in entry file
+      ;; Insert headlines and resources in entry file
       (insert "\n\n-----------------------------------------------\n\n")
-      (org-element-map (with-temp-buffer
-                         (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-                         (org-element-parse-buffer))
-          'headline
-        (lambda (headline)
-          (insert (make-string (org-element-property :level headline) ?*) " ")
-          (insert-text-button
-           (org-element-property :raw-value headline)
-           'action (lambda (x)
-                     (org-open-file (org-brain-entry-path entry)
-                                    nil nil
-                                    (concat "*" (org-element-property
-                                                 :raw-value headline)))))
-          (insert "\n")))
+      (let ((resources (org-brain-resources entry)))
+        ;; Top level resources
+        (when (mapc #'org-brain-insert-resource-button
+                    (-filter (lambda (x) (eq nil (car x))) resources))
+          (insert "\n"))
+        (org-element-map (with-temp-buffer
+                           (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+                           (org-element-parse-buffer))
+            'headline
+          (lambda (headline)
+            (let ((head-title (org-element-property :raw-value headline)))
+              (insert (make-string (org-element-property :level headline) ?*) " ")
+              (insert-text-button
+               head-title
+               'action (lambda (x)
+                         (org-open-file (org-brain-entry-path entry)
+                                        nil nil
+                                        (concat "*" head-title))))
+              (insert "\n")
+              ;; Headline resources
+              (when (mapc (lambda (resource)
+                            (org-brain-insert-resource-button
+                             resource (1+ (org-element-property :level headline))))
+                          (-filter (lambda (x) (string-equal head-title (car x))) resources))
+                (insert "\n"))))))
       ;; Finishing
       (org-brain-visualize-mode)
       (goto-char entry-pos)
