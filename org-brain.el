@@ -56,11 +56,17 @@ This will be used by `org-brain-new-child'."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-files-extension "org"
+  "The extension for entry files in `org-brain-path'."
+  :group 'org-brain
+  :type '(string))
+
 (defun org-brain-files (&optional relative)
   "Get all org files (recursively) in `org-brain-path'.
 If RELATIVE is t, then return relative paths and remove org extension."
   (make-directory org-brain-path t)
-  (let ((files (directory-files-recursively org-brain-path "\\.org$")))
+  (let ((files (directory-files-recursively
+                org-brain-path (format "\\.%s$" org-brain-files-extension))))
     (if relative
         (mapcar #'org-brain-path-entry-name files)
       files)))
@@ -80,7 +86,8 @@ If RELATIVE is t, then return relative paths and remove org extension."
 
 (defun org-brain-entry-path (entry)
   "Get path of org-brain ENTRY."
-  (expand-file-name (org-link-unescape (concat entry ".org")) org-brain-path))
+  (expand-file-name (org-link-unescape (format "%s.%s" entry org-brain-files-extension))
+                    org-brain-path))
 
 (defun org-brain-parents (entry)
   "Get list of org-brain entries which links to ENTRY."
@@ -198,7 +205,6 @@ You can choose to EXCLUDE an entry from the list."
           (insert (format "\n\n* %s    :brainchildren:\n- [[brain:%s][%s]]"
                           org-brain-children-headline-default-name child child))
           (save-buffer)))))
-
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
@@ -254,10 +260,11 @@ NEWENTRY. The ENTRY file will also be renamed."
             (set-visited-file-name newfile t t))))))))
 
 ;;;###autoload
-(defun org-brain-visualize (entry &optional ignored-siblings)
+(defun org-brain-visualize (entry &optional ignored-siblings nofocus)
   "View a concept map with ENTRY at the center.
 IGNORED-SIBLINGS, a list of org-brain entries, can be provided to
-ignore certain sibling links to show."
+ignore certain sibling links to show. Unless NOFOCUS is non-nil,
+the concept map buffer will gain focus."
   (interactive
    (list (completing-read
           "Entry: " (org-brain-files t) nil nil
@@ -377,13 +384,13 @@ ignore certain sibling links to show."
           (insert "\n")))
       ;; Finishing
       (org-brain-visualize-mode)
-      (pop-to-buffer "*org-brain*")
-      (goto-char entry-pos)))
+      (goto-char entry-pos)
+      (unless nofocus (pop-to-buffer "*org-brain*"))))
   (setq org-brain--visualizing-entry entry))
 
 (defun org-brain-visualize-revert (ignore-auto noconfirm)
   "Revert function for `org-brain-visualize-mode'."
-  (org-brain-visualize org-brain--visualizing-entry))
+  (org-brain-visualize org-brain--visualizing-entry nil t))
 
 (defun org-brain-visualize-open ()
   "Open the entry file last visited by `org-brain-visualize'."
