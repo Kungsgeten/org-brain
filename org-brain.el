@@ -205,6 +205,7 @@ You can choose to EXCLUDE an entry from the list."
           (insert (format "\n\n* %s    :brainchildren:\n- [[brain:%s][%s]]"
                           org-brain-children-headline-default-name child (org-brain-title child)))
           (save-buffer)))))
+
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
