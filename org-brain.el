@@ -196,14 +196,14 @@ You can choose to EXCLUDE an entry from the list."
         (make-directory (file-name-directory entry-path) t)))
     (or (org-map-entries (lambda ()
                            (end-of-line)
-                           (insert (format "\n- [[brain:%s]]" child))
+                           (insert (format "\n- [[brain:%s][%s]]" child (org-brain-title child)))
                            (save-buffer))
                          "+brainchildren"
                          (list entry-path))
         (with-current-buffer (get-file-buffer entry-path)
           (goto-char (point-max))
-          (insert (format "\n\n* %s    :brainchildren:\n- [[brain:%s]]"
-                          org-brain-children-headline-default-name child))
+          (insert (format "\n\n* %s    :brainchildren:\n- [[brain:%s][%s]]"
+                          org-brain-children-headline-default-name child (org-brain-title child)))
           (save-buffer)))))
 
 (defun org-brain-insert-visualize-button (entry)
