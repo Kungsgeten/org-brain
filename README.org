@@ -54,11 +54,16 @@ You can use =M-x org-brain-visualize= to choose an entry which will be visualize
 | k / S-TAB | Goto previous link                    |
 | c         | Add child                             |
 | p         | Add parent                            |
+| l         | Add resource link                     |
+| C-y       | Paste resource link                   |
+| a         | Add resource [[http://orgmode.org/manual/Attachments.html][attachment]]               |
 | o         | Open and edit the visualized entry    |
 | f         | Find/visit another entry to visualize |
 | r         | Rename this, or another, entry        |
 
 If you add children to a file with =org-brain-visualize=, the links to the child entries will be added under the first headline in the file with the =brainchildren= tag. If this headline doesn't exist, a headline named /Brainchildren/ will be created and will be given the tag. If you want another default name for these headlines, you can customize =org-brain-children-headline-default-name=.
+
+If you add resources via =org-brain-visualize= they will be entered inserted under the current heading in the visualize buffer (link resource will be added as list items at the top of the heading in the entry file). If you're not under a heading in the visualize buffer, the resources will be added to /Brainchildren/, as in the case with adding new children.
 
 * Other useful packages
 

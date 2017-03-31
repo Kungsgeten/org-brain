@@ -287,7 +287,7 @@ is (raw-link description)."
                 (goto-char (org-element-property :begin headline))
                 (let ((attach-dir (org-attach-dir t)))
                   (mapcar (lambda (attachment)
-                            (cons (org-get-heading t)
+                            (cons (org-element-property :raw-value headline)
                                   (list (format "file:%s"
                                                 (org-link-escape
                                                  (expand-file-name attachment attach-dir)))
@@ -300,7 +300,7 @@ is (raw-link description)."
               (unless (member (org-element-property :type link) org-brain-ignored-resource-links)
                 (cons (progn
                         (goto-char (org-element-property :begin link))
-                        (ignore-errors (org-get-heading t)))
+                        (ignore-errors (org-get-heading t t)))
                       (list (org-element-property :raw-link link)
                             (car (org-element-contents link)))))))))))))
 
@@ -312,6 +312,79 @@ is (raw-link description)."
    'action (lambda (x)
              (org-open-link-from-string (cadr resource))))
   (insert "\n"))
+
+(defun org-brain-visualize--resource-context ()
+  "Get a headline in `org-brain--visualizing-entry' where a resource should be inserted.
+The headline is guessed depending on `point' in the buffer."
+  (save-excursion
+    (end-of-line)
+    (let ((entry-path (org-brain-entry-path org-brain--visualizing-entry)))
+      (if (re-search-backward "^\*+ *\\(.*\\)" nil t)
+          (match-string 1)
+        (org-save-all-org-buffers)
+        (unless (file-exists-p entry-path)
+          (with-temp-file entry-path
+            (make-directory (file-name-directory entry-path) t)))
+        (or (car (org-map-entries (lambda () (org-get-heading t t))
+                                  "+brainchildren"
+                                  (list entry-path)))
+            (with-current-buffer (get-file-buffer entry-path)
+              (goto-char (point-max))
+              (insert (format "\n\n* %s    :brainchildren:"
+                              org-brain-children-headline-default-name))
+              (save-buffer)
+              (org-get-heading t t)))))))
+
+(defun org-brain-visualize-add-resource-link (link &optional description prompt)
+  "Insert LINK with DESCRIPTION in `org-brain--visualizing-entry'.
+Where to insert LINK is guessed with `org-brain-visualize--resource-context'.
+If PROMPT is non nil, use `org-insert-link' even if not being run interactively."
+  (interactive "i")
+  (if (not (eq major-mode 'org-brain-visualize-mode))
+      (error "Not in org-brain-visualize-mode")
+    (let ((heading (org-brain-visualize--resource-context))
+          (position (point))
+          (entry-path (org-brain-entry-path org-brain--visualizing-entry)))
+      (with-temp-file entry-path
+        (insert-file-contents entry-path)
+        (delay-mode-hooks
+          (org-mode)
+          (goto-char (org-find-exact-headline-in-buffer heading))
+          (when-let (property-block (org-get-property-block))
+            (goto-char (cdr property-block)))
+          (end-of-line)
+          (insert "\n- ")
+          (if (and link (not prompt))
+              (insert (format "%s" (org-make-link-string link description)))
+            (org-insert-link nil link description))))
+      (when (get-file-buffer entry-path)
+        (kill-buffer (get-file-buffer entry-path)))
+      (revert-buffer)
+      (goto-char position))))
+
+(defun org-brain-visualize-paste-link ()
+  "Add `current-kill' as a resource link."
+  (interactive)
+  (org-brain-visualize-add-resource-link (current-kill 0) nil t))
+
+(defun org-brain-visualize-add-attachment ()
+  (interactive)
+  (if (not (eq major-mode 'org-brain-visualize-mode))
+      (error "Not in org-brain-visualize-mode")
+    (let* ((heading (org-brain-visualize--resource-context))
+           (position (point))
+           (entry-path (org-brain-entry-path org-brain--visualizing-entry))
+           (existing-buffer (find-buffer-visiting entry-path)))
+      (delay-mode-hooks
+        (with-current-buffer (find-file entry-path)
+          (goto-char (org-find-exact-headline-in-buffer heading))
+          (call-interactively #'org-attach-attach)
+          (save-buffer)
+          (if existing-buffer
+              (switch-to-buffer "*org-brain*")
+            (kill-this-buffer)))
+        (revert-buffer)
+        (goto-char position)))))
 
 ;;;###autoload
 (defun org-brain-visualize (entry &optional ignored-siblings nofocus)
@@ -429,7 +502,9 @@ the concept map buffer will gain focus."
           (insert "\n"))
         (org-element-map (with-temp-buffer
                            (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-                           (org-element-parse-buffer))
+                           (delay-mode-hooks
+                             (org-mode)
+                             (org-element-parse-buffer)))
             'headline
           (lambda (headline)
             (let ((head-title (org-element-property :raw-value headline)))
@@ -493,6 +568,9 @@ the concept map buffer will gain focus."
 (define-key org-brain-visualize-mode-map "o" 'org-brain-visualize-open)
 (define-key org-brain-visualize-mode-map "f" 'org-brain-visualize)
 (define-key org-brain-visualize-mode-map "r" 'org-brain-rename-entry)
+(define-key org-brain-visualize-mode-map "l" 'org-brain-visualize-add-resource-link)
+(define-key org-brain-visualize-mode-map "a" 'org-brain-visualize-add-attachment)
+(define-key org-brain-visualize-mode-map "\C-y" 'org-brain-visualize-paste-link)
 
 (provide 'org-brain)
 ;;; org-brain.el ends here
