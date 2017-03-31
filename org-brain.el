@@ -165,7 +165,7 @@ You can choose to EXCLUDE an entry from the list."
     (org-open-file (org-brain-entry-path (car split-path))
                    t nil (cadr split-path))))
 
-(defun org-brain-link-activate-func (start end path bracketp)
+(defun org-brain-link-activate-func (start end path _bracketp)
   "Links to non-existing org-brain files should have a different face."
   (when (not (member (org-link-unescape (car (split-string path "::")))
                      (org-brain-files t)))
@@ -175,7 +175,7 @@ You can choose to EXCLUDE an entry from the list."
   "Create an org-link target string to a file in `org-brain-path'."
   (concat "brain:" (completing-read "Entry: " (org-brain-files t))))
 
-(defun org-brain-link-tooltip (window object position)
+(defun org-brain-link-tooltip (_window _object position)
   "Org-brain entry links have the entry's title as tooltip."
   (save-excursion
     (goto-char position)
@@ -211,7 +211,7 @@ You can choose to EXCLUDE an entry from the list."
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
    (org-brain-title entry)
-   'action (lambda (x) (org-brain-visualize entry))))
+   'action (lambda (_x) (org-brain-visualize entry))))
 
 (defvar org-brain--visualizing-entry nil
   "The last entry argument to `org-brain-visualize'.")
@@ -309,7 +309,7 @@ is (raw-link description)."
   (insert (make-string (or indent 0) ?\ ) "- ")
   (insert-text-button
    (or (car (cddr resource)) (cadr resource))
-   'action (lambda (x)
+   'action (lambda (_x)
              (org-open-link-from-string (cadr resource))))
   (insert "\n"))
 
@@ -512,7 +512,7 @@ the concept map buffer will gain focus."
               (insert (make-string (org-element-property :level headline) ?*) " ")
               (insert-text-button
                head-title
-               'action (lambda (x)
+               'action (lambda (_x)
                          (org-open-file (org-brain-entry-path entry)
                                         nil nil
                                         (concat "*" head-title))))
@@ -529,7 +529,7 @@ the concept map buffer will gain focus."
       (unless nofocus (pop-to-buffer "*org-brain*"))))
   (setq org-brain--visualizing-entry entry))
 
-(defun org-brain-visualize-revert (ignore-auto noconfirm)
+(defun org-brain-visualize-revert (_ignore-auto _noconfirm)
   "Revert function for `org-brain-visualize-mode'."
   (org-brain-visualize org-brain--visualizing-entry nil t))
 
