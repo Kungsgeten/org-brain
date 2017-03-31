@@ -308,14 +308,14 @@ is (raw-link description)."
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
   (insert (make-string (or indent 0) ?\ ) "- ")
   (insert-text-button
-   (or (caddr resource) (cadr resource))
+   (or (car (cddr resource)) (cadr resource))
    'action (lambda (x)
              (org-open-link-from-string (cadr resource))))
   (insert "\n"))
 
-(defun org-brain-visualize--resource-context ()
-  "Get a headline in `org-brain--visualizing-entry' where a resource should be inserted.
-The headline is guessed depending on `point' in the buffer."
+(defun org-brain--visualize-get-headline ()
+  "Get a headline at point in `org-brain--visualizing-entry'.
+If no headline is found, use `org-brain-children-headline-default-name'."
   (save-excursion
     (end-of-line)
     (let ((entry-path (org-brain-entry-path org-brain--visualizing-entry)))
@@ -337,12 +337,12 @@ The headline is guessed depending on `point' in the buffer."
 
 (defun org-brain-visualize-add-resource-link (link &optional description prompt)
   "Insert LINK with DESCRIPTION in `org-brain--visualizing-entry'.
-Where to insert LINK is guessed with `org-brain-visualize--resource-context'.
+Where to insert LINK is guessed with `org-brain--visualize-get-headline'.
 If PROMPT is non nil, use `org-insert-link' even if not being run interactively."
   (interactive "i")
   (if (not (eq major-mode 'org-brain-visualize-mode))
       (error "Not in org-brain-visualize-mode")
-    (let ((heading (org-brain-visualize--resource-context))
+    (let ((heading (org-brain--visualize-get-headline))
           (position (point))
           (entry-path (org-brain-entry-path org-brain--visualizing-entry)))
       (with-temp-file entry-path
@@ -368,10 +368,11 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
   (org-brain-visualize-add-resource-link (current-kill 0) nil t))
 
 (defun org-brain-visualize-add-attachment ()
+  "Add an attachment to `org-brain--visualize-get-headline'."
   (interactive)
   (if (not (eq major-mode 'org-brain-visualize-mode))
       (error "Not in org-brain-visualize-mode")
-    (let* ((heading (org-brain-visualize--resource-context))
+    (let* ((heading (org-brain--visualize-get-headline))
            (position (point))
            (entry-path (org-brain-entry-path org-brain--visualizing-entry))
            (existing-buffer (find-buffer-visiting entry-path)))
