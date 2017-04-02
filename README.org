@@ -1,4 +1,4 @@
-#+TITLE:org-brain
+#+TITLE:org-brain [[http://melpa.org/#/org-brain][file:http://melpa.org/packages/org-brain-badge.svg]]
 
 =org-brain= implements a variant of [[https://en.wikipedia.org/wiki/Concept_map][concept mapping]] in Emacs, using [[http://orgmode.org/][org-mode]]. It is heavily inspired by a piece of software called [[http://thebrain.com/][The Brain]] (but currently with a more limited feature set), you can view an introduction to that program [[https://www.youtube.com/watch?v=GFqLUBKCFdA][here]].
 
@@ -37,6 +37,8 @@ At the bottom the entry's table of contents (headlines in the buffer) is shown: 
 The parents, children, siblings, headlines and resources are all links; they can be pressed to visualize other entries, visit resources etc.
 
 * Setup and requirements
+
+The easiest way is to get =org-brain= from MELPA. If you do not want to do that, here's the steps to install it manually:
 
 1. =org-brain= requires Emacs 25, org-mode 9 and [[https://github.com/magnars/dash.el][dash]]. These need to be part of your Emacs.
 2. Download =org-brain.el=, add it to your load-path, and put =(require 'org-brain)= in your init-file.
@@ -110,4 +112,4 @@ org-board is a bookmarking and web archival system for Emacs Org mode, building 
 
 * Disclaimer
 
-=org-brain= is a new package, and it may have speed issues if the number of org-mode entries get high (I haven't tried it with thousands of entries). The package isn't on Melpa yet, since I want it to mature a bit (perhaps other useful features, optimization etc) before sending a pull request.
+=org-brain= is a new package, and it may have speed issues if the number of org-mode entries get high (I haven't tried it with thousands of entries).
