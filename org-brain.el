@@ -83,7 +83,8 @@ If RELATIVE is t, then return relative paths and remove org extension."
 
 (defun org-brain-path-entry-name (path)
   "Get PATH as an org-brain entry name."
-  (file-name-sans-extension (file-relative-name path org-brain-path)))
+  (string-remove-suffix (concat "." org-brain-files-extension)
+                        (file-relative-name path org-brain-path)))
 
 (defun org-brain-entry-path (entry)
   "Get path of org-brain ENTRY."
