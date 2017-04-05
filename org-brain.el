@@ -539,19 +539,28 @@ the concept map buffer will gain focus."
   (interactive)
   (org-brain-open org-brain--visualizing-entry))
 
+(defcustom org-brain-batch-separator ";"
+  "When adding children and parents, this string allows for batch input."
+  :group 'org-brain
+  :type '(string))
+
 (defun org-brain-visualize-add-child (child)
-  "Add CHILD link to entry last visited by `org-brain-visualize'."
+  "Add CHILD link to entry last visited by `org-brain-visualize'.
+CHILD can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Child: " (org-brain-files t))))
-  (org-brain-new-child org-brain--visualizing-entry child)
+  (dolist (c (split-string child org-brain-batch-separator t " +"))
+    (org-brain-new-child org-brain--visualizing-entry c))
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
 (defun org-brain-visualize-add-parent (parent)
-  "In PARENT add link to entry last visited by `org-brain-visualize'."
+  "In PARENT add link to entry last visited by `org-brain-visualize'.
+PARENT can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Parent: " (org-brain-files t))))
-  (org-brain-new-child parent org-brain--visualizing-entry)
+  (dolist (p (split-string parent org-brain-batch-separator t " +"))
+    (org-brain-new-child p org-brain--visualizing-entry))
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
