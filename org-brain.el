@@ -212,7 +212,8 @@ You can choose to EXCLUDE an entry from the list."
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
    (org-brain-title entry)
-   'action (lambda (_x) (org-brain-visualize entry))))
+   'action (lambda (_x) (org-brain-visualize entry))
+   'follow-link t))
 
 (defvar org-brain--visualizing-entry nil
   "The last entry argument to `org-brain-visualize'.")
@@ -311,7 +312,8 @@ is (raw-link description)."
   (insert-text-button
    (or (car (cddr resource)) (cadr resource))
    'action (lambda (_x)
-             (org-open-link-from-string (cadr resource))))
+             (org-open-link-from-string (cadr resource)))
+   'follow-link t)
   (insert "\n"))
 
 (defun org-brain--visualize-get-headline ()
@@ -516,7 +518,8 @@ the concept map buffer will gain focus."
                'action (lambda (_x)
                          (org-open-file (org-brain-entry-path entry)
                                         nil nil
-                                        (concat "*" head-title))))
+                                        (concat "*" head-title)))
+               'follow-link t)
               (insert "\n")
               ;; Headline resources
               (when (mapc (lambda (resource)
