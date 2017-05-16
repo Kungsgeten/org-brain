@@ -75,7 +75,7 @@ This will be used by `org-brain-new-child'."
           (t (setf node (cdr node))))))
 
 ;;; Logging
-(defcustom org-brain-log t
+(defcustom org-brain-log nil
   "Set to nil to not write to *Messages* buffer."
   :group 'org-brain
   :type 'boolean)
