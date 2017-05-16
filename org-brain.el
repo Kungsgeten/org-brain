@@ -110,12 +110,14 @@ This will be used by `org-brain-new-child'."
   (setq org-brain-files-cache nil))
 
 (defun org-brain-invalidate-parent-cache-entry (entry)
-  (org-brain-log (format "Invalidating org-brain parent cache entry: %s ..." entry))
+  (org-brain-log
+   (format "Invalidating org-brain parent cache entry: %s ..." entry))
   (setq org-brain-parents-cache
         (remove* entry org-brain-parents-cache :test #'equal :key #'car)))
 
 (defun org-brain-invalidate-child-cache-entry (entry)
-  (org-brain-log (format "Invalidating org-brain child cache entry: %s ..." entry))
+  (org-brain-log
+   (format "Invalidating org-brain child cache entry: %s ..." entry))
   (setq org-brain-children-cache
         (remove* entry org-brain-children-cache :test #'equal :key #'car)))
 
@@ -204,7 +206,6 @@ If RELATIVE is t, then return relative paths and remove org extension."
 (defun org-brain-children (entry &optional exclude)
   "Get list of org-brain entries linked to from ENTRY.
 You can choose to EXCLUDE an entry from the list."
-  ;; TODO Handle exclude
   (if (and org-brain-children-cache
            (assoc entry org-brain-children-cache))
       (cdr (assoc entry org-brain-children-cache))
