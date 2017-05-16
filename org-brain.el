@@ -123,6 +123,17 @@ This will be used by `org-brain-new-child'."
   (org-brain-log "Invalidating org-brain pin cache...")
   (setq org-brain-pins-cache nil))
 
+(defun org-brain-build-caches ()
+  "(Optional) It is not necessary to use this function as the
+  caches are built lazily, automatically. However, this is just
+  here if you want to do some cache building ahead of time, for
+  instance during Emacs startup (at the cost of a longer Emacs
+  startup) while you grab your coffee."
+  (interactive)
+  (org-brain-log "Eagerly building some of the org-brain caches..")
+  (org-brain-files)
+  (org-brain-pins))
+
 (defun org-brain-files (&optional relative)
   "Get all org files (recursively) in `org-brain-path'.
 If RELATIVE is t, then return relative paths and remove org extension."
