@@ -369,7 +369,7 @@ NEWENTRY. The ENTRY file will also be renamed."
          (read-string "New name: ")))
   (let ((oldfile (org-brain-entry-path entry))
         (newfile (org-brain-entry-path newname)))
-    (org-brain-invalidate-files-cache)    ; NOTE Invalidate org-brain file cache
+    (org-brain-invalidate-files-cache)  ; Invalidate cache
     (mapc
      (lambda (brainfile)
        (with-temp-buffer
