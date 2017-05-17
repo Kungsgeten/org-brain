@@ -698,7 +698,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
     (with-current-buffer (find-file-noselect entry-path)
       (when (not (assoc "BRAIN_PIN" (org-brain-keywords entry)))
         (goto-char (point-min))
-        (insert "\n#+BRAIN_PIN:\n")
+        (insert "#+BRAIN_PIN:\n")
         (save-buffer)))))
 
 (defun org-brain-visualize-remove-pin ()
@@ -742,7 +742,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
       (if (not (assoc "TITLE" (org-brain-keywords entry)))
           (progn
             (goto-char (point-min))
-            (insert (format "\n#+TITLE: %s\n" title))
+            (insert (format "#+TITLE: %s\n" title))
             (save-buffer))
         ;; Remove #+TITLE: ... and create new one
         (progn
@@ -752,7 +752,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
           (when (looking-at "^#\\+TITLE: +.*$")
             (kill-line)
             (goto-char (point-min))
-            (insert (format "\n#+TITLE: %s\n" title))
+            (insert (format "#+TITLE: %s\n" title))
             (save-buffer)))))))
 
 (define-derived-mode org-brain-visualize-mode
