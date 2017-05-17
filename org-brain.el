@@ -74,6 +74,15 @@ This will be used by `org-brain-new-child'."
            (setf (car node) (caar node)))
           (t (setf node (cdr node))))))
 
+(defun trim (string)
+  "Remove leading and trailing whitespace."
+  (string-trim string))
+
+(defun empty-string-p (string)
+  "Return true if the string is empty or nil. Expects string."
+  (or (null string)
+      (zerop (length (trim string)))))
+
 ;;; Logging
 (defcustom org-brain-log nil
   "Set to nil to not write to *Messages* buffer."
@@ -692,6 +701,28 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
         (insert "\n#+BRAIN_PIN:\n")
         (save-buffer)))))
 
+(defun org-brain-visualize-remove-pin ()
+  "Remove \"#+BRAIN_PIN:\" from entry last visited by
+  `org-brain-visualize' if it exists."
+  (interactive)
+  (org-brain-invalidate-pins-cache)    ; Invalidate cache
+  (org-brain-remove-pin org-brain--visualizing-entry)
+  (when (string-equal (buffer-name) "*org-brain*")
+    (revert-buffer)))
+
+(defun org-brain-remove-pin (entry)
+  "In org-brain ENTRY, remove \"#+BRAIN_PIN:\" if it exists."
+  (let ((entry-path (org-brain-entry-path entry)))
+    (org-save-all-org-buffers)
+    (with-current-buffer (find-file-noselect entry-path)
+      (when (assoc "BRAIN_PIN" (org-brain-keywords entry))
+        (goto-char (point-min))
+        (re-search-forward "^#\\+BRAIN_PIN:.*$")
+        (beginning-of-line)
+        (when (looking-at "^#\\+BRAIN_PIN:.*$")
+            (kill-line)
+            (save-buffer))))))
+
 (defun org-brain-visualize-add-or-change-title ()
   "In current org-brain ENTRY, add \"#+TITLE:\" with title value acquired
   from user."
@@ -730,6 +761,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
 (define-key org-brain-visualize-mode-map "p" 'org-brain-visualize-add-parent)
 (define-key org-brain-visualize-mode-map "c" 'org-brain-visualize-add-child)
 (define-key org-brain-visualize-mode-map "P" 'org-brain-visualize-add-pin)
+(define-key org-brain-visualize-mode-map "R" 'org-brain-visualize-remove-pin)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-visualize-add-or-change-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
 (define-key org-brain-visualize-mode-map "k" 'backward-button)
