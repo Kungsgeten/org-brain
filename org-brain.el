@@ -99,10 +99,10 @@ This will be used by `org-brain-new-child'."
     (setq inhibit-message nil)))
 
 ;;; Caches
-(setq org-brain-files-cache nil)
-(setq org-brain-parents-cache nil)
-(setq org-brain-children-cache nil)
-(setq org-brain-pins-cache nil)
+(defvar org-brain-files-cache nil "Cache for org-brain-files")
+(defvar org-brain-parents-cache nil "Cache for org-brain-parents")
+(defvar org-brain-children-cache nil "Cache for org-brain-children")
+(defvar org-brain-pins-cache nil "Cache for org-brain-pins")
 
 ;;;###autoload
 (defun org-brain-invalidate-all-caches ()
