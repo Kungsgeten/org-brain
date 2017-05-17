@@ -103,7 +103,9 @@ here's the steps to install it manually:
 
 * Usage
 
-Primarily you should interact with the =M-x org-brain-visualize= interface in order to benefit from automatic caching and thus dramatic speed gains (~30x faster).
+Primarily you should interact with the =M-x org-brain-visualize= interface in
+order to benefit from automatic caching and thus dramatic speed gains (~30x
+faster).
 
 Once in the org-brain-visualize interface/mode, via =M-x org-brain-visualize=, you can type:
 
