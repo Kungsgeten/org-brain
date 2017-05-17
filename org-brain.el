@@ -725,9 +725,12 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
 
 (defun org-brain-visualize-add-or-change-title ()
   "In current org-brain ENTRY, add \"#+TITLE:\" with title value acquired
-  from user."
+  and required from user."
   (interactive)
   (let ((title (read-string "Title: ")))
+    (loop while (empty-string-p title) do
+          (setq title (read-string
+                       "Title must have a value, please enter title: ")))
     (org-brain-add-or-change-title title org-brain--visualizing-entry)
     (when (string-equal (buffer-name) "*org-brain*")
       (revert-buffer))))
