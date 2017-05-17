@@ -756,6 +756,27 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
             (insert (format "#+TITLE: %s\n" title))
             (save-buffer))))))
 
+(defun org-brain-visualize-remove-title ()
+  "Remove \"#+TITLE:\" line from entry last visited by
+  `org-brain-visualize' if it exists."
+  (interactive)
+  (org-brain-remove-title org-brain--visualizing-entry)
+  (when (string-equal (buffer-name) "*org-brain*")
+    (revert-buffer)))
+
+(defun org-brain-remove-title (entry)
+  "In org-brain ENTRY, remove \"#+TITLE:\" if it exists."
+  (let ((entry-path (org-brain-entry-path entry)))
+    (org-save-all-org-buffers)
+    (with-current-buffer (find-file-noselect entry-path)
+      (when (assoc "TITLE" (org-brain-keywords entry))
+        (goto-char (point-min))
+        (re-search-forward "^#\\+TITLE:.*$")
+        (beginning-of-line)
+        (when (looking-at "^#\\+TITLE:.*$")
+            (kill-line)
+            (save-buffer))))))
+
 (define-derived-mode org-brain-visualize-mode
   special-mode  "Org-brain Visualize"
   "Major mode for `org-brain-visualize'.
@@ -767,6 +788,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
 (define-key org-brain-visualize-mode-map "P" 'org-brain-visualize-add-pin)
 (define-key org-brain-visualize-mode-map "R" 'org-brain-visualize-remove-pin)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-visualize-add-or-change-title)
+(define-key org-brain-visualize-mode-map "T" 'org-brain-visualize-remove-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
 (define-key org-brain-visualize-mode-map "k" 'backward-button)
 (define-key org-brain-visualize-mode-map [?\t] 'forward-button)

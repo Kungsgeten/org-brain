@@ -135,6 +135,7 @@ Once in the org-brain-visualize interface/mode, via =M-x org-brain-visualize=, y
    This will create a new title, prompting you for the value. If a
    title, #+TITLE: some-title, already exists then it will be replaced with the
    new title you've provide.
+8. "T" to remove a title of the current entry altogether.
 
 Here is the the full list of keybindings:
 
@@ -145,6 +146,7 @@ Here is the the full list of keybindings:
 | P         | Add pin                               |
 | R         | Remove pin                            |
 | t         | Add or change title                   |
+| T         | Remove title                          |
 | l         | Add resource link                     |
 | C-y       | Paste resource link                   |
 | a         | Add resource [[http://orgmode.org/manual/Attachments.html][attachment]]               |
