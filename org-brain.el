@@ -59,6 +59,11 @@ This will be used by `org-brain-new-child'."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-children-tag-default-name "brainchildren"
+  "Default name for a tag on headline containing links to org-brain entries."
+  :group 'org-brain
+  :type '(string))
+
 (defcustom org-brain-files-extension "org"
   "The extension for entry files in `org-brain-path'."
   :group 'org-brain
@@ -305,13 +310,40 @@ You can choose to EXCLUDE an entry from the list."
                            (end-of-line)
                            (insert (format "\n- [[brain:%s][%s]]" child (org-brain-title child)))
                            (save-buffer))
-                         "+brainchildren"
+                         (format "+%s" org-brain-children-tag-default-name)
                          (list entry-path))
         (with-current-buffer (get-file-buffer entry-path)
           (goto-char (point-max))
-          (insert (format "\n\n* %s    :brainchildren:\n- [[brain:%s][%s]]"
-                          org-brain-children-headline-default-name child (org-brain-title child)))
+          (insert (format "\n\n* %s    :%s:\n- [[brain:%s][%s]]"
+                          org-brain-children-tag-default-name
+                          org-brain-children-headline-default-name
+                          child
+                          (org-brain-title child)))
           (save-buffer)))))
+
+(defun org-brain-remove-child (entry)
+  "In org-brain ENTRY, remove a child link of ENTRY obtained from
+  prompting the user. This doesn't delete the file pointed to by
+  the link, just the link."
+  (let ((entry-path (org-brain-entry-path entry)))
+    (org-save-all-org-buffers)
+    (let ((child-to-remove
+           (completing-read "Child to remove: "
+            (org-brain-children entry))))
+      (with-current-buffer (get-file-buffer entry-path)
+          (goto-char (point-min))
+          (save-excursion
+            (re-search-forward (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
+            (let ((bound (outline-next-heading)))
+              (re-search-backward (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
+              (beginning-of-line)
+              (re-search-forward
+               (format "^ *- \\[\\[brain:%s.*$" child-to-remove) bound t)
+              (beginning-of-line)
+              (looking-at (format "^ *- \\[\\[brain:%s.*$" child-to-remove))
+              (kill-line 1)
+              (save-buffer)
+              (org-brain-invalidate-child-cache-entry entry)))))))
 
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
@@ -668,6 +700,18 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
+(defun org-brain-visualize-remove-child ()
+  "Prompt user for child of entry last visited by
+  `org-brain-visualize' to remove and then remove it. This does
+  not delete the file pointed to by the child link."
+  (interactive)
+  (org-brain-invalidate-files-cache)    ; Invalidate cache
+  (org-brain-invalidate-child-cache-entry
+   org-brain--visualizing-entry)        ; Invalidate cache
+  (org-brain-remove-child org-brain--visualizing-entry)
+  (when (string-equal (buffer-name) "*org-brain*")
+    (revert-buffer)))
+
 (defun org-brain-visualize-add-parent (parent)
   "In PARENT add link to entry last visited by `org-brain-visualize'.
 PARENT can hold multiple entries, by using `org-brain-batch-separator'."
@@ -784,6 +828,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
 
 (define-key org-brain-visualize-mode-map "p" 'org-brain-visualize-add-parent)
 (define-key org-brain-visualize-mode-map "c" 'org-brain-visualize-add-child)
+(define-key org-brain-visualize-mode-map "C" 'org-brain-visualize-remove-child)
 (define-key org-brain-visualize-mode-map "P" 'org-brain-visualize-add-pin)
 (define-key org-brain-visualize-mode-map "R" 'org-brain-visualize-remove-pin)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-visualize-add-or-change-title)
