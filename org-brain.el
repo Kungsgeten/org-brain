@@ -336,17 +336,14 @@ You can choose to EXCLUDE an entry from the list."
           (save-excursion
             (re-search-forward
              (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
-            (let ((bound (outline-next-heading)))
-              (re-search-backward
-               (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
-              (beginning-of-line)
-              (re-search-forward
-               (format "^ *- \\[\\[brain:%s.*$" child-to-remove) bound t)
-              (beginning-of-line)
-              (looking-at (format "^ *- \\[\\[brain:%s.*$" child-to-remove))
-              (kill-line 1)
-              (save-buffer)
-              (org-brain-invalidate-child-cache-entry entry)))))))
+            (beginning-of-line)
+            (re-search-forward
+             (format "^ *- \\[\\[brain:%s.*$" child-to-remove) nil t)
+            (beginning-of-line)
+            (looking-at (format "^ *- \\[\\[brain:%s.*$" child-to-remove))
+            (kill-line 1)
+            (save-buffer)
+            (org-brain-invalidate-child-cache-entry entry))))))
 
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
