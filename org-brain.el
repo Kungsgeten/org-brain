@@ -664,7 +664,8 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Child: " (org-brain-files t))))
   (org-brain-invalidate-files-cache)    ; Invalidate cache
-  (org-brain-invalidate-child-cache-entry org-brain--visualizing-entry) ; Invalidate cache
+  (org-brain-invalidate-child-cache-entry
+   org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (c (split-string child org-brain-batch-separator t " +"))
     (org-brain-new-child org-brain--visualizing-entry c))
   (when (string-equal (buffer-name) "*org-brain*")
@@ -676,7 +677,8 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Parent: " (org-brain-files t))))
   (org-brain-invalidate-files-cache)    ; Invalidate cache
-  (org-brain-invalidate-parent-cache-entry org-brain--visualizing-entry) ; Invalidate cache
+  (org-brain-invalidate-parent-cache-entry
+   org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (p (split-string parent org-brain-batch-separator t " +"))
     (org-brain-new-child p org-brain--visualizing-entry))
   (when (string-equal (buffer-name) "*org-brain*")
