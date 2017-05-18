@@ -103,7 +103,9 @@ here's the steps to install it manually:
 
 * Usage
 
-Primarily you should interact with the =M-x org-brain-visualize= interface in order to benefit from automatic caching and thus dramatic speed gains (~30x faster).
+Primarily you should interact with the =M-x org-brain-visualize= interface in
+order to benefit from automatic caching and thus dramatic speed gains (~30x
+faster).
 
 Once in the org-brain-visualize interface/mode, via =M-x org-brain-visualize=, you can type:
 
@@ -156,7 +158,6 @@ org-brain-insert-link=.
 
 =M-x org-brain-agenda= can be used to run =org-agenda= on your =org-brain= files. 
 
-
 If you add resources via =org-brain-visualize= they will be entered inserted under
 the current heading in the visualize buffer (link resource will be added as list
 items at the top of the heading in the entry file). If you're not under a
@@ -170,8 +171,8 @@ be inconsistent with actual state on disk. To remedy this situation, you may use
 caches will be rebuilt and speed of the org-brain-visualize interface/mode will
 become very fast again after an initial cache miss (which will cause the caches
 to be built). =org-brain-files= cache is built all at once on first cache miss
-while org-brain-children-cache, org-brain-parents-cache, and
-org-brain-pins-cache are necessarily built node by node. Subsequent returns to
+while =org-brain-children-cache=, =org-brain-parents-cache=, and
+=org-brain-pins-cache= are necessarily built node by node. Subsequent returns to
 said cached nodes will be approximately 30x faster.
 
 * Other useful packages
