@@ -80,6 +80,26 @@ here's the steps to install it manually:
      (eval-after-load 'evil
        (evil-set-initial-state 'org-brain-visualize-mode 'emacs)))
    #+end_src
+6. If you want to eagerly build some of the caches (rather than wait to have
+   them built automatically in a lazy way), you may use =org-brain-build-caches=
+   either interactively or programatically, perhaps during Emacs startup time
+   (while you get your coffee). You'll be adding about 15 seconds to Emacs
+   startup time in exchange for the same savings of save on your initial use of
+   org-brain. Example configuration for this:
+   #+begin_src emacs-lisp
+    (use-package org-brain
+      ;; :ensure t ; Pull request not yet in MELPA package
+      :load-path "~/.ghq/github.com/analyticd/org-brain"
+      :init
+      (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org/files/directory")
+      (eval-after-load 'evil
+        (evil-set-initial-state 'org-brain-visualize-mode 'emacs))
+      ;; Prebuild some of the org-brain caches during Emacs startup at the cost of
+      ;; slower Emacs startup time.
+      (org-brain-build-caches))
+   #+end_src
+   Using =org-brain-build-caches= isn't necessary as, again, the caches are built
+   automatically in a lazy way during use of the org-brain-visualize interface.
 
 * Usage
 
@@ -105,12 +125,13 @@ Once in the org-brain-visualize interface/mode, via =M-x org-brain-visualize=, y
    once separated by =org-brain-batch-separator=, ";" by default, to
    simultaneously create more than one.
 4. "P" to pin the current entry (if it is already pinned, then =org-brain= will respect that)
-5. "r" to rename the current entry
+5. "R" to remove a pin from the current entry
+6. "r" to rename the current entry
    This will only change the filename and entry name, not the =#+TITLE= of
    the entry.
-6. "t" to add or change the title of the current entry
+7. "t" to add or change the title of the current entry
    This will create a new title, prompting you for the value. If a
-   title, #+TITLE: some-title, already exists then it will replace it with the
+   title, #+TITLE: some-title, already exists then it will be replaced with the
    new title you've provide.
 
 Here is the the full list of keybindings:
@@ -120,6 +141,7 @@ Here is the the full list of keybindings:
 | c         | Add child                             |
 | p         | Add parent                            |
 | P         | Add pin                               |
+| R         | Remove pin                            |
 | t         | Add or change title                   |
 | l         | Add resource link                     |
 | C-y       | Paste resource link                   |

@@ -74,8 +74,17 @@ This will be used by `org-brain-new-child'."
            (setf (car node) (caar node)))
           (t (setf node (cdr node))))))
 
+(defun trim (string)
+  "Remove leading and trailing whitespace."
+  (string-trim string))
+
+(defun empty-string-p (string)
+  "Return true if the string is empty or nil. Expects string."
+  (or (null string)
+      (zerop (length (trim string)))))
+
 ;;; Logging
-(defcustom org-brain-log t
+(defcustom org-brain-log nil
   "Set to nil to not write to *Messages* buffer."
   :group 'org-brain
   :type 'boolean)
@@ -110,18 +119,31 @@ This will be used by `org-brain-new-child'."
   (setq org-brain-files-cache nil))
 
 (defun org-brain-invalidate-parent-cache-entry (entry)
-  (org-brain-log (format "Invalidating org-brain parent cache entry: %s ..." entry))
+  (org-brain-log
+   (format "Invalidating org-brain parent cache entry: %s ..." entry))
   (setq org-brain-parents-cache
         (remove* entry org-brain-parents-cache :test #'equal :key #'car)))
 
 (defun org-brain-invalidate-child-cache-entry (entry)
-  (org-brain-log (format "Invalidating org-brain child cache entry: %s ..." entry))
+  (org-brain-log
+   (format "Invalidating org-brain child cache entry: %s ..." entry))
   (setq org-brain-children-cache
         (remove* entry org-brain-children-cache :test #'equal :key #'car)))
 
 (defun org-brain-invalidate-pins-cache ()
   (org-brain-log "Invalidating org-brain pin cache...")
   (setq org-brain-pins-cache nil))
+
+(defun org-brain-build-caches ()
+  "(Optional) It is not necessary to use this function as the
+  caches are built lazily, automatically. However, this is just
+  here if you want to do some cache building ahead of time, for
+  instance during Emacs startup (at the cost of a longer Emacs
+  startup) while you grab your coffee."
+  (interactive)
+  (org-brain-log "Eagerly building some of the org-brain caches..")
+  (org-brain-files)
+  (org-brain-pins))
 
 (defun org-brain-files (&optional relative)
   "Get all org files (recursively) in `org-brain-path'.
@@ -193,7 +215,6 @@ If RELATIVE is t, then return relative paths and remove org extension."
 (defun org-brain-children (entry &optional exclude)
   "Get list of org-brain entries linked to from ENTRY.
 You can choose to EXCLUDE an entry from the list."
-  ;; TODO Handle exclude
   (if (and org-brain-children-cache
            (assoc entry org-brain-children-cache))
       (cdr (assoc entry org-brain-children-cache))
@@ -643,7 +664,8 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Child: " (org-brain-files t))))
   (org-brain-invalidate-files-cache)    ; Invalidate cache
-  (org-brain-invalidate-child-cache-entry org-brain--visualizing-entry) ; Invalidate cache
+  (org-brain-invalidate-child-cache-entry
+   org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (c (split-string child org-brain-batch-separator t " +"))
     (org-brain-new-child org-brain--visualizing-entry c))
   (when (string-equal (buffer-name) "*org-brain*")
@@ -655,7 +677,8 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Parent: " (org-brain-files t))))
   (org-brain-invalidate-files-cache)    ; Invalidate cache
-  (org-brain-invalidate-parent-cache-entry org-brain--visualizing-entry) ; Invalidate cache
+  (org-brain-invalidate-parent-cache-entry
+   org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (p (split-string parent org-brain-batch-separator t " +"))
     (org-brain-new-child p org-brain--visualizing-entry))
   (when (string-equal (buffer-name) "*org-brain*")
@@ -677,14 +700,39 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
     (with-current-buffer (find-file-noselect entry-path)
       (when (not (assoc "BRAIN_PIN" (org-brain-keywords entry)))
         (goto-char (point-min))
-        (insert "\n#+BRAIN_PIN:\n")
+        (insert "#+BRAIN_PIN:\n")
         (save-buffer)))))
+
+(defun org-brain-visualize-remove-pin ()
+  "Remove \"#+BRAIN_PIN:\" from entry last visited by
+  `org-brain-visualize' if it exists."
+  (interactive)
+  (org-brain-invalidate-pins-cache)    ; Invalidate cache
+  (org-brain-remove-pin org-brain--visualizing-entry)
+  (when (string-equal (buffer-name) "*org-brain*")
+    (revert-buffer)))
+
+(defun org-brain-remove-pin (entry)
+  "In org-brain ENTRY, remove \"#+BRAIN_PIN:\" if it exists."
+  (let ((entry-path (org-brain-entry-path entry)))
+    (org-save-all-org-buffers)
+    (with-current-buffer (find-file-noselect entry-path)
+      (when (assoc "BRAIN_PIN" (org-brain-keywords entry))
+        (goto-char (point-min))
+        (re-search-forward "^#\\+BRAIN_PIN:.*$")
+        (beginning-of-line)
+        (when (looking-at "^#\\+BRAIN_PIN:.*$")
+            (kill-line)
+            (save-buffer))))))
 
 (defun org-brain-visualize-add-or-change-title ()
   "In current org-brain ENTRY, add \"#+TITLE:\" with title value acquired
-  from user."
+  and required from user."
   (interactive)
   (let ((title (read-string "Title: ")))
+    (loop while (empty-string-p title) do
+          (setq title (read-string
+                       "Title must have a value, please enter title: ")))
     (org-brain-add-or-change-title title org-brain--visualizing-entry)
     (when (string-equal (buffer-name) "*org-brain*")
       (revert-buffer))))
@@ -696,7 +744,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
       (if (not (assoc "TITLE" (org-brain-keywords entry)))
           (progn
             (goto-char (point-min))
-            (insert (format "\n#+TITLE: %s\n" title))
+            (insert (format "#+TITLE: %s\n" title))
             (save-buffer))
         ;; Remove #+TITLE: ... and create new one
         (progn
@@ -706,7 +754,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
           (when (looking-at "^#\\+TITLE: +.*$")
             (kill-line)
             (goto-char (point-min))
-            (insert (format "\n#+TITLE: %s\n" title))
+            (insert (format "#+TITLE: %s\n" title))
             (save-buffer)))))))
 
 (define-derived-mode org-brain-visualize-mode
@@ -718,6 +766,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
 (define-key org-brain-visualize-mode-map "p" 'org-brain-visualize-add-parent)
 (define-key org-brain-visualize-mode-map "c" 'org-brain-visualize-add-child)
 (define-key org-brain-visualize-mode-map "P" 'org-brain-visualize-add-pin)
+(define-key org-brain-visualize-mode-map "R" 'org-brain-visualize-remove-pin)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-visualize-add-or-change-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
 (define-key org-brain-visualize-mode-map "k" 'backward-button)
