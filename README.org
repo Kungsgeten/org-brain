@@ -54,27 +54,33 @@ be pressed to visualize other entries, visit resources etc.
 
 * Setup and requirements
 
-The easiest way is to get =org-brain= from MELPA. If you do not want to do that or
-would like this fork which includes caching and an extended visualize interface,
+The easiest way is to get =org-brain= from MELPA. If you do not want to do that,
 here's the steps to install it manually:
 
 1. =org-brain= requires Emacs 25, org-mode 9. These need to be part of your Emacs.
 2. Clone the repo locally (plug for [[https://github.com/motemen/ghq][ghq]] to manage local repo cloning).
-3. Utilize =use-package= to load the repo. (Alternatively, download =org-brain.el=, add it to your load-path, and put =(require 'org-brain)= in your init-file.)
+3. Utilize =use-package= to load the repo. (Alternatively, download
+   =org-brain.el=, add it to your load-path, and put =(require 'org-brain)= in
+   your init-file.)
    #+begin_src emacs-lisp
    (use-package org-brain
-     ;; :ensure t ; If you want to use MELPA package which doesn't include the caching and extended visualize interface.
-     :load-path "~/.ghq/github.com/analyticd/org-brain"
+     ;; :ensure t ; If you want to use MELPA package
+     :load-path "~/.ghq/github.com/kungsgeten/org-brain"
      :init
      (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/just/your/existing/org/files/directory"))
    #+end_src
-4. Configure =org-brain-path= (defaults to =/brain= in your =org-directory=) to a directory where you want to put your =org-brain= files (which could be the location where you already keep your org files if you wish to transform your existing org files into =org-brain= files)
-   You can set this with the example config presented above or through the customize interface, 
-5. If you are an evil user, you'll want to add =(evil-set-initial-state 'org-brain-visualize-mode 'emacs)= to your =org-brain= configuration. Here is the config example above, updated:
+4. Configure =org-brain-path= (defaults to =/brain= in your =org-directory=) to
+   a directory where you want to put your =org-brain= files (which could be the
+   location where you already keep your org files if you wish to transform your
+   existing org files into =org-brain= files) You can set this with the example
+   config presented above or through the customize interface,
+5. If you are an [[https://github.com/emacs-evil/evil][evil]] user, you'll want to add =(evil-set-initial-state
+   'org-brain-visualize-mode 'emacs)= to your =org-brain= configuration. Here is
+   the config example above, updated:
    #+begin_src emacs-lisp
    (use-package org-brain
-     ;; :ensure t ; If you want to use MELPA package which doesn't include the caching and extended visualize interface.
-     :load-path "~/.ghq/github.com/analyticd/org-brain"
+     ;; :ensure t ; If you want to use MELPA package
+     :load-path "~/.ghq/github.com/kungsgeten/org-brain"
      :init
      (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org/files/directory")
      (eval-after-load 'evil
@@ -88,8 +94,7 @@ here's the steps to install it manually:
    org-brain. Example configuration for this:
    #+begin_src emacs-lisp
     (use-package org-brain
-      ;; :ensure t ; Pull request not yet in MELPA package
-      :load-path "~/.ghq/github.com/analyticd/org-brain"
+      :ensure t
       :init
       (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org/files/directory")
       (eval-after-load 'evil
@@ -99,7 +104,7 @@ here's the steps to install it manually:
       (org-brain-build-caches))
    #+end_src
    Using =org-brain-build-caches= isn't necessary as, again, the caches are built
-   automatically in a lazy way during use of the org-brain-visualize interface.
+   automatically in a lazy way during use of the =org-brain-visualize= interface.
 
 * Usage
 
@@ -116,7 +121,7 @@ Once in the org-brain-visualize interface/mode, via =M-x org-brain-visualize=, y
    mandolin;banjo= would add =guitar=, =mandolin= and =banjo= as children. Currently
    it isn't possible to use completion when batch entering children/parents, so
    it is best used for adding non-existing entries.
-   
+
    If you add children to a file with =org-brain-visualize=, the links to the child
    entries will be added under the first headline in the file with the
    =brainchildren= tag. If this headline doesn't exist, a headline named
@@ -165,9 +170,9 @@ Here is the the full list of keybindings:
 
 In order to link to other entries, use an =org-mode= link
 with =brain:= type, its easiest to use =C-c C-l brain: TAB= or =M-x
-org-brain-insert-link=. 
+org-brain-insert-link=.
 
-=M-x org-brain-agenda= can be used to run =org-agenda= on your =org-brain= files. 
+=M-x org-brain-agenda= can be used to run =org-agenda= on your =org-brain= files.
 
 If you add resources via =org-brain-visualize= they will be entered inserted under
 the current heading in the visualize buffer (link resource will be added as list

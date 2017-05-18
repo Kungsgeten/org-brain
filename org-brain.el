@@ -4,11 +4,11 @@
 ;; MIT License
 
 ;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
-;; Co-author (caching and extended visualize interface): https://github.com/analyticd
+;; Co-author: https://github.com/analyticd
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25") (org "9"))
-;; Version: 0.2
+;; Version: 0.3
 
 ;;; Commentary:
 
@@ -29,7 +29,7 @@
 ;; quickly add parents/children/pins to an entry, and open them for editing. In
 ;; this view you may also have pinned entries, which will be shown at all times.
 ;; To pin an entry, add #+BRAIN_PIN: on a line in the beginning of the entry
-;; file.
+;; file (or use bindings in `org-brain-visualize-mode' directly).
 
 ;;; Code:
 
