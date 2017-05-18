@@ -55,56 +55,41 @@ be pressed to visualize other entries, visit resources etc.
 * Setup and requirements
 
 The easiest way is to get =org-brain= from MELPA. If you do not want to do that,
-here's the steps to install it manually:
+clone the repository or download =org-brain.el= and add it to your load-path.
+The example below is using [[https://github.com/jwiegley/use-package][use-package]] and that you're using MELPA, but you
+could use =(require 'org-brain)= or add a =:load-path= to =use-package= instead.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org-brain :ensure t
+    :init
+    (setq org-brain-path "directory/path/where-i-want-org-brain")
+    ;; For Evil users
+    (eval-after-load 'evil
+      (evil-set-initial-state 'org-brain-visualize-mode 'emacs))
+    :config
+    ;; Save/load org-brain caches to/from disk
+    (org-brain-activate-cache-saving))
+#+END_SRC
 
 1. =org-brain= requires Emacs 25, org-mode 9. These need to be part of your Emacs.
-2. Clone the repo locally (plug for [[https://github.com/motemen/ghq][ghq]] to manage local repo cloning).
-3. Utilize =use-package= to load the repo. (Alternatively, download
-   =org-brain.el=, add it to your load-path, and put =(require 'org-brain)= in
-   your init-file.)
-   #+begin_src emacs-lisp
-   (use-package org-brain
-     ;; :ensure t ; If you want to use MELPA package
-     :load-path "~/.ghq/github.com/kungsgeten/org-brain"
-     :init
-     (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/just/your/existing/org/files/directory"))
-   #+end_src
-4. Configure =org-brain-path= (defaults to =/brain= in your =org-directory=) to
+2. Configure =org-brain-path= (defaults to =/brain= in your =org-directory=) to
    a directory where you want to put your =org-brain= files (which could be the
    location where you already keep your org files if you wish to transform your
-   existing org files into =org-brain= files) You can set this with the example
+   existing org files into =org-brain= files). You can set this with the example
    config presented above or through the customize interface,
-5. If you are an [[https://github.com/emacs-evil/evil][evil]] user, you'll want to add =(evil-set-initial-state
-   'org-brain-visualize-mode 'emacs)= to your =org-brain= configuration. Here is
-   the config example above, updated:
-   #+begin_src emacs-lisp
-   (use-package org-brain
-     ;; :ensure t ; If you want to use MELPA package
-     :load-path "~/.ghq/github.com/kungsgeten/org-brain"
-     :init
-     (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org/files/directory")
-     (eval-after-load 'evil
-       (evil-set-initial-state 'org-brain-visualize-mode 'emacs)))
-   #+end_src
-6. If you want to eagerly build some of the caches (rather than wait to have
-   them built automatically in a lazy way), you may use =org-brain-build-caches=
-   either interactively or programatically, perhaps during Emacs startup time
-   (while you get your coffee). You'll be adding about 15 seconds to Emacs
-   startup time in exchange for the same savings of save on your initial use of
-   org-brain. Example configuration for this:
-   #+begin_src emacs-lisp
-    (use-package org-brain
-      :ensure t
-      :init
-      (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org/files/directory")
-      (eval-after-load 'evil
-        (evil-set-initial-state 'org-brain-visualize-mode 'emacs))
-      ;; Prebuild some of the org-brain caches during Emacs startup at the cost of
-      ;; slower Emacs startup time.
-      (org-brain-build-caches))
-   #+end_src
-   Using =org-brain-build-caches= isn't necessary as, again, the caches are built
-   automatically in a lazy way during use of the =org-brain-visualize= interface.
+3. If you are an [[https://github.com/emacs-evil/evil][evil]] user, you'll want to add =(evil-set-initial-state
+   'org-brain-visualize-mode 'emacs)= to your =org-brain= configuration (see
+   example above).
+4. =org-brain= uses caches in order to speed up loading of entries. If you want
+   to save these caches between Emacs sessions (saving time when you restart
+   Emacs) put =(org-brain-activate-cache-saving)= in your init (included in
+   example above).
+5. If /not using/ =org-brain-activate-cache-saving= you might want to eagerly
+   build some of the caches (rather than wait to have them built automatically
+   in a lazy way), you may use =org-brain-build-caches= either interactively or
+   programatically, perhaps during Emacs startup time (while you get your
+   coffee). You'll be adding about 15 seconds to Emacs startup time in exchange
+   for the same savings of save on your initial use of org-brain.
 
 * Usage
 

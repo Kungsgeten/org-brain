@@ -52,6 +52,11 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(directory))
 
+(defcustom org-brain-cache-file (expand-file-name ".org-brain-cache.el" org-brain-path)
+  "Where the org-brain caches will be saved."
+  :group 'org-brain
+  :type '(directory))
+
 (defcustom org-brain-children-headline-default-name "Brainchildren"
   "Default name for a headline containing links to org-brain entries.
 
@@ -99,19 +104,45 @@ This will be used by `org-brain-new-child'."
     (setq inhibit-message nil)))
 
 ;;; Caches
-(defvar org-brain-files-cache nil "Cache for org-brain-files")
-(defvar org-brain-parents-cache nil "Cache for org-brain-parents")
-(defvar org-brain-children-cache nil "Cache for org-brain-children")
-(defvar org-brain-pins-cache nil "Cache for org-brain-pins")
+(defvar org-brain-files-cache nil "Cache for org-brain-files.")
+(defvar org-brain-parents-cache nil "Cache for org-brain-parents.")
+(defvar org-brain-children-cache nil "Cache for org-brain-children.")
+(defvar org-brain-pins-cache nil "Cache for org-brain-pins.")
+
+(defun org-brain-dump-caches ()
+  "Save caches to `org-brain-cache-file'."
+  ;; Code adapted from Magnar Sveen's multiple-cursors
+  (with-temp-file org-brain-cache-file
+    (emacs-lisp-mode)
+    (dolist (cache '(org-brain-files-cache
+                     org-brain-parents-cache
+                     org-brain-children-cache
+                     org-brain-pins-cache))
+      (insert "(setq " (symbol-name cache) "\n"
+              "      '(")
+      (newline-and-indent)
+      (mapc #'(lambda (value)
+                (insert (format "%S" value))
+                (newline-and-indent))
+            (symbol-value cache))
+      (insert "))")
+      (newline))))
+
+(defun org-brain-activate-cache-saving ()
+  "Load caches from `org-brain-cache-file', save them when exiting Emacs.
+Add this to your init-file if you want to speed up org-brain entry loading."
+  (load org-brain-cache-file t)
+  (add-hook 'kill-emacs-hook #'org-brain-dump-caches))
 
 ;;;###autoload
 (defun org-brain-invalidate-all-caches ()
-  "This is a convenience function for those who (occasionally)
-  edit children, parents, i.e., entries in the Brainchildren
-  node, or pins, outside the org-brain-visualize interface. In
-  that case, you have to call this function manually. It is not
-  needed if children, parents, and pins are added using the
-  org-brain-visualize interface/mode."
+  "Empty org-brain caches, in case modified outside `org-brain-visualize'.
+This is a convenience function for those who (occasionally)
+edit children, parents, i.e., entries in the Brainchildren
+node, or pins, outside the org-brain-visualize interface. In
+that case, you have to call this function manually. It is not
+needed if children, parents, and pins are added using the
+org-brain-visualize interface/mode."
   (interactive)
   (setq org-brain-files-cache nil)
   (setq org-brain-parents-cache nil)
@@ -144,11 +175,15 @@ This will be used by `org-brain-new-child'."
 
 ;;;###autoload
 (defun org-brain-build-caches ()
-  "(Optional) It is not necessary to use this function as the
-  caches are built lazily, automatically. However, this is just
-  here if you want to do some cache building ahead of time, for
-  instance during Emacs startup (at the cost of a longer Emacs
-  startup) while you grab your coffee."
+  "Build `org-brain-files' and `org-brain-pins'.
+
+It is not necessary to use this function as the caches are built
+lazily, automatically. However, this is just here if you want
+to do some cache building ahead of time, for instance during
+Emacs startup (at the cost of a longer Emacs startup) while you
+grab your coffee.
+
+A better solution could be to use `org-brain-activate-cache-saving'."
   (interactive)
   (org-brain-log "Eagerly building some of the org-brain caches..")
   (org-brain-files)
@@ -311,8 +346,8 @@ You can choose to EXCLUDE an entry from the list."
       (goto-char (point-min))
       (save-excursion
         (if (re-search-forward
-               (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name)
-               nil t)
+             (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name)
+             nil t)
             (progn
               (end-of-line)
               (insert (format "\n- [[brain:%s][%s]]"
@@ -327,27 +362,8 @@ You can choose to EXCLUDE an entry from the list."
           (save-buffer))))))
 
 (defun org-brain-remove-child (entry child)
-  "In org-brain ENTRY, remove CHILD link. This doesn't delete the
-  file pointed to by the link, just the link."
-  (let ((entry-path (org-brain-entry-path entry)))
-    (org-save-all-org-buffers)
-    (org-brain-invalidate-child-cache-entry entry)
-    (with-current-buffer (find-file-noselect entry-path)
-      (goto-char (point-min))
-      (save-excursion
-        (re-search-forward
-         (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
-        (beginning-of-line)
-        (re-search-forward
-         (format "^ *- \\[\\[brain:%s.*$" child) nil t)
-        (beginning-of-line)
-        (looking-at (format "^ *- \\[\\[brain:%s.*$" child))
-        (kill-line 1)
-        (save-buffer)))))
-
-(defun org-brain-remove-child (entry child)
-  "In org-brain ENTRY, remove CHILD link. This doesn't delete the
-  file pointed to by the link, just the link."
+  "In org-brain ENTRY, remove CHILD link.
+This doesn't delete the file pointed to by the link, just the link."
   (let ((entry-path (org-brain-entry-path entry)))
     (org-save-all-org-buffers)
     (with-current-buffer (find-file-noselect entry-path)
@@ -365,7 +381,7 @@ You can choose to EXCLUDE an entry from the list."
         (org-brain-invalidate-child-cache-entry entry)))))
 
 (defun org-brain-insert-visualize-button (entry)
-  "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
+  "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
    (org-brain-title entry)
    'action (lambda (_x) (org-brain-visualize entry))
@@ -548,8 +564,7 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
 
 
 (defun org-brain--insert-headlines-and-resources (entry)
-  "Insert a horizontal separator followed by the headlines and
-  resources for the ENTRY in the visualize interface."
+  "Insert a separator, followed by the headlines and resources in ENTRY."
   (insert "\n\n-----------------------------------------------\n\n")
   (let ((resources (org-brain-resources entry)))
     ;; Top level resources
@@ -592,8 +607,7 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
   (insert "\n\n\n"))
 
 (defun org-brain--insert-parent-and-sibling-entries (entry &optional ignored-siblings)
-  "Insert parent and sibling entries into the visualize
-  interface."
+  "Insert parent and sibling entries into the visualize interface."
   (let ((parent-positions nil)
         (max-width 0))
     (mapc (lambda (parent)
@@ -739,9 +753,10 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
     (revert-buffer)))
 
 (defun org-brain-visualize-remove-child (child)
-  "Prompt user for child(ren) of entry last visited by
-  `org-brain-visualize' to remove and then remove it/them. This
-  does not delete the file pointed to by the child link."
+  "Remove CHILD from `org-brain--visualizing-entry'.
+Prompt user for child(ren) of entry last visited by
+`org-brain-visualize' to remove and then remove it/them. This
+does not delete the file pointed to by the child link."
   (interactive
    (list (completing-read "Child: "
                           (org-brain-children org-brain--visualizing-entry))))
@@ -781,10 +796,9 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
     (revert-buffer)))
 
 (defun org-brain-visualize-add-pin ()
-  "Add \"#+BRAIN_PIN:\" to entry last visited by
-  `org-brain-visualize' if it doesn't already exist."
+  "Add \"#+BRAIN_PIN:\" to `org-brain--visualizing-entry'."
   (interactive)
-  (org-brain-invalidate-pins-cache)    ; Invalidate cache
+  (org-brain-invalidate-pins-cache)     ; Invalidate cache
   (org-brain-add-pin org-brain--visualizing-entry)
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
@@ -800,8 +814,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
         (save-buffer)))))
 
 (defun org-brain-visualize-remove-pin ()
-  "Remove \"#+BRAIN_PIN:\" from entry last visited by
-  `org-brain-visualize' if it exists."
+  "Remove \"#+BRAIN_PIN:\" from `org-brain--visualizing-entry'."
   (interactive)
   (org-brain-invalidate-pins-cache)    ; Invalidate cache
   (org-brain-remove-pin org-brain--visualizing-entry)
@@ -822,8 +835,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
             (save-buffer))))))
 
 (defun org-brain-visualize-add-or-change-title ()
-  "In current org-brain ENTRY, add \"#+TITLE:\" with title value acquired
-  and required from user."
+  "Prompt for \"#+TITLE:\" to add to current org-brain entry."
   (interactive)
   (let ((title (read-string "Title: ")))
     (loop while (org-brain-empty-string-p title) do
@@ -834,8 +846,8 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
       (revert-buffer))))
 
 (defun org-brain-add-or-change-title (title entry)
-  "In the ENTRY, add the TITLE. If the ENTRY already has a TITLE,
-  first remove it and then add the new TITLE."
+  "Add TITLE to ENTRY.
+If the ENTRY already has a TITLE, first remove it and then add the new TITLE."
   (let ((entry-path (org-brain-entry-path entry)))
     (org-save-all-org-buffers)
     (with-current-buffer (find-file-noselect entry-path)
@@ -845,18 +857,17 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
             (insert (format "#+TITLE: %s\n" title))
             (save-buffer))
         ;; Remove #+TITLE: ... and create new one
+        (goto-char (point-min))
+        (re-search-forward "^#\\+TITLE: +.*$")
+        (beginning-of-line)
+        (when (looking-at "^#\\+TITLE: +.*$")
+          (kill-line)
           (goto-char (point-min))
-          (re-search-forward "^#\\+TITLE: +.*$")
-          (beginning-of-line)
-          (when (looking-at "^#\\+TITLE: +.*$")
-            (kill-line)
-            (goto-char (point-min))
-            (insert (format "#+TITLE: %s\n" title))
-            (save-buffer))))))
+          (insert (format "#+TITLE: %s\n" title))
+          (save-buffer))))))
 
 (defun org-brain-visualize-remove-title ()
-  "Remove \"#+TITLE:\" line from entry last visited by
-  `org-brain-visualize' if it exists."
+  "Remove \"#+TITLE:\" line from `org-brain--visualizing-entry'."
   (interactive)
   (org-brain-remove-title org-brain--visualizing-entry)
   (when (string-equal (buffer-name) "*org-brain*")
