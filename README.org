@@ -124,30 +124,36 @@ Once in the org-brain-visualize interface/mode, via =M-x org-brain-visualize=, y
    default name for these headlines, you can customize
    =org-brain-children-headline-default-name=.
 3. "C" to remove a child (link) for the current entry. This does not delete the
-   file pointed to by the child (link).
+   file pointed to by the child (link). You may enter several children at
+   once separated by =org-brain-batch-separator=, ";" by default, to
+   simultaneously remove more than one.
 4. "p" to create a parent for the current entry. You may enter several parents at
    once separated by =org-brain-batch-separator=, ";" by default, to
    simultaneously create more than one.
-5. "P" to pin the current entry (if it is already pinned, then =org-brain= will respect that)
-6. "R" to remove a pin from the current entry
-7. "r" to rename the current entry
+5. "P" to remove a parent for the current entry. You may enter several parents at
+   once separated by =org-brain-batch-separator=, ";" by default, to
+   simultaneously remove more than one.
+6. "n" to pin the current entry (if it is already pinned, then =org-brain= will respect that)
+7. "N" to remove a pin from the current entry
+8. "r" to rename the current entry
    This will only change the filename and entry name, not the =#+TITLE= of
    the entry.
-8. "t" to add or change the title of the current entry
+9. "t" to add or change the title of the current entry
    This will create a new title, prompting you for the value. If a
    title, #+TITLE: some-title, already exists then it will be replaced with the
    new title you've provide.
-9. "T" to remove a title of the current entry altogether.
+10. "T" to remove a title of the current entry altogether.
 
 Here is the the full list of keybindings:
 
 | j / TAB   | Goto next link                        |
 | k / S-TAB | Goto previous link                    |
-| c         | Add child                             |
-| C         | Remove child                          |
-| p         | Add parent                            |
-| P         | Add pin                               |
-| R         | Remove pin                            |
+| c         | Add child(ren)                        |
+| C         | Remove child(ren)                     |
+| p         | Add parent(s)                         |
+| P         | Remove parent(s)                      |
+| n         | Add pin                               |
+| N         | Remove pin                            |
 | t         | Add or change title                   |
 | T         | Remove title                          |
 | l         | Add resource link                     |

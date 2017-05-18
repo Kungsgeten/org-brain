@@ -322,28 +322,24 @@ You can choose to EXCLUDE an entry from the list."
                           (org-brain-title child)))
           (save-buffer)))))
 
-(defun org-brain-remove-child (entry)
-  "In org-brain ENTRY, remove a child link of ENTRY obtained from
-  prompting the user. This doesn't delete the file pointed to by
-  the link, just the link."
+(defun org-brain-remove-child (entry child)
+  "In org-brain ENTRY, remove CHILD link. This doesn't delete the
+  file pointed to by the link, just the link."
   (let ((entry-path (org-brain-entry-path entry)))
     (org-save-all-org-buffers)
-    (let ((child-to-remove
-           (completing-read "Child to remove: "
-            (org-brain-children entry))))
-      (with-current-buffer (find-file-noselect entry-path)
-          (goto-char (point-min))
-          (save-excursion
-            (re-search-forward
-             (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
-            (beginning-of-line)
-            (re-search-forward
-             (format "^ *- \\[\\[brain:%s.*$" child-to-remove) nil t)
-            (beginning-of-line)
-            (looking-at (format "^ *- \\[\\[brain:%s.*$" child-to-remove))
-            (kill-line 1)
-            (save-buffer)
-            (org-brain-invalidate-child-cache-entry entry))))))
+    (with-current-buffer (find-file-noselect entry-path)
+      (goto-char (point-min))
+      (save-excursion
+        (re-search-forward
+         (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
+        (beginning-of-line)
+        (re-search-forward
+         (format "^ *- \\[\\[brain:%s.*$" child) nil t)
+        (beginning-of-line)
+        (looking-at (format "^ *- \\[\\[brain:%s.*$" child))
+        (kill-line 1)
+        (save-buffer)
+        (org-brain-invalidate-child-cache-entry entry)))))
 
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
@@ -700,15 +696,19 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
-(defun org-brain-visualize-remove-child ()
-  "Prompt user for child of entry last visited by
-  `org-brain-visualize' to remove and then remove it. This does
-  not delete the file pointed to by the child link."
-  (interactive)
+(defun org-brain-visualize-remove-child (child)
+  "Prompt user for child(ren) of entry last visited by
+  `org-brain-visualize' to remove and then remove it/them. This
+  does not delete the file pointed to by the child link."
+  (interactive
+   (list (completing-read "Child: "
+                          (org-brain-children org-brain--visualizing-entry))))
   (org-brain-invalidate-files-cache)    ; Invalidate cache
   (org-brain-invalidate-child-cache-entry
    org-brain--visualizing-entry)        ; Invalidate cache
-  (org-brain-remove-child org-brain--visualizing-entry)
+  (dolist (c (split-string child org-brain-batch-separator t " +"))
+    (org-brain-remove-child org-brain--visualizing-entry c))
+  ;; (org-brain-remove-child org-brain--visualizing-entry)
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
@@ -722,6 +722,20 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
    org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (p (split-string parent org-brain-batch-separator t " +"))
     (org-brain-new-child p org-brain--visualizing-entry))
+  (when (string-equal (buffer-name) "*org-brain*")
+    (revert-buffer)))
+
+(defun org-brain-visualize-remove-parent (parent)
+  "In PARENT remove link to entry last visited by `org-brain-visualize'.
+PARENT can hold multiple entries, by using `org-brain-batch-separator'."
+  (interactive
+   (list (completing-read "Parent: "
+                          (org-brain-parents org-brain--visualizing-entry))))
+  (org-brain-invalidate-files-cache)    ; Invalidate cache
+  (org-brain-invalidate-parent-cache-entry
+   org-brain--visualizing-entry)        ; Invalidate cache
+  (dolist (p (split-string parent org-brain-batch-separator t " +"))
+    (org-brain-remove-child p org-brain--visualizing-entry))
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
@@ -827,10 +841,11 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
   (setq revert-buffer-function #'org-brain-visualize-revert))
 
 (define-key org-brain-visualize-mode-map "p" 'org-brain-visualize-add-parent)
+(define-key org-brain-visualize-mode-map "P" 'org-brain-visualize-remove-parent)
 (define-key org-brain-visualize-mode-map "c" 'org-brain-visualize-add-child)
 (define-key org-brain-visualize-mode-map "C" 'org-brain-visualize-remove-child)
-(define-key org-brain-visualize-mode-map "P" 'org-brain-visualize-add-pin)
-(define-key org-brain-visualize-mode-map "R" 'org-brain-visualize-remove-pin)
+(define-key org-brain-visualize-mode-map "n" 'org-brain-visualize-add-pin)
+(define-key org-brain-visualize-mode-map "N" 'org-brain-visualize-remove-pin)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-visualize-add-or-change-title)
 (define-key org-brain-visualize-mode-map "T" 'org-brain-visualize-remove-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
