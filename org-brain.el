@@ -547,6 +547,131 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
         (goto-char position)))))
 
 
+(defun org-brain--insert-headlines-and-resources (entry)
+  "Insert a horizontal separator followed by the headlines and
+  resources for the ENTRY in the visualize interface."
+  (insert "\n\n-----------------------------------------------\n\n")
+  (let ((resources (org-brain-resources entry)))
+    ;; Top level resources
+    (when (mapc #'org-brain-insert-resource-button
+                (cl-remove-if (lambda (x) (eq nil (car x))) resources))
+      (insert "\n"))
+    (org-element-map
+        (with-temp-buffer
+          (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+          (delay-mode-hooks
+            (org-mode)
+            (org-element-parse-buffer)))
+        'headline
+      (lambda (headline)
+        (let ((head-title (org-element-property :raw-value headline)))
+          (insert (make-string (org-element-property :level headline) ?*) " ")
+          (insert-text-button
+           head-title
+           'action (lambda (_x)
+                     (org-open-file (org-brain-entry-path entry)
+                                    nil nil
+                                    (concat "*" head-title)))
+           'follow-link t)
+          (insert "\n")
+          ;; Headline resources
+          (when (mapc (lambda (resource)
+                        (org-brain-insert-resource-button
+                         resource (1+ (org-element-property :level headline))))
+                      (cl-remove-if
+                       (lambda (x) (string-equal head-title (car x))) resources))
+            (insert "\n")))))))
+
+(defun org-brain--insert-pinned-entries ()
+  "Insert the pinned entries in the visualize interface."
+  (insert "PINNED:")
+  (mapc (lambda (pin)
+          (insert "  ")
+          (org-brain-insert-visualize-button pin))
+        (org-brain-pins))
+  (insert "\n\n\n"))
+
+(defun org-brain--insert-parent-and-sibling-entries (entry &optional ignored-siblings)
+  "Insert parent and sibling entries into the visualize
+  interface."
+  (let ((parent-positions nil)
+        (max-width 0))
+    (mapc (lambda (parent)
+            (push parent ignored-siblings)
+            (let ((children-links (set-difference
+                                   (org-brain-children parent entry)
+                                   ignored-siblings))
+                  (col-start (+ 3 max-width))
+                  (parent-title (org-brain-title parent)))
+              (goto-line 4)
+              (mapc
+               (lambda (child)
+                 (picture-forward-column col-start)
+                 (insert (make-string (1+ (length parent-title)) ?\ ) "/ ")
+                 (org-brain-insert-visualize-button child)
+                 (setq max-width (max max-width (current-column)))
+                 (newline (forward-line 1))
+                 (push child ignored-siblings))
+               children-links)
+              (goto-line 4)
+              (forward-line (1- (length children-links)))
+              (picture-forward-column col-start)
+              (push (cons (picture-current-line)
+                          (+ (current-column) (/ (length parent-title) 2)))
+                    parent-positions)
+              (org-brain-insert-visualize-button parent)
+              (setq max-width (max max-width (current-column)))
+              (when children-links
+                (delete-char (length parent-title)))))
+          (org-brain-parents entry))
+    ;; Draw lines
+    (when parent-positions
+      (let ((maxline (line-number-at-pos (point-max))))
+        ;; Bottom line
+        (goto-line maxline)
+        (picture-forward-column (cdar (last parent-positions)))
+        (picture-move-down 1)
+        (insert (make-string (1+ (- (cdar parent-positions)
+                                    (cdar (last parent-positions))))
+                             ?-))
+        ;; Lines from parents to bottom
+        (mapc (lambda (pos)
+                (goto-line (car pos))
+                (picture-forward-column (cdr pos))
+                (while (< (line-number-at-pos (point))
+                          maxline)
+                  (picture-move-down 1)
+                  (insert "|")
+                  (unless (looking-at-p "\n") (delete-char 1)))
+                (picture-move-down 1)
+                (ignore-errors
+                  (delete-char 1))
+                (insert "*"))
+              parent-positions)
+        ;; Line to main entry
+        (move-to-column (/ (+ (cdar (last parent-positions))
+                              (cdar parent-positions))
+                           2))
+        (delete-char 1)
+        (when (> (length parent-positions) 1)
+          (insert "*")
+          (backward-char 1)
+          (picture-move-down 1)
+          (insert "|")
+          (picture-move-down 1))
+        (insert "V")))))
+
+(defun org-brain--insert-entry-children (entry)
+  "Insert ENTRY children into the visualize interface."
+  (mapc (lambda (child)
+          (let ((child-title (org-brain-title child)))
+            (when (> (+ (current-column) (length child-title))
+                     fill-column)
+              (insert "\n"))
+            (org-brain-insert-visualize-button child)
+            (insert "  ")))
+        (org-brain-children entry)))
+
 ;;;###autoload
 (defun org-brain-visualize (entry &optional ignored-siblings nofocus)
   "View a concept map with ENTRY at the center.
@@ -564,79 +689,9 @@ the concept map buffer will gain focus."
     (read-only-mode -1)
     (delete-region (point-min) (point-max))
     ;; Pinned entries
-    (insert "PINNED:")
-    (mapc (lambda (pin)
-            (insert "  ")
-            (org-brain-insert-visualize-button pin))
-          (org-brain-pins))
-    (insert "\n\n\n")
+    (org-brain--insert-pinned-entries)
     ;; Draw parent entries and siblings
-    (let ((parent-positions nil)
-          (max-width 0))
-      (mapc (lambda (parent)
-              (push parent ignored-siblings)
-              (let ((children-links (set-difference
-                                     (org-brain-children parent entry)
-                                                 ignored-siblings))
-                    (col-start (+ 3 max-width))
-                    (parent-title (org-brain-title parent)))
-                (goto-line 4)
-                (mapc
-                 (lambda (child)
-                   (picture-forward-column col-start)
-                   (insert (make-string (1+ (length parent-title)) ?\ ) "/ ")
-                   (org-brain-insert-visualize-button child)
-                   (setq max-width (max max-width (current-column)))
-                   (newline (forward-line 1))
-                   (push child ignored-siblings))
-                 children-links)
-                (goto-line 4)
-                (forward-line (1- (length children-links)))
-                (picture-forward-column col-start)
-                (push (cons (picture-current-line)
-                            (+ (current-column) (/ (length parent-title) 2)))
-                      parent-positions)
-                (org-brain-insert-visualize-button parent)
-                (setq max-width (max max-width (current-column)))
-                (when children-links
-                  (delete-char (length parent-title)))))
-            (org-brain-parents entry))
-      ;; Draw lines
-      (when parent-positions
-        (let ((maxline (line-number-at-pos (point-max))))
-          ;; Bottom line
-          (goto-line maxline)
-          (picture-forward-column (cdar (last parent-positions)))
-          (picture-move-down 1)
-          (insert (make-string (1+ (- (cdar parent-positions)
-                                      (cdar (last parent-positions))))
-                               ?-))
-          ;; Lines from parents to bottom
-          (mapc (lambda (pos)
-                  (goto-line (car pos))
-                  (picture-forward-column (cdr pos))
-                  (while (< (line-number-at-pos (point))
-                            maxline)
-                    (picture-move-down 1)
-                    (insert "|")
-                    (unless (looking-at-p "\n") (delete-char 1)))
-                  (picture-move-down 1)
-                  (ignore-errors
-                    (delete-char 1))
-                  (insert "*"))
-                parent-positions)
-          ;; Line to main entry
-          (move-to-column (/ (+ (cdar (last parent-positions))
-                                (cdar parent-positions))
-                             2))
-          (delete-char 1)
-          (when (> (length parent-positions) 1)
-            (insert "*")
-            (backward-char 1)
-            (picture-move-down 1)
-            (insert "|")
-            (picture-move-down 1))
-          (insert "V"))))
+    (org-brain--insert-parent-and-sibling-entries entry ignored-siblings)
     ;; Insert main entry name
     (picture-move-down 1)
     (let ((half-title-length (/ (length (org-brain-title entry)) 2)))
@@ -647,45 +702,9 @@ the concept map buffer will gain focus."
     (let ((entry-pos (point)))
       (insert (org-brain-title entry) "\n\n")
       ;; Insert entry children
-      (mapc (lambda (child)
-              (let ((child-title (org-brain-title child)))
-                (when (> (+ (current-column) (length child-title))
-                         fill-column)
-                  (insert "\n"))
-                (org-brain-insert-visualize-button child)
-                (insert "  ")))
-            (org-brain-children entry))
+      (org-brain--insert-entry-children entry)
       ;; Insert headlines and resources in entry file
-      (insert "\n\n-----------------------------------------------\n\n")
-      (let ((resources (org-brain-resources entry)))
-        ;; Top level resources
-        (when (mapc #'org-brain-insert-resource-button
-                    (cl-remove-if (lambda (x) (eq nil (car x))) resources))
-          (insert "\n"))
-        (org-element-map (with-temp-buffer
-                           (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-                           (delay-mode-hooks
-                             (org-mode)
-                             (org-element-parse-buffer)))
-            'headline
-          (lambda (headline)
-            (let ((head-title (org-element-property :raw-value headline)))
-              (insert (make-string (org-element-property :level headline) ?*) " ")
-              (insert-text-button
-               head-title
-               'action (lambda (_x)
-                         (org-open-file (org-brain-entry-path entry)
-                                        nil nil
-                                        (concat "*" head-title)))
-               'follow-link t)
-              (insert "\n")
-              ;; Headline resources
-              (when (mapc (lambda (resource)
-                            (org-brain-insert-resource-button
-                             resource (1+ (org-element-property :level headline))))
-                          (cl-remove-if
-                           (lambda (x) (string-equal head-title (car x))) resources))
-                (insert "\n"))))))
+      (org-brain--insert-headlines-and-resources entry)
       ;; Finishing
       (org-brain-visualize-mode)
       (goto-char entry-pos)
