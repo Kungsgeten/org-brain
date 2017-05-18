@@ -66,7 +66,7 @@ This will be used by `org-brain-new-child'."
 
 ;;; Utils
 (defun org-brain-flatten (obj)
-  "Return a 1-dimensional list, OBJ, given an n-dimensional list."
+  "Return a 1-dimensional list, given an n-dimensional list OBJ."
   (do* ((result (list obj))
         (node result))
        ((null node) (delete nil result))
