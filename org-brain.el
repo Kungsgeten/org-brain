@@ -345,6 +345,25 @@ You can choose to EXCLUDE an entry from the list."
         (kill-line 1)
         (save-buffer)))))
 
+(defun org-brain-remove-child (entry child)
+  "In org-brain ENTRY, remove CHILD link. This doesn't delete the
+  file pointed to by the link, just the link."
+  (let ((entry-path (org-brain-entry-path entry)))
+    (org-save-all-org-buffers)
+    (with-current-buffer (find-file-noselect entry-path)
+      (goto-char (point-min))
+      (save-excursion
+        (re-search-forward
+         (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
+        (beginning-of-line)
+        (re-search-forward
+         (format "^ *- \\[\\[brain:%s.*$" child) nil t)
+        (beginning-of-line)
+        (looking-at (format "^ *- \\[\\[brain:%s.*$" child))
+        (kill-line 1)
+        (save-buffer)
+        (org-brain-invalidate-child-cache-entry entry)))))
+
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
