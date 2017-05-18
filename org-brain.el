@@ -142,6 +142,7 @@ This will be used by `org-brain-new-child'."
   (org-brain-log "Invalidating org-brain pin cache...")
   (setq org-brain-pins-cache nil))
 
+;;;###autoload
 (defun org-brain-build-caches ()
   "(Optional) It is not necessary to use this function as the
   caches are built lazily, automatically. However, this is just
@@ -330,12 +331,14 @@ You can choose to EXCLUDE an entry from the list."
     (let ((child-to-remove
            (completing-read "Child to remove: "
             (org-brain-children entry))))
-      (with-current-buffer (get-file-buffer entry-path)
+      (with-current-buffer (find-file-noselect entry-path)
           (goto-char (point-min))
           (save-excursion
-            (re-search-forward (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
+            (re-search-forward
+             (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
             (let ((bound (outline-next-heading)))
-              (re-search-backward (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
+              (re-search-backward
+               (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
               (beginning-of-line)
               (re-search-forward
                (format "^ *- \\[\\[brain:%s.*$" child-to-remove) bound t)
