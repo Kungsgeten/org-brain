@@ -307,26 +307,31 @@ You can choose to EXCLUDE an entry from the list."
     (unless (file-exists-p entry-path)
       (with-temp-file entry-path
         (make-directory (file-name-directory entry-path) t)))
-    (or (org-map-entries (lambda ()
-                           (end-of-line)
-                           (insert (format "\n- [[brain:%s][%s]]" child (org-brain-title child)))
-                           (save-buffer))
-                         (format "+%s" org-brain-children-tag-default-name)
-                         (list entry-path))
-        (with-current-buffer (get-file-buffer entry-path)
+    (with-current-buffer (find-file-noselect entry-path)
+      (goto-char (point-min))
+      (save-excursion
+        (if (re-search-forward
+               (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name)
+               nil t)
+            (progn
+              (end-of-line)
+              (insert (format "\n- [[brain:%s][%s]]"
+                              child (org-brain-title child)))
+              (save-buffer))
           (goto-char (point-max))
           (insert (format "\n\n* %s    :%s:\n- [[brain:%s][%s]]"
-                          org-brain-children-tag-default-name
                           org-brain-children-headline-default-name
+                          org-brain-children-tag-default-name
                           child
                           (org-brain-title child)))
-          (save-buffer)))))
+          (save-buffer))))))
 
 (defun org-brain-remove-child (entry child)
   "In org-brain ENTRY, remove CHILD link. This doesn't delete the
   file pointed to by the link, just the link."
   (let ((entry-path (org-brain-entry-path entry)))
     (org-save-all-org-buffers)
+    (org-brain-invalidate-child-cache-entry entry)
     (with-current-buffer (find-file-noselect entry-path)
       (goto-char (point-min))
       (save-excursion
@@ -338,8 +343,7 @@ You can choose to EXCLUDE an entry from the list."
         (beginning-of-line)
         (looking-at (format "^ *- \\[\\[brain:%s.*$" child))
         (kill-line 1)
-        (save-buffer)
-        (org-brain-invalidate-child-cache-entry entry)))))
+        (save-buffer)))))
 
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
@@ -708,7 +712,6 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
    org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (c (split-string child org-brain-batch-separator t " +"))
     (org-brain-remove-child org-brain--visualizing-entry c))
-  ;; (org-brain-remove-child org-brain--visualizing-entry)
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
