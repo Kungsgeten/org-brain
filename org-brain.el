@@ -189,27 +189,26 @@ If RELATIVE is t, then return relative paths and remove org extension."
   (if (and org-brain-parents-cache
            (assoc entry org-brain-parents-cache))
       (cdr (assoc entry org-brain-parents-cache))
-    (progn
-      (org-brain-log (format  "Updating org-brain-parents-cache for %s..." entry))
-      (let ((parents (remove nil
-                      (mapcar
-                       (lambda (brainfile)
-                         (let ((brainfile-entry (org-brain-path-entry-name brainfile)))
-                           (unless (string-equal brainfile-entry entry)
-                             (org-element-map
-                                 (with-temp-buffer
-                                   (insert-file-contents brainfile)
-                                   (org-element-parse-buffer))
-                                 'link
-                               (lambda (link)
-                                 (when (and (string-equal (org-element-property :type link) "brain")
-                                            (string-equal (car (split-string (org-element-property :path link) "::"))
-                                                          entry))
-                                   brainfile-entry))
-                               nil t))))
-                       (org-brain-files)))))
-        (push (cons entry . (parents)) org-brain-parents-cache)
-        (cdr (assoc entry org-brain-parents-cache))))))
+    (org-brain-log (format  "Updating org-brain-parents-cache for %s..." entry))
+    (let ((parents (remove nil
+                           (mapcar
+                            (lambda (brainfile)
+                              (let ((brainfile-entry (org-brain-path-entry-name brainfile)))
+                                (unless (string-equal brainfile-entry entry)
+                                  (org-element-map
+                                      (with-temp-buffer
+                                        (insert-file-contents brainfile)
+                                        (org-element-parse-buffer))
+                                      'link
+                                    (lambda (link)
+                                      (when (and (string-equal (org-element-property :type link) "brain")
+                                                 (string-equal (car (split-string (org-element-property :path link) "::"))
+                                                               entry))
+                                        brainfile-entry))
+                                    nil t))))
+                            (org-brain-files)))))
+      (push (cons entry . (parents)) org-brain-parents-cache)
+      (cdr (assoc entry org-brain-parents-cache)))))
 
 (defun org-brain-children (entry &optional exclude)
   "Get list of org-brain entries linked to from ENTRY.
