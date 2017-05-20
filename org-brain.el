@@ -468,7 +468,7 @@ is (raw-link description)."
                                         attachment)))
                           (org-attach-file-list attach-dir)))))))
          ;; Links
-	 (cl-delete-if
+	 (cl-remove-if
 	  ;; we want to delete elements which for some reason `org-element-contents' does not return
 	  ;; a string or nil. I think is a non-desired behaviour from `org-element-parse-buffer'.
 	  (lambda (elt)
