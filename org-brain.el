@@ -484,9 +484,7 @@ is (raw-link description)."
 			 (goto-char (org-element-property :begin link))
 			 (ignore-errors (org-get-heading t t)))
 		       (list (org-element-property :raw-link link)
-			     (car (org-element-contents link))))))))
-
-		       ))))))))))
+			     (car (org-element-contents link))))))))))))))
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
