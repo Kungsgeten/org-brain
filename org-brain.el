@@ -468,15 +468,23 @@ is (raw-link description)."
                                         attachment)))
                           (org-attach-file-list attach-dir)))))))
          ;; Links
-         (delete-dups
-          (org-element-map data 'link
-            (lambda (link)
-              (unless (member (org-element-property :type link) org-brain-ignored-resource-links)
-                (cons (progn
-                        (goto-char (org-element-property :begin link))
-                        (ignore-errors (org-get-heading t t)))
-                      (list (org-element-property :raw-link link)
-                            (car (org-element-contents link)))))))))))))
+	 (cl-remove-if
+	  ;; we want to delete elements which for some reason `org-element-contents' does not return
+	  ;; a string or nil. I think is a non-desired behaviour from `org-element-parse-buffer'.
+	  (lambda (elt)
+	    "Return true if elements links which the text/label (third item) is not a string or nil."
+	    (not (or (null (caddr elt))
+		     (char-or-string-p (caddr elt)))))
+	  
+	  (delete-dups
+	   (org-element-map data 'link
+	     (lambda (link)
+	       (unless (member (org-element-property :type link) org-brain-ignored-resource-links)
+		 (cons (progn
+			 (goto-char (org-element-property :begin link))
+			 (ignore-errors (org-get-heading t t)))
+		       (list (org-element-property :raw-link link)
+			     (car (org-element-contents link))))))))))))))
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
