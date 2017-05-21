@@ -569,7 +569,7 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
   (let ((resources (org-brain-resources entry)))
     ;; Top level resources
     (when (mapc #'org-brain-insert-resource-button
-                (cl-remove-if (lambda (x) (eq nil (car x))) resources))
+                (cl-remove-if-not (lambda (x) (eq nil (car x))) resources))
       (insert "\n"))
     (org-element-map
         (with-temp-buffer
@@ -593,7 +593,7 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
           (when (mapc (lambda (resource)
                         (org-brain-insert-resource-button
                          resource (1+ (org-element-property :level headline))))
-                      (cl-remove-if
+                      (cl-remove-if-not
                        (lambda (x) (string-equal head-title (car x))) resources))
             (insert "\n")))))))
 
