@@ -246,26 +246,53 @@ If RELATIVE is t, then return relative paths and remove org extension."
                      (format "%s.%s" entry org-brain-files-extension))
                     org-brain-path))
 
-(defun org-brain-parents (entry)
-  "Get list of org-brain parent entries which links to ENTRY."
+(defun org-brain-parents (entry &optional exclude)
+  "Get list of org-brain parent entries linked to ENTRY.
+You can choose to EXCLUDE an entry from the list."
   (if (and org-brain-parents-cache
            (assoc entry org-brain-parents-cache))
       (cdr (assoc entry org-brain-parents-cache))
-    (org-brain-log (format  "Updating org-brain-parents-cache for %s..." entry))
+    (org-brain-log (format "Updating org-brain-parents-cache for %s..." entry))
     (let ((parents
-           (delete-dups
-            (org-element-map
-                (org-brain--parsetree-for-entry entry)
-                'link
-              (lambda (link)
-                (when (string-equal
-                       (org-element-property :type link)
-                       org-brain-parent-link-type)
-                  (let ((link-entry
-                         (car (split-string
-                               (org-element-property :path link)
-                               "::"))))
-                    (unless (string-equal link-entry entry) link-entry))))))))
+           (delete
+            exclude
+            (delete-dups
+             (org-brain-flatten
+              (org-element-map (org-brain--parsetree-for-entry entry) 'headline
+                (lambda (headline)
+                  ;; Only look for parents that are attached to the
+                  ;; org-brain-parents-headline-default-name headline.
+                  (when (string-equal (org-element-property :raw-value headline)
+                                      org-brain-parents-headline-default-name)
+                    (org-element-map (org-element-contents headline) 'link
+                      (lambda (link)
+
+                        ;; NOTE This gets child link description successfully
+                        ;; (let* ((raw-link (org-element-property :raw-link link))
+                        ;;        (link-contents (car (org-element-contents link)))
+                        ;;        (description (org-brain--link-description
+                        ;;                      (list raw-link
+                        ;;                            link-contents))))
+                        ;;   (substring-no-properties description))
+
+                        ;; NOTE This can ensure link type.
+                        ;; (when (string-equal
+                        ;;        (org-element-property :type link)
+                        ;;        org-brain-parent-link-type)
+                        ;;   (let* ((raw-link (org-element-property :raw-link link))
+                        ;;          (link-contents (car (org-element-contents link)))
+                        ;;          (description (org-brain--link-description
+                        ;;                        (list raw-link
+                        ;;                              link-contents))))
+                        ;;     description)
+                        ;;   )
+
+                        (let ((link-entry
+                               (car (split-string
+                                     (org-element-property :path link)
+                                     "::"))))
+                          (unless (string-equal link-entry entry) link-entry)))
+                      nil nil 'headline)))))))))
       (push (cons entry . (parents)) org-brain-parents-cache)
       (cdr (assoc entry org-brain-parents-cache)))))
 
@@ -604,6 +631,8 @@ You can choose to EXCLUDE an entry from the list."
 
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
+  (org-brain-log (format "In org-brain-insert-visualize-button, entry title: %s"
+                         (org-brain-title entry)))
   (insert-text-button
    (org-brain-title entry)
    'action (lambda (_x) (org-brain-visualize entry))
@@ -781,7 +810,6 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
         (org-brain-pins))
   (insert "\n\n\n"))
 
-
 (defun org-brain--insert-entry-children (entry)
   "Insert ENTRY children into the visualize interface."
   (mapc (lambda (child)
@@ -793,16 +821,6 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
             (insert "  ")))
         (org-brain-children entry)))
 
-;; (defun org-brain--insert-entry-children (entry)
-;;   "Insert ENTRY children into the visualize interface."
-;;   (mapc (lambda (child)
-;;           (when (> (+ (current-column) (length child))
-;;                    fill-column)
-;;             (insert "\n"))
-;;           (org-brain-insert-visualize-button child)
-;;           (insert "  "))
-;;         (org-brain-children entry)))
-
 ;;; FIXME
 (defun org-brain--insert-parent-and-sibling-entries
     (entry &optional ignored-siblings)
@@ -811,10 +829,12 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
   (let ((parent-positions nil)
         (max-width 0))
     (mapc (lambda (parent)
-            ;; (push parent ignored-siblings) ; put parent in ignored siblings
-            (let ((children (org-brain-children parent) ; Get children
-                                                              ; of current
-                                                              ; parent
+            (push parent ignored-siblings) ; put parent in ignored siblings
+            (let ((children (set-difference
+                             (org-brain-children parent)
+                             ignored-siblings) ; Get children of current
+                                               ; parent and exclude
+                                               ; ignored-siblings.
                                   ;; (set-difference  ; this set-difference
                                   ;;                  ; should go away now?
                                   ;;  ;; (org-brain-children parent entry)
@@ -824,36 +844,39 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
                                               ; location
                   ;; Get parent title
                   (parent-title (org-brain-title parent)))
+              (org-brain-log (format "In org-brain--insert-parent-and-sibling-entries, children: %s" children))
               (goto-line 4) ; Jump to 4th line from top
+              ;; Start drawing
               (mapc
                (lambda (child)
+                 (org-brain-log (format "In org-brain--insert-parent-and-sibling-entries, child: %s" child))
                  (picture-forward-column col-start)   ; Move cursor right by
                                                       ; col-start columns
                  (insert (make-string
                           (1+ (length parent-title)) ?\ ) "/ ") ; Draw "/"
                                                                 ; UI element
-                                                                ; that precedes
+                                                                ; one space
+                                                                ; to the right
+                                                                ; of the
                                                                 ; parent's
-                                                                ; child and
-                                                                ; sibling of
-                                                                ; current entry.
-                 (org-brain-insert-visualize-button child) ; Draw link button to
-                                                           ; child
+                                                                ; title.
+                 (org-brain-insert-visualize-button child) ; Draw link button
+                                                           ; for child.
                  (setq max-width (max max-width (current-column))) ; Update
                                                                    ; max-width
                  (newline (forward-line 1)) ; Insert newline and move down one
-                                            ; line
+                                            ; line.
                  ;; NOTE Not sure this next line is needed now.
-                 ;; (push child ignored-siblings) ; Push child onto
+                 (push child ignored-siblings) ; Push child onto
                                                   ; ignored-siblings
                  )
                children)
               (goto-line 4)             ; Jump to line 4 from top
-              (forward-line (1- (length children)))  ; Move forward enough
-                                                           ; lines to location
-                                                           ; where parent of
-                                                           ; children drawn
-                                                           ; should be located.
+              (forward-line (1- (length children)))  ; Move forward/down enough
+                                                     ; lines to location
+                                                     ; where parent of
+                                                     ; children drawn
+                                                     ; should be located.
               (picture-forward-column col-start) ; Move cursor to col-start
                                                  ; starting location.
               (push (cons (picture-current-line)
@@ -938,10 +961,7 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
   HEADLINE)."
   (org-element-map (org-element-contents headline) 'link
     (lambda (link)
-      (let* ((heading (progn
-                        (goto-char (org-element-property :begin link))
-                        (ignore-errors (org-get-heading t t))))
-             (raw-link (org-element-property :raw-link link))
+      (let* ((raw-link (org-element-property :raw-link link))
              (link-contents (car (org-element-contents link)))
              (description (org-brain--link-description
                            (list raw-link
@@ -961,7 +981,8 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
           (org-brain--insert-resource-button
            raw-link
            raw-link
-           (1+ (org-element-property :level headline))))))
+           (1+ (org-element-property :level headline))))
+        ))
     nil nil 'headline))         ; No recursion on headline, i.e., just
                                 ; get the links for the current
                                 ; headline, but not any of its children
@@ -980,9 +1001,6 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
    'follow-link t)
   (insert "\n"))
 
-;;; FIXME The reason, I think, this fails UI drawing is that it parses the
-;;; buffer whereas other insert-- functions do not, so it is parsing a buffer
-;;; that has changed maybe??!!
 (defun org-brain--insert-headlines-and-resources (entry)
   "Insert a horizontal separator followed by the headlines and
   resources for the ENTRY in the visualize interface."
@@ -1022,9 +1040,6 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
           ;;               (org-element-contents headline) 'link 'identity
           ;;               nil nil 'headline))))
 
-          ;; Draw headline's links
-          ;; FIXME Including this does some weird stuff drawing the UI, even
-          ;; in the siblings area?!
           ;; See: [[id:0D41BB92-E21F-41EB-9310-FD5D54274626][A note about understanding the visualize interface]] for a
           ;; better understanding of link display in the visualize interface.
           (org-brain--insert-resources headline)
