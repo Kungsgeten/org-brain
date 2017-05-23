@@ -32,8 +32,6 @@ Game Maker  Unity
 /* Gamasutra Articles
    - Passing Through Ghosts in Pac-Man
    - In-House Engine Development: Technical Tips
-
-/* Brainchildren
 #+END_EXAMPLE
 
 Above is a visualization of the /game programming/ entry (as can be seen in the
@@ -45,45 +43,70 @@ the entry: /Game Maker/ and /Unity/. At the very top you'll find pinned entries
 (entries which will be shown independent of the visualized entry).
 
 At the bottom the entry's table of contents (headlines in the buffer) is shown:
-/Gamasutra Articles/ and /Brainchildren/. You can also see the resources of the
-entry: the two Gamasutra articles and the Wikipedia link. Resources can be
-=org-mode= links in the entry file, or [[http://orgmode.org/manual/Attachments.html][org attachments]].
+/Gamasutra Articles/. You can also see the resources of the entry: the two
+Gamasutra articles and the Wikipedia link. Resources can be =org-mode= links in
+the entry file, or [[http://orgmode.org/manual/Attachments.html][org attachments]].
 
 The parents, children, siblings, headlines and resources are all links; they can
 be pressed to visualize other entries, visit resources etc.
+* Backwards compatability/breaking change: Version 0.4 changes the way child and parent relations are stored 
+Parent relationships for an entry are now stored as links under the
+=org-brain-parents-headline-default-name=, e.g., "Brainparents" by default,
+headline, whose creation and maintenance is automated by the =org-brain-visualize=
+interface commands.
 
+As before, child relationships for an entry are stored as links under the
+=org-brain-children-headline-default-name=, e.g., "Brainchildren by default,
+headline, whose creation and maintenance is automated by the =org-brain-visualize=
+interface commands.
+
+Ideally, you'll not manually operate on either the
+=org-brain-parents-headline-default-name= or the
+=org-brain-children-headline-default-name= headlines or their links. However, if
+you already have org-brain files in place and you do not wish to re-establish
+child and parent relationships through the =org-brain-visualize= interface for
+these existing files, then you may manually change the
+=org-brain-simple-link-type=, e.g., "brain:" by default, links under your
+=org-brain-children-headline-default-name=, e.g., "Brainchildren" by default,
+headline to be =org-brain-child-link-type=, e.g., "brainchild:" by default, links.
+
+Note that =org-brain-simple-link-type= links will continue to work as general
+links, similar to a "file:" link in Org, but they are not recognized by
+org-brain as child or parent relationship links. 
+
+This breaking change simplifies the logic of org-brain and greatly increases
+its performance.
 * Setup and requirements
-
 The easiest way is to get =org-brain= from MELPA. If you do not want to do that or
 would like this fork which includes caching and an extended visualize interface,
-here's the steps to install it manually:
+here are the steps to install it manually:
 
 1. =org-brain= requires Emacs 25, org-mode 9. These need to be part of your Emacs.
 2. Clone the repo locally (plug for [[https://github.com/motemen/ghq][ghq]] to manage local repo cloning).
 3. Utilize =use-package= to load the repo. (Alternatively, download =org-brain.el=, add it to your load-path, and put =(require 'org-brain)= in your init-file.)
-   #+begin_src emacs-lisp
+   #+begin_src emacs-lisp 
    (use-package org-brain
-     ;; :ensure t ; If you want to use MELPA package which doesn't include the caching and extended visualize interface.
+     ;; :ensure t ; If you want to use MELPA package.
      :load-path "~/.ghq/github.com/analyticd/org-brain"
      :init
-     (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/just/your/existing/org/files/directory"))
+     (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/just/your/existing/org-directory"))
    #+end_src
 4. Configure =org-brain-path= (defaults to =/brain= in your =org-directory=) to a directory where you want to put your =org-brain= files (which could be the location where you already keep your org files if you wish to transform your existing org files into =org-brain= files)
    You can set this with the example config presented above or through the customize interface,
 5. If you are an evil user, you'll want to add =(evil-set-initial-state 'org-brain-visualize-mode 'emacs)= to your =org-brain= configuration. Here is the config example above, updated:
    #+begin_src emacs-lisp
    (use-package org-brain
-     ;; :ensure t ; If you want to use MELPA package which doesn't include the caching and extended visualize interface.
+     ;; :ensure t ; If you want to use MELPA package.
      :load-path "~/.ghq/github.com/analyticd/org-brain"
      :init
-     (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org/files/directory")
+     (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org-directory")
      (eval-after-load 'evil
        (evil-set-initial-state 'org-brain-visualize-mode 'emacs)))
    #+end_src
 6. If you want to eagerly build some of the caches (rather than wait to have
    them built automatically in a lazy way), you may use =org-brain-build-caches=
    either interactively or programatically, perhaps during Emacs startup time
-   (while you get your coffee). You'll be adding about 15 seconds to Emacs
+   (while you get your coffee). You'll be adding about several seconds to Emacs
    startup time in exchange for the same savings of save on your initial use of
    org-brain. Example configuration for this:
    #+begin_src emacs-lisp
@@ -91,7 +114,7 @@ here's the steps to install it manually:
       ;; :ensure t ; Pull request not yet in MELPA package
       :load-path "~/.ghq/github.com/analyticd/org-brain"
       :init
-      (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org/files/directory")
+      (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org-directory")
       (eval-after-load 'evil
         (evil-set-initial-state 'org-brain-visualize-mode 'emacs))
       ;; Prebuild some of the org-brain caches during Emacs startup at the cost of
@@ -99,15 +122,12 @@ here's the steps to install it manually:
       (org-brain-build-caches))
    #+end_src
    Using =org-brain-build-caches= isn't necessary as, again, the caches are built
-   automatically in a lazy way during use of the org-brain-visualize interface.
-
+   automatically in a lazy way during use of the =org-brain-visualize= interface.
 * Usage
-
 Primarily you should interact with the =M-x org-brain-visualize= interface in
-order to benefit from automatic caching and thus dramatic speed gains (~30x
-faster).
+order to benefit from automatic caching and thus speed gains.
 
-Once in the org-brain-visualize interface/mode, via =M-x org-brain-visualize=, you can type:
+Once in the =org-brain-visualize= interface/mode, via =M-x org-brain-visualize=, you can type:
 
 1. "o" to open the current entry in your =org-brain= for editing.
 2. "c" to create a child for the current entry. You may enter several children at
@@ -163,17 +183,18 @@ Here is the the full list of keybindings:
 | f         | Find/visit another entry to visualize |
 | r         | Rename this, or another, entry        |
 
-In order to link to other entries, use an =org-mode= link
-with =brain:= type, its easiest to use =C-c C-l brain: TAB= or =M-x
-org-brain-insert-link=.
+In order to make simple, i.e., non-parent or child relationships in the
+org-brain sense, link to other entries, use an =org-mode= link with
+=org-brain-simple-link-type=, e.g., "brain:" by default type, its easiest to use
+=C-c C-l brain: TAB= or =M-x org-brain-insert-link=. There is no advantage
+currently, as of version 0.4 of org-brain to using an =org-brain-simple-link-type=
+over a regular org link. As noted earlier, =org-brain-visualize= commands manage
+child and parent relationships automatically.
 
 =M-x org-brain-agenda= can be used to run =org-agenda= on your =org-brain= files.
 
-If you add resources via =org-brain-visualize= they will be entered inserted under
-the current heading in the visualize buffer (link resource will be added as list
-items at the top of the heading in the entry file). If you're not under a
-heading in the visualize buffer, the resources will be added to /Brainchildren/,
-as in the case with adding new children.
+If you add resources via =org-brain-visualize= they will be inserted under
+the current heading in the visualize buffer. 
 
 Editing /Brainchildren/ manually is off the golden path. If you edit /Brainchildren/
 manually, i.e., outside the =org-brain-visualize= interface, then the caches will
@@ -185,44 +206,6 @@ to be built). =org-brain-files= cache is built all at once on first cache miss
 while =org-brain-children-cache=, =org-brain-parents-cache=, and
 =org-brain-pins-cache= are necessarily built node by node. Subsequent returns to
 said cached nodes will be approximately 30x faster.
-
-* A note about understanding the visualize interface (things to improve)
-:PROPERTIES:
-:ID:       0D41BB92-E21F-41EB-9310-FD5D54274626
-:END:
-A few things can still be improved which currently can be somewhat confusing:
-
-If there is a link /embedded/ in a headline title whose description is some subset
-of the headline title's text, then it will be shown as a
-child link of the headline one level higher and its description will be whatever
-said link's description was, as expected. E.g.,
-
-   * _This is a parent of the headline below_
-     - [[foo.txt][link]]  <-- the embedded link from the headline below is show here as a child in its normal org-mode link represetation, i.e., only link description showing
-   ** _This is an embedded [[file:foo.txt][link]] in a headline title_ <-- here the link will show in its expanded form as if in fundamental mode
-
-Note that the link on the level one headline targets the links path, as
-expected, and the embedded link in the level two headline targets the level two
-headline itself, as expected by the visualize interface.
-
-Now note that if you make the embedded link description equal to the whole
-headline title, e.g.,
-
-   * _This is a parent of the headline below_ <-- There is now no child link
-     - [[file:foo.txt][This is an embedded link in a headline title]] <-- This looks redundant with the headline below, but it points to the link location wherease the headline below points to the headline itself
-   ** _[[file:foo.txt][This is an embedded link in a headline title]]_ <-- Here the link will show in its expanded form as if in fundamental mode
-
-It will appear as a child link of the level one headline as before, but now it
-seems redundant, yet the link and headline have distinct targets.
-
-Here is another situation:
-
-If you have a link whose target path is an org-mode id and that org-mode id
-points to a headline, then it will be rendered as a link and a headline
-simultaneously, e.g.,
-
-    ***   - [[id:someheadlineid][someheadline]]
-
 * Other useful packages
 
 There's some missing functionality in =org-brain=, which could be useful,
