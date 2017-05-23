@@ -811,23 +811,21 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
              (description (org-brain--link-description
                            (list raw-link
                                  link-contents))))
-        (if (and description
-                 (char-or-string-p description) ; Temp fix for bug in org parser
-                 (not (string-equal description ","))) ; Handle another org
-                                                       ; parser bug. Parser
-                                                       ; thinks "," is a
-                                                       ; link when used in e.g.,
-                                                       ; or i.e.,
-            (org-brain--insert-resource-button
-             (org-brain--handle-relative-path raw-link)
-             description
-             (1+ (org-element-property :level headline)))
-          (org-brain-log (format "using raw-link: %s as description"
-                                 raw-link))
+        (if (and (not (org-brain--empty-string-p description))
+                 (char-or-string-p description) ; Temp fix: handle org parser
+                                                ; bug.
+                 (not (string-equal description ","))) ; Temp fix: handle org
+                                                       ; parser bug.
           (org-brain--insert-resource-button
            (org-brain--handle-relative-path raw-link)
-           raw-link
-           (1+ (org-element-property :level headline))))))
+           description
+           (1+ (org-element-property :level headline)))
+          (org-brain-log (format "Using raw-link: %s as description"
+                                   raw-link))
+            (org-brain--insert-resource-button
+             (org-brain--handle-relative-path raw-link)
+             raw-link
+             (1+ (org-element-property :level headline))))))
     nil nil 'headline))         ; No recursion on headline, i.e., just
                                 ; get the links for the current
                                 ; headline, but not any of its children
