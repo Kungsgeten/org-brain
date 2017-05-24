@@ -127,25 +127,31 @@ can type:
    title, #+TITLE: some-title, already exists then it will be replaced with the
    new title you've provide.
 10. "T" to remove a title of the current entry altogether.
+11. "s" to do a completing read search of headlines in the current entry and
+    jump to selected headline in underlying file.
+12. "S" to do a completing read search of links in the current entry and jump to
+    selected link in underlying file.
 
 Here is the the full list of keybindings:
 
-| j / TAB   | Goto next link                        |
-| k / S-TAB | Goto previous link                    |
-| c         | Add child(ren)                        |
-| C         | Remove child(ren)                     |
-| p         | Add parent(s)                         |
-| P         | Remove parent(s)                      |
-| n         | Add pin                               |
-| N         | Remove pin                            |
-| t         | Add or change title                   |
-| T         | Remove title                          |
-| l         | Add resource link                     |
-| C-y       | Paste resource link                   |
-| a         | Add resource [[http://orgmode.org/manual/Attachments.html][attachment]]               |
-| o         | Open and edit the visualized entry    |
-| f         | Find/visit another entry to visualize |
-| r         | Rename this, or another, entry        |
+| j / TAB   | Goto next link                                                       |
+| k / S-TAB | Goto previous link                                                   |
+| c         | Add child(ren)                                                       |
+| C         | Remove child(ren)                                                    |
+| p         | Add parent(s)                                                        |
+| P         | Remove parent(s)                                                     |
+| n         | Add pin                                                              |
+| N         | Remove pin                                                           |
+| t         | Add or change title                                                  |
+| T         | Remove title                                                         |
+| l         | Add resource link                                                    |
+| C-y       | Paste resource link                                                  |
+| a         | Add resource [[http://orgmode.org/manual/Attachments.html][attachment]]                                              |
+| o         | Open and edit the visualized entry                                   |
+| f         | Find/visit another entry to visualize                                |
+| r         | Rename this, or another, entry                                       |
+| s         | Search for headline in current entry and jump to selected headline in underlying file |
+| S         | Search for link in current entry and jump to selected link in underlying file |
 
 In order to make a link to another org-brain entries, use an =org-mode= link with
 =org-brain-link-type= type, e.g., "brain:" by default. Its easiest to use
