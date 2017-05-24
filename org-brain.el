@@ -725,7 +725,7 @@ interactively."
                                               ; parser bug.
             (org-brain--insert-resource-button
              (org-brain--handle-relative-path raw-link)
-             raw-link
+             (org-link-unescape raw-link)
              (1+ (org-element-property :level headline)))))))
     nil nil 'headline))         ; No recursion on headline, i.e., just
                                 ; get the links for the current
