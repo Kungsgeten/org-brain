@@ -587,9 +587,9 @@ interactively."
   (let ((parent-positions nil)
         (max-width 0))
     (mapc (lambda (parent)
-            (let ((children (set-difference
+            (let ((children (cl-set-difference
                              (org-brain-children parent)
-                             ignored-siblings))
+                             ignored-siblings :test #'equal))
                   (col-start (+ 3 max-width))
                   (parent-title (org-brain-title parent)))
               (goto-line 4)
