@@ -719,10 +719,8 @@ interactively."
              (org-brain--handle-relative-path raw-link)
              description
              (1+ (org-element-property :level headline)))
-          (unless (string-equal raw-link ",") ; Temp fix: handle org parser
-                                              ; bug.
-            (org-brain-log (format "Using raw-link: %s as description"
-                                   raw-link))
+          (unless (string-equal raw-link ",") ; Temp fix: handle org
+                                              ; parser bug.
             (org-brain--insert-resource-button
              (org-brain--handle-relative-path raw-link)
              raw-link
