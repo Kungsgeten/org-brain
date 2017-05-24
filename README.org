@@ -47,35 +47,24 @@ At the bottom the entry's table of contents (headlines in the buffer) is shown:
 Gamasutra articles and the Wikipedia link. Resources can be =org-mode= links in
 the entry file, or [[http://orgmode.org/manual/Attachments.html][org attachments]].
 
-The parents, children, siblings, headlines and resources are all links; they can
+The parents, children, siblings, headlines, and resources are all links; they can
 be pressed to visualize other entries, visit resources etc.
-* Backwards compatability/breaking change: Version 0.4 changes the way child and parent relations are stored 
-Parent relationships for an entry are now stored as links under the
-=org-brain-parents-headline-default-name=, e.g., "Brainparents" by default,
-headline, whose creation and maintenance is automated by the =org-brain-visualize=
-interface commands.
+* Backwards compatability/breaking change: Version 0.5 changes the way child and parent relations, and pins, are stored 
+Parent and child relationships are serialized to disk in sexp form. Same with
+pinned entries. Their creation and maintenance is managed by =org-brain-visualize=
+mode commands. Therefore, the "Brainchildren" headline is no longer used in
+org-brain files by =org-brain= and is therefore deprecated as of this release.
+Note also that #+BRAIN_PIN: is no longer used either and is also deprecated as
+of this release.
 
-As before, child relationships for an entry are stored as links under the
-=org-brain-children-headline-default-name=, e.g., "Brainchildren by default,
-headline, whose creation and maintenance is automated by the =org-brain-visualize=
-interface commands.
+Note that =org-brain-link-type= links will continue to work as general links,
+similar to a "file:" link in Org, but they are not recognized by =org-brain= as
+child or parent relationship links. 
 
-Ideally, you'll not manually operate on either the
-=org-brain-parents-headline-default-name= or the
-=org-brain-children-headline-default-name= headlines or their links. However, if
-you already have org-brain files in place and you do not wish to re-establish
-child and parent relationships through the =org-brain-visualize= interface for
-these existing files, then you may manually change the
-=org-brain-simple-link-type=, e.g., "brain:" by default, links under your
-=org-brain-children-headline-default-name=, e.g., "Brainchildren" by default,
-headline to be =org-brain-child-link-type=, e.g., "brainchild:" by default, links.
-
-Note that =org-brain-simple-link-type= links will continue to work as general
-links, similar to a "file:" link in Org, but they are not recognized by
-org-brain as child or parent relationship links. 
-
-This breaking change simplifies the logic of org-brain and greatly increases
-its performance.
+This release's changes simplify the logic of org-brain, greatly increase its
+performance, and most importantly, keeps all meta-data needed by org-brain out
+of your org brain files (with the exception of #+TITLE: which is a standard
+=org-mode= concept.
 * Setup and requirements
 The easiest way is to get =org-brain= from MELPA. If you do not want to do that or
 would like this fork which includes caching and an extended visualize interface,
@@ -101,33 +90,15 @@ here are the steps to install it manually:
      :init
      (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org-directory")
      (eval-after-load 'evil
-       (evil-set-initial-state 'org-brain-visualize-mode 'emacs)))
+       (evil-set-initial-state 'org-brain-visualize-mode 'emacs))
+     :config
+     (bind-key [(meta f9)] #'org-brain-visualize)) ; Handy keybinding, use whatever binding you want
    #+end_src
-6. If you want to eagerly build some of the caches (rather than wait to have
-   them built automatically in a lazy way), you may use =org-brain-build-caches=
-   either interactively or programatically, perhaps during Emacs startup time
-   (while you get your coffee). You'll be adding about several seconds to Emacs
-   startup time in exchange for the same savings of save on your initial use of
-   org-brain. Example configuration for this:
-   #+begin_src emacs-lisp
-    (use-package org-brain
-      ;; :ensure t ; Pull request not yet in MELPA package
-      :load-path "~/.ghq/github.com/analyticd/org-brain"
-      :init
-      (setq org-brain-path "/path/to/where/you/want/to/keep/your/org/brain/files/or/your/existing/org-directory")
-      (eval-after-load 'evil
-        (evil-set-initial-state 'org-brain-visualize-mode 'emacs))
-      ;; Prebuild some of the org-brain caches during Emacs startup at the cost of
-      ;; slower Emacs startup time.
-      (org-brain-build-caches))
-   #+end_src
-   Using =org-brain-build-caches= isn't necessary as, again, the caches are built
-   automatically in a lazy way during use of the =org-brain-visualize= interface.
 * Usage
-Primarily you should interact with the =M-x org-brain-visualize= interface in
-order to benefit from automatic caching and thus speed gains.
+You interact with =org-brain= via the =M-x org-brain-visualize= interface.
 
-Once in the =org-brain-visualize= interface/mode, via =M-x org-brain-visualize=, you can type:
+Once in the =org-brain-visualize= interface/mode, via =M-x org-brain-visualize=, you
+can type:
 
 1. "o" to open the current entry in your =org-brain= for editing.
 2. "c" to create a child for the current entry. You may enter several children at
@@ -136,13 +107,6 @@ Once in the =org-brain-visualize= interface/mode, via =M-x org-brain-visualize=,
    mandolin;banjo= would add =guitar=, =mandolin= and =banjo= as children. Currently
    it isn't possible to use completion when batch entering children/parents, so
    it is best used for adding non-existing entries.
-
-   If you add children to a file with =org-brain-visualize=, the links to the child
-   entries will be added under the first headline in the file with the
-   =brainchildren= tag. If this headline doesn't exist, a headline named
-   /Brainchildren/ will be created and will be given the tag. If you want another
-   default name for these headlines, you can customize
-   =org-brain-children-headline-default-name=.
 3. "C" to remove a child (link) for the current entry. This does not delete the
    file pointed to by the child (link). You may enter several children at
    once separated by =org-brain-batch-separator=, ";" by default, to
@@ -183,29 +147,19 @@ Here is the the full list of keybindings:
 | f         | Find/visit another entry to visualize |
 | r         | Rename this, or another, entry        |
 
-In order to make simple, i.e., non-parent or child relationships in the
-org-brain sense, link to other entries, use an =org-mode= link with
-=org-brain-simple-link-type=, e.g., "brain:" by default type, its easiest to use
-=C-c C-l brain: TAB= or =M-x org-brain-insert-link=. There is no advantage
-currently, as of version 0.4 of org-brain to using an =org-brain-simple-link-type=
-over a regular org link. As noted earlier, =org-brain-visualize= commands manage
-child and parent relationships automatically.
+In order to make a link to another org-brain entries, use an =org-mode= link with
+=org-brain-link-type= type, e.g., "brain:" by default. Its easiest to use
+=C-c C-l br TAB= and select the "brain:" type, or =M-x org-brain-insert-link=.
+=org-brain-link-type= has the advantage that it provides completion on your
+=org-brain-files=. Note, however, that as of version 0.5 of =org-brain=,
+=org-brain-link-type= links do not play a part in defining child or parent
+relationships. They are now simply links, analogous to regular org-mode links to
+other resources.
 
 =M-x org-brain-agenda= can be used to run =org-agenda= on your =org-brain= files.
 
 If you add resources via =org-brain-visualize= they will be inserted under
 the current heading in the visualize buffer. 
-
-Editing /Brainchildren/ manually is off the golden path. If you edit /Brainchildren/
-manually, i.e., outside the =org-brain-visualize= interface, then the caches will
-be inconsistent with actual state on disk. To remedy this situation, you may use
-=M-x org-brain-invalidate-all-caches= after making such edits. Subsequently the
-caches will be rebuilt and speed of the org-brain-visualize interface/mode will
-become very fast again after an initial cache miss (which will cause the caches
-to be built). =org-brain-files= cache is built all at once on first cache miss
-while =org-brain-children-cache=, =org-brain-parents-cache=, and
-=org-brain-pins-cache= are necessarily built node by node. Subsequent returns to
-said cached nodes will be approximately 30x faster.
 * Other useful packages
 
 There's some missing functionality in =org-brain=, which could be useful,

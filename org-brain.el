@@ -8,7 +8,7 @@
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25") (org "9"))
-;; Version: 0.4
+;; Version: 0.5
 
 ;;; Commentary:
 
@@ -50,41 +50,61 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(directory))
 
-(defcustom org-brain-children-headline-default-name "Brainchildren"
-  "Default name for a headline containing links to org-brain children entries."
+(defcustom org-brain-storage-directory (expand-file-name ".org-brain"
+                                                         org-brain-path)
+  "The directory where org-brain stores children, parents, and
+  pins data. This directory will be automatically created, if it
+  doesn't exist already, on the first run."
   :group 'org-brain
-  :type '(string))
+  :type '(directory))
 
-(defcustom org-brain-children-tag-default-name "brainchildren"
-  "Default name for a tag on headline containing links to
-  org-brain children entries."
+(defcustom org-brain--children-file (convert-standard-filename
+                                     (expand-file-name
+                                      "org-brain-children.el"
+                                      org-brain-storage-directory))
+  "File to save the children cache into."
   :group 'org-brain
-  :type '(string))
+  :type 'file
+  :initialize 'custom-initialize-default
+  :set (lambda (symbol value)
+         (let ((oldvalue (eval symbol)))
+           (custom-set-default symbol value)
+           (and (not (equal value oldvalue))
+                (org-brain--load-children)))))
 
-(defcustom org-brain-parents-headline-default-name "Brainparents"
-  "Default name for a headline containing links to org-brain parent entries."
+(defcustom org-brain--parents-file (convert-standard-filename
+                                     (expand-file-name
+                                      "org-brain-parents.el"
+                                      org-brain-storage-directory))
+  "File to save the parents cache into."
   :group 'org-brain
-  :type '(string))
+  :type 'file
+  :initialize 'custom-initialize-default
+  :set (lambda (symbol value)
+         (let ((oldvalue (eval symbol)))
+           (custom-set-default symbol value)
+           (and (not (equal value oldvalue))
+                (org-brain--load-parents)))))
 
-(defcustom org-brain-parents-tag-default-name "brainparents"
-  "Default name for a tag on headline containing links to
-  org-brain parent entries."
+(defcustom org-brain--pins-file (convert-standard-filename
+                                     (expand-file-name
+                                      "org-brain-pins.el"
+                                      org-brain-storage-directory))
+  "File to save the pins cache into."
   :group 'org-brain
-  :type '(string))
+  :type 'file
+  :initialize 'custom-initialize-default
+  :set (lambda (symbol value)
+         (let ((oldvalue (eval symbol)))
+           (custom-set-default symbol value)
+           (and (not (equal value oldvalue))
+                (org-brain--load-pins)))))
 
-(defcustom org-brain-simple-link-type "brain"
+(defcustom org-brain-link-type "brain"
   "The text used in the url of an org-brain link. This type of
   link is considered by org-brain to be neither a child or parent
   link, but is used much like a regular org link in the body of
-  an org file. Used by `org-link-set-parameters'")
-
-(defcustom org-brain-child-link-type "brainchild"
-  "The text used in the url of an org-brain child link. Used by
-  `org-link-set-parameters'")
-
-(defcustom org-brain-parent-link-type "brainparent"
-  "The text used in the url of an org-brain parent link. Used by
-  `org-link-set-parameters'")
+  an org file.")
 
 (defcustom org-brain-files-extension "org"
   "The extension for entry files in `org-brain-path'."
@@ -101,6 +121,24 @@ will be considered org-brain entries."
   "Return true if the STRING is empty or nil. Expects string type."
   (or (null string)
       (zerop (length (string-trim string)))))
+
+;;; Macros used for serialization (hash-tables don't serialize in a elisp
+;;; reaDable so we marshall to and from a list).
+(defmacro org-brain--hash-to-list (hash-table)
+  "Convert HASH-TABLE to list for storage in a file."
+  (let ((nl (gensym)))
+    `(let (,nl)
+       (maphash (lambda (k v)
+                  (push (list k v) ,nl)) ,hash-table)
+       ,nl)))
+
+(defmacro org-brain--list-to-hash (list)
+  "Convert LIST to a hash-table for use in memory."
+  (let ((ht (gensym)))
+    `(let ((,ht (make-hash-table :test #'equal)))
+       (mapc (lambda (item)
+               (puthash (car item) (cadr item) ,ht)) ,list)
+       ,ht)))
 
 ;;; Logging
 (defcustom org-brain-log nil
@@ -127,21 +165,8 @@ will be considered org-brain entries."
 (defvar org-brain--default-link-type-for-attachments "file+emacs"
   "Link type to use for clickable link to attachment.")
 
-;;; Link types
-(org-link-set-parameters org-brain-simple-link-type
-                         :complete 'org-brain-child-link-complete
-                         :follow 'org-brain-open
-                         :activate-func 'org-brain-link-activate-func
-                         :help-echo 'org-brain-link-tooltip)
-
-(org-link-set-parameters org-brain-child-link-type
-                         :complete 'org-brain-child-link-complete
-                         :follow 'org-brain-open
-                         :activate-func 'org-brain-link-activate-func
-                         :help-echo 'org-brain-link-tooltip)
-
-(org-link-set-parameters org-brain-parent-link-type
-                         :complete 'org-brain-parent-link-complete
+(org-link-set-parameters org-brain-link-type
+                         :complete 'org-brain-link-complete
                          :follow 'org-brain-open
                          :activate-func 'org-brain-link-activate-func
                          :help-echo 'org-brain-link-tooltip)
@@ -152,55 +177,10 @@ will be considered org-brain entries."
 (defvar org-brain-children-cache nil "Cache for org-brain-children")
 (defvar org-brain-pins-cache nil "Cache for org-brain-pins")
 
-;;;###autoload
-(defun org-brain-invalidate-all-caches ()
-  "This is a convenience function for those who (occasionally)
-  edit children, parents, or pins manually outside the
-  org-brain-visualize interface. In that case, you have to call
-  this function manually. It is not needed if children, parents,
-  related, and pins are added using the org-brain-visualize
-  interface/mode."
-  (interactive)
-  (setq org-brain-files-cache nil)
-  (setq org-brain-parents-cache nil)
-  (setq org-brain-children-cache nil)
-  (setq org-brain-pins-cache nil))
-
 (defun org-brain-invalidate-files-cache ()
   "Set the org-brain-files-cache to nil."
   (org-brain-log "Invalidating org-brain file cache...")
   (setq org-brain-files-cache nil))
-
-(defun org-brain-invalidate-parent-cache-entry (entry)
-  "Set the cache element keyed by ENTRY to nil in the org-brain-parents-cache."
-  (org-brain-log
-   (format "Invalidating org-brain parent cache entry: %s ..." entry))
-  (setq org-brain-parents-cache
-        (cl-remove entry org-brain-parents-cache :test #'equal :key #'car)))
-
-(defun org-brain-invalidate-child-cache-entry (entry)
-  "Set the cache element keyed by ENTRY to nil in the org-brain-children-cache."
-  (org-brain-log
-   (format "Invalidating org-brain child cache entry: %s ..." entry))
-  (setq org-brain-children-cache
-        (cl-remove entry org-brain-children-cache :test #'equal :key #'car)))
-
-(defun org-brain-invalidate-pins-cache ()
-  "Set the org-brain-pins-cache to nil."
-  (org-brain-log "Invalidating org-brain pin cache...")
-  (setq org-brain-pins-cache nil))
-
-;;;###autoload
-(defun org-brain-build-caches ()
-  "(Optional) It is not necessary to use this function as the
-  caches are built lazily, automatically. However, this is just
-  here if you want to do some cache building ahead of time, for
-  instance during Emacs startup (at the cost of a longer Emacs
-  startup) while you grab your coffee."
-  (interactive)
-  (org-brain-log "Eagerly building some of the org-brain caches..")
-  (org-brain-files)
-  (org-brain-pins))
 
 (defun org-brain-files (&optional relative)
   "Get all org files (recursively) in `org-brain-path'.
@@ -216,17 +196,11 @@ If RELATIVE is t, then return relative paths and remove org extension."
     org-brain-files-cache))
 
 (defun org-brain-pins ()
-  "Get list of org-brain entries with \"BRAIN_PIN\" keyword."
-  (or org-brain-pins-cache
-      (progn
-        (org-brain-log "Updating org-brain-pins-cache...")
-        (setq org-brain-pins-cache
-              (remove nil
-                      (mapcar
-                       (lambda (entry)
-                         (when (assoc "BRAIN_PIN" (org-brain-keywords entry))
-                           entry))
-                       (org-brain-files t)))))))
+  "Get list of org-brain entries that are pinned."
+  ;; Create the org-brain-storage-directory if it doesn't already exist.
+  (org-brain-log "In org-brain-pins, about to make org-brain-storage-directory if needed.")
+  (make-directory org-brain-storage-directory t)
+  (org-brain--load-pins))
 
 (defun org-brain-path-entry-name (path)
   "Get PATH as an org-brain entry name."
@@ -239,71 +213,69 @@ If RELATIVE is t, then return relative paths and remove org extension."
                      (format "%s.%s" entry org-brain-files-extension))
                     org-brain-path))
 
+;;; Data serialization functions
+(defun save-data (file data)
+  "Save lisp DATA, i.e., sexps, to FILE."
+  (with-temp-file file
+    (let ((standard-output (current-buffer))
+          (print-circle t))  ; Allow circular data
+      (prin1 data))))
+
+(defun load-data (file)
+  "Load lisp data, i.e., sexps, from FILE."
+  (when (file-exists-p file)
+    (with-temp-buffer
+      (insert-file-contents file)
+      (read (current-buffer)))))
+
+(defun org-brain--save-children ()
+  "Save the children. Write data into the file specified by
+  `org-brain--children-file'."
+  (save-data org-brain--children-file
+             (org-brain--hash-to-list org-brain-children-cache)))
+
+(defun org-brain--save-parents ()
+  "Save the parents. Write data into the file specified by
+  `org-brain--parents-file'."
+  (save-data org-brain--parents-file
+             (org-brain--hash-to-list org-brain-parents-cache)))
+
+(defun org-brain--save-pins ()
+  "Save the pins. Write data into the file specified by
+  `org-brain--pins-file'."
+  (save-data org-brain--pins-file org-brain-pins-cache))
+
+(defun org-brain--load-children ()
+  "Load children cache from file."
+  (setq org-brain-children-cache
+        (org-brain--list-to-hash (load-data org-brain--children-file))))
+
+(defun org-brain--load-parents ()
+  "Load parents cache from file."
+  (setq org-brain-parents-cache
+        (org-brain--list-to-hash (load-data org-brain--parents-file))))
+
+(defun org-brain--load-pins ()
+  "Load pins cache from file."
+  (setq org-brain-pins-cache (load-data org-brain--pins-file)))
+
 (defun org-brain-parents (entry &optional exclude)
   "Get list of org-brain parent entries linked to ENTRY.
 You can choose to EXCLUDE an entry from the list."
-  (if (and org-brain-parents-cache
-           (assoc entry org-brain-parents-cache))
-      (cdr (assoc entry org-brain-parents-cache))
-    (org-brain-log (format "Updating org-brain-parents-cache for %s..." entry))
-    (let ((parents
-           (delete
-            exclude
-            (car
-             (org-element-map (org-brain--parsetree-for-entry entry) 'headline
-               (lambda (headline)
-                 ;; Only look for parents that are attached to the
-                 ;; org-brain-parents-headline-default-name headline.
-                 (when (string-equal (org-element-property :raw-value headline)
-                                     org-brain-parents-headline-default-name)
-                   (org-element-map (org-element-contents headline) 'link
-                     (lambda (link)
-                       ;; Restrict to only org-brain-parent-link-type links.
-                       (when (string-equal (org-element-property :type link)
-                                           org-brain-parent-link-type)
-                         (car (split-string
-                               (org-element-property :path link)
-                               "::"))))
-                     nil nil 'headline))))))))  ; Only get links for this
-                                                ; headline and not for
-                                                ; children headlines, i.e.,
-                                                ; don't recursive on headlines
-                                                ; for links.
-      (push (cons entry . (parents)) org-brain-parents-cache)
-      (cdr (assoc entry org-brain-parents-cache)))))
+  (org-brain--load-parents)
+  (when (and org-brain-parents-cache
+             (gethash entry org-brain-parents-cache))
+    (cl-set-difference (gethash entry org-brain-parents-cache)
+                       exclude :test #'equal)))
 
 (defun org-brain-children (entry &optional exclude)
   "Get list of org-brain child entries linked to ENTRY.
 You can choose to EXCLUDE an entry from the list."
-  (if (and org-brain-children-cache
-           (assoc entry org-brain-children-cache))
-      (cdr (assoc entry org-brain-children-cache))
-    (org-brain-log (format "Updating org-brain-children-cache for %s..." entry))
-    (let ((children
-           (delete
-            exclude
-            (car
-              (org-element-map (org-brain--parsetree-for-entry entry) 'headline
-                (lambda (headline)
-                  ;; Only look for children that are attached to the
-                  ;; org-brain-children-headline-default-name headline.
-                  (when (string-equal (org-element-property :raw-value headline)
-                                      org-brain-children-headline-default-name)
-                    (org-element-map (org-element-contents headline) 'link
-                      (lambda (link)
-                       ;; Restrict to only org-brain-child-link-type links.
-                        (when (string-equal (org-element-property :type link)
-                                            org-brain-child-link-type)
-                          (car (split-string
-                                (org-element-property :path link)
-                                "::"))))
-                      nil nil 'headline))))))))  ; Only get links for this
-                                                 ; headline and not for
-                                                 ; children headlines, i.e.,
-                                                 ; don't recursive on headlines
-                                                 ; for links.
-      (push (cons entry . (children)) org-brain-children-cache)
-      (cdr (assoc entry org-brain-children-cache)))))
+  (org-brain--load-children)
+  (when (and org-brain-children-cache
+             (gethash entry org-brain-children-cache))
+    (cl-set-difference (gethash entry org-brain-children-cache)
+                       exclude :test #'equal)))
 
 (defun org-brain-keywords (entry)
   "Get alist of `org-mode' keywords and their values in org-brain ENTRY."
@@ -320,24 +292,14 @@ You can choose to EXCLUDE an entry from the list."
       (org-link-unescape (file-name-base entry))))
 
 ;;;###autoload
-(defun org-brain-insert-child-link ()
-  "Insert a link to an org-brain child entry and suggest a description."
+(defun org-brain-insert-link ()
+  "Insert a link to an org-brain entry and suggest a description."
   (interactive)
   (let* ((file (completing-read "Entry: " (org-brain-files t)))
          (title (org-brain-title file))
          (desc (read-string "Description: " title)))
     (insert (org-make-link-string
-             (concat org-brain-child-link-type ":" file) desc))))
-
-;;;###autoload
-(defun org-brain-insert-parent-link ()
-  "Insert a link to an org-brain parent entry and suggest a description."
-  (interactive)
-  (let* ((file (completing-read "Entry: " (org-brain-files t)))
-         (title (org-brain-title file))
-         (desc (read-string "Description: " title)))
-    (insert (org-make-link-string
-             (concat org-brain-parent-link-type ":" file) desc))))
+             (concat org-brain-link-type ":" file) desc))))
 
 ;;;###autoload
 (defun org-brain-agenda ()
@@ -363,16 +325,10 @@ You can choose to EXCLUDE an entry from the list."
                      (org-brain-files t)))
     (put-text-property start end 'face '(org-warning org-link))))
 
-(defun org-brain-child-link-complete ()
-  "Create an org-brain brainchild org-link target string to a
-  file in `org-brain-path'."
+;;; TODO
+(defun org-brain-link-complete ()
+  "Create an org-brain-link-type link to a file in `org-brain-path'."
   (concat org-brain-child-link-type ":"
-          (completing-read "Entry: " (org-brain-files t))))
-
-(defun org-brain-parent-link-complete ()
-  "Create an org-brain brainparent org-link target string to a
-  file in `org-brain-path'."
-  (concat org-brain-parent-link-type ":"
           (completing-read "Entry: " (org-brain-files t))))
 
 (defun org-brain-link-tooltip (_window _object position)
@@ -384,106 +340,65 @@ You can choose to EXCLUDE an entry from the list."
            (org-element-property :path (org-element-context)) "::")))))
 
 (defun org-brain-add-child (entry child)
-  "In org-brain ENTRY, add a link to CHILD."
+  "Add CHILD as child of ENTRY."
   (let ((entry-path (org-brain-entry-path entry)))
-    (org-save-all-org-buffers)
     (unless (file-exists-p entry-path)
       (with-temp-file entry-path
-        (make-directory (file-name-directory entry-path) t)))
-    (with-current-buffer (find-file-noselect entry-path)
-      (goto-char (point-min))
-      (save-excursion
-        (if (re-search-forward
-               (format "^\\*.*:%s:.*$"
-                       org-brain-children-tag-default-name)
-               nil t)
-            (progn
-              (end-of-line)
-              (insert (format "\n- [[%s:%s][%s]]"
-                             org-brain-child-link-type
-                             child
-                             (org-brain-title child)))
-              (save-buffer))
-          (goto-char (point-max))
-          (insert (format "\n\n* %s    :%s:\n- [[%s:%s][%s]]"
-                          org-brain-children-headline-default-name
-                          org-brain-children-tag-default-name
-                          org-brain-child-link-type
-                          child
-                          (org-brain-title child)))
-          (save-buffer))))))
+        (make-directory (file-name-directory entry-path) t))))
+  ;; Create the cache if it doesn't yet exist, i.e., first run.
+  (unless org-brain-children-cache
+    (setf org-brain-children-cache (make-hash-table :test #'equal)))
+  (org-brain-log (format "org-brain-children-cache: %s"
+                         org-brain-children-cache))
+  (let ((children (gethash entry org-brain-children-cache)))
+    (push child children)
+    (org-brain-log (format "entry: %s, children: %s" entry children))
+    (setf (gethash entry org-brain-children-cache)
+          children))
+  (org-brain-log (format "After cache update, org-brain-children-cache: %s"
+                         org-brain-children-cache))
+  (org-brain--save-children))
 
 (defun org-brain-add-parent (entry parent)
-  "In org-brain ENTRY, add a link to PARENT."
+  "Add PARENT as parent of ENTRY."
   (let ((entry-path (org-brain-entry-path entry)))
-    (org-save-all-org-buffers)
     (unless (file-exists-p entry-path)
       (with-temp-file entry-path
-        (make-directory (file-name-directory entry-path) t)))
-    (with-current-buffer (find-file-noselect entry-path)
-      (goto-char (point-min))
-      (save-excursion
-        (if (re-search-forward
-               (format "^\\*.*:%s:.*$"
-                       org-brain-parents-tag-default-name)
-               nil t)
-            (progn
-              (end-of-line)
-              (insert (format "\n- [[%s:%s][%s]]"
-                            org-brain-parent-link-type
-                            parent
-                            (org-brain-title parent)))
-              (save-buffer))
-          (goto-char (point-max))
-          (insert (format "\n\n* %s    :%s:\n- [[%s:%s][%s]]"
-                          org-brain-parents-headline-default-name
-                          org-brain-parents-tag-default-name
-                          org-brain-parent-link-type
-                          parent
-                          (org-brain-title parent)))
-          (save-buffer))))))
+        (make-directory (file-name-directory entry-path) t))))
+  ;; Create the cache if it doesn't yet exist, i.e., first run.
+  (unless org-brain-parents-cache
+    (setf org-brain-parents-cache (make-hash-table :test #'equal)))
+  (org-brain-log (format "org-brain-parents-cache: %s"
+                         org-brain-parents-cache))
+  (let ((parents (gethash entry org-brain-parents-cache)))
+    (push parent parents)
+    (org-brain-log (format "entry: %s, parents: %s" entry parents))
+    (setf (gethash entry org-brain-parents-cache) parents))
+  (org-brain-log (format "After cache update, org-brain-parents-cache: %s"
+                         org-brain-parents-cache))
+  (org-brain--save-parents))
 
 (defun org-brain-remove-child (entry child)
   "In org-brain ENTRY, remove CHILD link. This doesn't delete the
   file pointed to by the link, just the link."
-  (let ((entry-path (org-brain-entry-path entry))
-        (child-regex (format "^ *- \\[\\[%s:%s.*$"
-                             org-brain-child-link-type
-                             child)))
-    (org-save-all-org-buffers)
-    (org-brain-invalidate-child-cache-entry entry)
-    (with-current-buffer (find-file-noselect entry-path)
-      (goto-char (point-min))
-      (save-excursion
-        (re-search-forward
-         (format "^\\*.*:%s:.*$" org-brain-children-tag-default-name) nil t)
-        (beginning-of-line)
-        (re-search-forward child-regex nil t)
-        (beginning-of-line)
-        (looking-at child-regex)
-        (kill-line 1)
-        (save-buffer)))))
+  (let ((children (gethash entry org-brain-children-cache)))
+    (org-brain-log (format "before remove, children: %s" children))
+    (setf (gethash entry org-brain-children-cache)
+          (cl-remove child children :test #'equal))
+    (org-brain-log (format "after remove, children: %s"
+                           (gethash entry org-brain-children-cache))))
+  (org-brain--save-children))
 
 (defun org-brain-remove-parent (entry parent)
   "In org-brain ENTRY, remove PARENT link. This doesn't delete the
   file pointed to by the link, just the link."
-  (let ((entry-path (org-brain-entry-path entry))
-        (parent-regex (format "^ *- \\[\\[%s:%s.*$"
-                              org-brain-parent-link-type
-                              parent)))
-    (org-save-all-org-buffers)
-    (org-brain-invalidate-parent-cache-entry entry)
-    (with-current-buffer (find-file-noselect entry-path)
-      (goto-char (point-min))
-      (save-excursion
-        (re-search-forward
-         (format "^\\*.*:%s:.*$" org-brain-parents-tag-default-name) nil t)
-        (beginning-of-line)
-        (re-search-forward parent-regex nil t)
-        (beginning-of-line)
-        (looking-at parent-regex)
-        (kill-line 1)
-        (save-buffer)))))
+  (let ((parents (gethash entry org-brain-parents-cache)))
+    (org-brain-log (format "before remove, parents: %s" parents))
+    (setf (gethash entry org-brain-parents-cache)
+          (cl-remove parent parents :test #'equal))
+    (org-brain-log (format "after remove, parents: %s"
+                           (gethash entry org-brain-parents-cache))))
+  (org-brain--save-parents))
 
 (defun org-brain--insert-visualize-button (entry)
   "Insert a button, which runs `org-brain-visualize' on ENTRY when clicked."
@@ -492,6 +407,7 @@ You can choose to EXCLUDE an entry from the list."
    'action (lambda (_x) (org-brain-visualize entry))
    'follow-link t))
 
+;;; TODO
 ;;;###autoload
 (defun org-brain-rename-entry (entry newname)
   "Rename org-brain ENTRY to NEWNAME.
@@ -548,7 +464,7 @@ also made aware of the change."
     (revert-buffer)))
 
 (defcustom org-brain-ignored-resource-links
-  '("brain" "brainchild" "brainparent" "fuzzy" "radio")
+  '("fuzzy" "radio")
   "`org-link-types' which shouldn't be shown as resources in
   `org-brain-visualize'."
   :group 'org-brain
@@ -560,7 +476,7 @@ also made aware of the change."
   "Given an org buffer's ENTRY and HEADLINE, insert the list of
   files attached to the HEADLINE."
   (when (member "ATTACH" (org-element-property :tags headline))
-    (org-brain-log (format "entry path: %s"
+    (org-brain-log (format "Entry attachment path: %s"
                    (file-name-directory (org-brain-entry-path entry))))
     (let* ((attach-dir org-attach-directory) ; Issue: non-absolute
                                              ; (org-attach-dir) error.
@@ -585,34 +501,17 @@ also made aware of the change."
               (org-attach-file-list absolute-attach-dir)))))
 
 (defun org-brain--visualize-get-headline ()
-  "Get a headline at point in `org-brain--visualizing-entry'.
-If no headline is found, use `org-brain-children-headline-default-name'."
-  (org-brain-log "In org-brain--visualize-get-headline...")
+  "Get headline at point in `org-brain--visualizing-entry'."
   (save-excursion
     (end-of-line)
-    (let ((entry-path (org-brain-entry-path org-brain--visualizing-entry)))
-      (if (re-search-backward "^\*+ *\\(.*\\)" nil t)
-          (match-string 1)
-        (org-save-all-org-buffers)
-        (unless (file-exists-p entry-path)
-          (with-temp-file entry-path
-            (make-directory (file-name-directory entry-path) t)))
-        (or (car (org-map-entries (lambda () (org-get-heading t t))
-                                  (format "+%s"
-                                          org-brain-children-tag-default-name)
-                                  (list entry-path)))
-            (with-current-buffer (get-file-buffer entry-path)
-              (goto-char (point-max))
-              (insert (format "\n\n* %s    :%s:"
-                              org-brain-children-headline-default-name
-                              org-brain-children-tag-default-name))
-              (save-buffer)
-              (org-get-heading t t)))))))
+    (re-search-backward "^\*+ *\\(.*\\)" nil t)
+    (match-string 1)))
 
 (defun org-brain-visualize-add-resource-link (link &optional description prompt)
   "Insert LINK with DESCRIPTION in `org-brain--visualizing-entry'.
 Where to insert LINK is guessed with `org-brain--visualize-get-headline'.
-If PROMPT is non nil, use `org-insert-link' even if not being run interactively."
+If PROMPT is non nil, use `org-insert-link' even if not being run
+interactively."
   (interactive "i")
   (if (not (eq major-mode 'org-brain-visualize-mode))
       (error "Not in org-brain-visualize-mode")
@@ -811,21 +710,23 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
              (description (org-brain--link-description
                            (list raw-link
                                  link-contents))))
-        (if (and (not (org-brain--empty-string-p description))
+        (if (and description
                  (char-or-string-p description) ; Temp fix: handle org parser
                                                 ; bug.
                  (not (string-equal description ","))) ; Temp fix: handle org
                                                        ; parser bug.
-          (org-brain--insert-resource-button
-           (org-brain--handle-relative-path raw-link)
-           description
-           (1+ (org-element-property :level headline)))
-          (org-brain-log (format "Using raw-link: %s as description"
+            (org-brain--insert-resource-button
+             (org-brain--handle-relative-path raw-link)
+             description
+             (1+ (org-element-property :level headline)))
+          (unless (string-equal raw-link ",") ; Temp fix: handle org parser
+                                              ; bug.
+            (org-brain-log (format "Using raw-link: %s as description"
                                    raw-link))
             (org-brain--insert-resource-button
              (org-brain--handle-relative-path raw-link)
              raw-link
-             (1+ (org-element-property :level headline))))))
+             (1+ (org-element-property :level headline)))))))
     nil nil 'headline))         ; No recursion on headline, i.e., just
                                 ; get the links for the current
                                 ; headline, but not any of its children
@@ -852,16 +753,12 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
     (lambda (headline)
       (let* ((head-title (org-element-property :raw-value headline))
              (entry-path (org-brain-entry-path entry)))
-        ;; Don't show Brainchildren or Brainparents headlines
-        (unless (member head-title
-                        (list org-brain-children-headline-default-name
-                              org-brain-parents-headline-default-name))
-          ;; Draw headline
-          (org-brain--insert-headline headline head-title entry-path)
-          ;; Draw headline's attachments
-          (org-brain--insert-attachment-files entry headline)
-          ;; Draw headline's links
-          (org-brain--insert-resources headline))))
+        ;; Draw headline
+        (org-brain--insert-headline headline head-title entry-path)
+        ;; Draw headline's attachments
+        (org-brain--insert-attachment-files entry headline)
+        ;; Draw headline's links
+        (org-brain--insert-resources headline)))
     (insert "\n")))
 
 ;;;###autoload
@@ -914,8 +811,6 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Child: " (org-brain-files t))))
   (org-brain-invalidate-files-cache)    ; Invalidate cache
-  (org-brain-invalidate-child-cache-entry
-   org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (c (split-string child org-brain-batch-separator t " +"))
     (org-brain-add-child org-brain--visualizing-entry c))
   (when (string-equal (buffer-name) "*org-brain*")
@@ -928,9 +823,6 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Child: "
                           (org-brain-children org-brain--visualizing-entry))))
-  (org-brain-invalidate-files-cache)    ; Invalidate cache
-  (org-brain-invalidate-child-cache-entry
-   org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (c (split-string child org-brain-batch-separator t " +"))
     (org-brain-remove-child org-brain--visualizing-entry c))
   (when (string-equal (buffer-name) "*org-brain*")
@@ -942,8 +834,6 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Parent: " (org-brain-files t))))
   (org-brain-invalidate-files-cache)    ; Invalidate cache
-  (org-brain-invalidate-parent-cache-entry
-   org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (p (split-string parent org-brain-batch-separator t " +"))
     (org-brain-add-parent org-brain--visualizing-entry p))
   (when (string-equal (buffer-name) "*org-brain*")
@@ -955,54 +845,44 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
   (interactive
    (list (completing-read "Parent: "
                           (org-brain-parents org-brain--visualizing-entry))))
-  (org-brain-invalidate-files-cache)    ; Invalidate cache
-  (org-brain-invalidate-parent-cache-entry
-   org-brain--visualizing-entry)        ; Invalidate cache
   (dolist (p (split-string parent org-brain-batch-separator t " +"))
     (org-brain-remove-parent org-brain--visualizing-entry p))
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
 (defun org-brain-visualize-add-pin ()
-  "Add \"#+BRAIN_PIN:\" to entry last visited by
-  `org-brain-visualize' if it doesn't already exist."
+  "Pin `ORG-BRAIN--VISUALIZING-ENTRY.'"
   (interactive)
-  (org-brain-invalidate-pins-cache)    ; Invalidate cache
+  (org-brain-log "In org-brain-visualize-add-pin...")
   (org-brain-add-pin org-brain--visualizing-entry)
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
 (defun org-brain-add-pin (entry)
-  "In org-brain ENTRY, add \"#+BRAIN_PIN:\"."
-  (let ((entry-path (org-brain-entry-path entry)))
-    (org-save-all-org-buffers)
-    (with-current-buffer (find-file-noselect entry-path)
-      (when (not (assoc "BRAIN_PIN" (org-brain-keywords entry)))
-        (goto-char (point-min))
-        (insert "#+BRAIN_PIN:\n")
-        (save-buffer)))))
+  "Pin ENTRY."
+  (unless (cl-position entry org-brain-pins-cache :test #'equal)
+    (push entry org-brain-pins-cache))
+  (org-brain-log (format "After pinning entry: %s, org-brain-pins-cache: %s"
+                         entry org-brain-pins-cache))
+  (org-brain--save-pins))
 
 (defun org-brain-visualize-remove-pin ()
-  "Remove \"#+BRAIN_PIN:\" from entry last visited by
-  `org-brain-visualize' if it exists."
+  "Unpin `ORG-BRAIN--VISUALIZING-ENTRY.'"
   (interactive)
-  (org-brain-invalidate-pins-cache)    ; Invalidate cache
   (org-brain-remove-pin org-brain--visualizing-entry)
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
 (defun org-brain-remove-pin (entry)
-  "In org-brain ENTRY, remove \"#+BRAIN_PIN:\" if it exists."
-  (let ((entry-path (org-brain-entry-path entry)))
-    (org-save-all-org-buffers)
-    (with-current-buffer (find-file-noselect entry-path)
-      (when (assoc "BRAIN_PIN" (org-brain-keywords entry))
-        (goto-char (point-min))
-        (re-search-forward "^#\\+BRAIN_PIN:.*$")
-        (beginning-of-line)
-        (when (looking-at "^#\\+BRAIN_PIN:.*$")
-            (kill-line)
-            (save-buffer))))))
+  "Unpin ENTRY."
+  (org-brain-log
+   (format "Before unpinning entry: %s, org-brain-pins-cache: %s"
+           entry org-brain-pins-cache))
+  (setf org-brain-pins-cache
+        (cl-remove entry org-brain-pins-cache :test #'equal))
+  (format "After unpinning entry: %s, org-brain-pins-cache: %s"
+           entry org-brain-pins-cache)
+  (org-brain--save-pins))
 
 (defun org-brain-visualize-add-or-change-title ()
   "In current org-brain ENTRY, add \"#+TITLE:\" with title value acquired
