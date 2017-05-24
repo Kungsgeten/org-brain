@@ -595,22 +595,24 @@ interactively."
               (goto-line 4)
               (mapc
                (lambda (child)
-                 (picture-forward-column col-start)
-                 (insert (make-string
-                          (1+ (length parent-title)) ?\ ) "/ ")
-                 (org-brain--insert-visualize-button child)
-                 (setq max-width (max max-width (current-column)))
-                 (newline (forward-line 1)))
+                 (unless (string-equal entry child)
+                   (picture-forward-column col-start)
+                   (insert (make-string
+                            (1+ (length parent-title)) ?\ ) "/ ")
+                   (org-brain--insert-visualize-button child)
+                   (setq max-width (max max-width (current-column)))
+                   (newline (forward-line 1))))
                children)
               (goto-line 4)
-              (forward-line (1- (length children)))
+              (forward-line (- (length children) 2))
               (picture-forward-column col-start)
               (push (cons (picture-current-line)
                           (+ (current-column) (/ (length parent-title) 2)))
                     parent-positions)
               (org-brain--insert-visualize-button parent)
               (setq max-width (max max-width (current-column)))
-              (when children
+              (when (and children
+                         (> (length children) 1))
                 (delete-char (length parent-title)))))
           (org-brain-parents entry))
     ;; Draw lines
