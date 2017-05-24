@@ -938,6 +938,68 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
             (kill-line)
             (save-buffer))))))
 
+(defun org-brain-visualize-search-entries (entry)
+  "Search for headline in `ORG-BRAIN--VISUALIZING-ENTRY' and upon
+  selection in completing read, open the headline in the
+  underlying file."
+  (interactive
+   (list (completing-read
+          "Entry: "
+          (org-element-map
+              (with-temp-buffer
+                (ignore-errors
+                  (insert-file-contents
+                   (org-brain-entry-path org-brain--visualizing-entry)))
+                (delay-mode-hooks
+                  (org-mode)
+                  (org-element-parse-buffer)))
+              'headline
+            (lambda (headline)
+              (org-element-property :title headline))))))
+  (org-brain-log (format "Visualizing entry: %s" org-brain--visualizing-entry))
+  (org-brain-log (format "Entry to search for: %s" entry))
+  (re-search-forward (format "^\*+ *%s" entry))
+  (backward-char 1)
+  (push-button))
+
+(defun org-brain-visualize-search-links (link)
+  "Search for link in `ORG-BRAIN--VISUALIZING-ENTRY' and upon
+  selection in completing read, open the link in the
+  underlying file."
+  (interactive
+   (list (completing-read
+          "Link: "
+          (org-element-map
+              (with-temp-buffer
+                (ignore-errors
+                  (insert-file-contents
+                   (org-brain-entry-path org-brain--visualizing-entry)))
+                (delay-mode-hooks
+                  (org-mode)
+                  (org-element-parse-buffer)))
+              'link
+            (lambda (link)
+              (let* ((raw-link (org-element-property :raw-link link))
+                     (link-contents (car (org-element-contents link)))
+                     (description (org-brain--link-description
+                                   (list raw-link
+                                         link-contents))))
+                (if (and description
+                         (char-or-string-p description) ; Temp fix: handle org
+                                                     ; parser bug.
+                         (not (string-equal description ","))) ; Temp fix:
+                                                           ; handle org
+                                                           ; parser bug.
+                    description
+                  (unless (string-equal raw-link ",") ; Temp fix: handle org
+                                                  ; parser bug.
+                     raw-link))))))))
+  (org-brain-log (format "Visualizing entry: %s" org-brain--visualizing-entry))
+  (org-brain-log (format "Link to search for: %s" link))
+  (re-search-forward (format "^ +- *%s" link))
+  (backward-char 1)
+  (push-button))
+
 (define-derived-mode org-brain-visualize-mode
   special-mode  "Org-brain Visualize"
   "Major mode for `org-brain-visualize'.
@@ -962,6 +1024,8 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
 (define-key org-brain-visualize-mode-map "l" 'org-brain-visualize-add-resource-link)
 (define-key org-brain-visualize-mode-map "a" 'org-brain-visualize-add-attachment)
 (define-key org-brain-visualize-mode-map "\C-y" 'org-brain-visualize-paste-link)
+(define-key org-brain-visualize-mode-map "s" 'org-brain-visualize-search-entries)
+(define-key org-brain-visualize-mode-map "S" 'org-brain-visualize-search-links)
 
 (provide 'org-brain)
 ;;; org-brain.el ends here
