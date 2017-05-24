@@ -214,14 +214,14 @@ If RELATIVE is t, then return relative paths and remove org extension."
                     org-brain-path))
 
 ;;; Data serialization functions
-(defun save-data (file data)
+(defun org-brain--save-data (file data)
   "Save lisp DATA, i.e., sexps, to FILE."
   (with-temp-file file
     (let ((standard-output (current-buffer))
           (print-circle t))  ; Allow circular data
       (prin1 data))))
 
-(defun load-data (file)
+(defun org-brain--load-data (file)
   "Load lisp data, i.e., sexps, from FILE."
   (when (file-exists-p file)
     (with-temp-buffer
@@ -231,33 +231,33 @@ If RELATIVE is t, then return relative paths and remove org extension."
 (defun org-brain--save-children ()
   "Save the children. Write data into the file specified by
   `org-brain--children-file'."
-  (save-data org-brain--children-file
+  (org-brain--save-data org-brain--children-file
              (org-brain--hash-to-list org-brain-children-cache)))
 
 (defun org-brain--save-parents ()
   "Save the parents. Write data into the file specified by
   `org-brain--parents-file'."
-  (save-data org-brain--parents-file
+  (org-brain--save-data org-brain--parents-file
              (org-brain--hash-to-list org-brain-parents-cache)))
 
 (defun org-brain--save-pins ()
   "Save the pins. Write data into the file specified by
   `org-brain--pins-file'."
-  (save-data org-brain--pins-file org-brain-pins-cache))
+  (org-brain--save-data org-brain--pins-file org-brain-pins-cache))
 
 (defun org-brain--load-children ()
   "Load children cache from file."
   (setq org-brain-children-cache
-        (org-brain--list-to-hash (load-data org-brain--children-file))))
+        (org-brain--list-to-hash (org-brain--load-data org-brain--children-file))))
 
 (defun org-brain--load-parents ()
   "Load parents cache from file."
   (setq org-brain-parents-cache
-        (org-brain--list-to-hash (load-data org-brain--parents-file))))
+        (org-brain--list-to-hash (org-brain--load-data org-brain--parents-file))))
 
 (defun org-brain--load-pins ()
   "Load pins cache from file."
-  (setq org-brain-pins-cache (load-data org-brain--pins-file)))
+  (setq org-brain-pins-cache (org-brain--load-data org-brain--pins-file)))
 
 (defun org-brain-parents (entry &optional exclude)
   "Get list of org-brain parent entries linked to ENTRY.
