@@ -996,9 +996,10 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
                      raw-link))))))))
   (org-brain-log (format "Visualizing entry: %s" org-brain--visualizing-entry))
   (org-brain-log (format "Link to search for: %s" link))
-  (re-search-forward (format "^ +- *%s" link))
-  (backward-char 1)
-  (push-button))
+  (when (re-search-forward (format "^ +- *%s\\|^*+ +\\[\\[.*\\]\\[%s"
+                                   link link))
+    (backward-char 1)
+    (push-button)))
 
 (define-derived-mode org-brain-visualize-mode
   special-mode  "Org-brain Visualize"
