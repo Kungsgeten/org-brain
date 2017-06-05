@@ -611,9 +611,8 @@ interactively."
                     parent-positions)
               (org-brain--insert-visualize-button parent)
               (setq max-width (max max-width (current-column)))
-              (when (and children
-                         (> (length children) 1))
-                (delete-char (length parent-title)))))
+              (when children
+                (ignore-errors (delete-char (length parent-title))))))
           (org-brain-parents entry))
     ;; Draw lines
     (when parent-positions
