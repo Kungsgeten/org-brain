@@ -1000,6 +1000,14 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
     (backward-char 1)
     (push-button)))
 
+(defun org-brain-visualize-search-string-in-brain ()
+  (interactive)
+  (let ((string (read-string
+                 (format "Enter the string to search for in files in your org-brain-path (%s): " org-brain-path))))
+    (if (featurep 'ag)
+        (ag string org-brain-path)
+      (message "Install and configure package ag to use this functionality."))))
+
 (define-derived-mode org-brain-visualize-mode
   special-mode  "Org-brain Visualize"
   "Major mode for `org-brain-visualize'.
@@ -1026,6 +1034,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
 (define-key org-brain-visualize-mode-map "\C-y" 'org-brain-visualize-paste-link)
 (define-key org-brain-visualize-mode-map "s" 'org-brain-visualize-search-entries)
 (define-key org-brain-visualize-mode-map "S" 'org-brain-visualize-search-links)
+(define-key org-brain-visualize-mode-map (kbd "C-c s") 'org-brain-visualize-search-string-in-brain)
 
 (provide 'org-brain)
 ;;; org-brain.el ends here
