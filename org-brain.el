@@ -1001,12 +1001,20 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
     (push-button)))
 
 (defun org-brain-visualize-search-string-in-brain ()
+  "Prompt user for search string and conduct search in
+  `ORG-BRAIN-PATH' using the AG package. Gracefully inform the
+  user to install AG if it isn't currently installed."
   (interactive)
   (let ((string (read-string
                  (format "Enter the string to search for in files in your org-brain-path (%s): " org-brain-path))))
     (if (featurep 'ag)
         (ag string org-brain-path)
-      (message "Install and configure package ag to use this functionality."))))
+      (message "Install and configure package ag to use this functionality. E.g., (package-install ag)"))))
+
+(defun org-brain-visualize-org-brain-path-directory ()
+  "Open `ORG-BRAIN-PATH' directory using DIRED."
+  (interactive)
+  (find-file-other-window org-brain-path))
 
 (define-derived-mode org-brain-visualize-mode
   special-mode  "Org-brain Visualize"
@@ -1035,6 +1043,7 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
 (define-key org-brain-visualize-mode-map "s" 'org-brain-visualize-search-entries)
 (define-key org-brain-visualize-mode-map "S" 'org-brain-visualize-search-links)
 (define-key org-brain-visualize-mode-map (kbd "C-c s") 'org-brain-visualize-search-string-in-brain)
+(define-key org-brain-visualize-mode-map "d" 'org-brain-visualize-org-brain-path-directory)
 
 (provide 'org-brain)
 ;;; org-brain.el ends here
