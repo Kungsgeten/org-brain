@@ -325,7 +325,6 @@ You can choose to EXCLUDE an entry from the list."
                      (org-brain-files t)))
     (put-text-property start end 'face '(org-warning org-link))))
 
-;;; TODO
 (defun org-brain-link-complete ()
   "Create an org-brain-link-type link to a file in `org-brain-path'."
   (concat org-brain-child-link-type ":"
@@ -338,6 +337,10 @@ You can choose to EXCLUDE an entry from the list."
     (org-brain-title
      (car (split-string
            (org-element-property :path (org-element-context)) "::")))))
+
+(defun org-brain-child-exists-p (entry child)
+  "Return non nil if CHILD is already a child of ENTRY."
+  (member child (org-brain-children entry)))
 
 (defun org-brain-add-child (entry child)
   "Add CHILD as child of ENTRY."
@@ -358,6 +361,10 @@ You can choose to EXCLUDE an entry from the list."
   (org-brain-log (format "After cache update, org-brain-children-cache: %s"
                          org-brain-children-cache))
   (org-brain--save-children))
+
+(defun org-brain-parent-exists-p (entry parent)
+  "Return non nil if PARENT is already a parent of ENTRY."
+  (member parent (org-brain-parents entry)))
 
 (defun org-brain-add-parent (entry parent)
   "Add PARENT as parent of ENTRY."
@@ -811,7 +818,10 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
    (list (completing-read "Child: " (org-brain-files t))))
   (org-brain-invalidate-files-cache)    ; Invalidate cache
   (dolist (c (split-string child org-brain-batch-separator t " +"))
-    (org-brain-add-child org-brain--visualizing-entry c))
+    (when (not (org-brain-child-exists-p org-brain--visualizing-entry c))
+      (org-brain-add-child org-brain--visualizing-entry c))
+    (when (not (org-brain-parent-exists-p c org-brain--visualizing-entry))
+      (org-brain-add-parent c org-brain--visualizing-entry)))
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
@@ -823,7 +833,10 @@ CHILD can hold multiple entries, by using `org-brain-batch-separator'."
    (list (completing-read "Child: "
                           (org-brain-children org-brain--visualizing-entry))))
   (dolist (c (split-string child org-brain-batch-separator t " +"))
-    (org-brain-remove-child org-brain--visualizing-entry c))
+    (when (org-brain-parent-exists-p c org-brain--visualizing-entry)
+      (org-brain-remove-parent c org-brain--visualizing-entry))
+    (when (org-brain-child-exists-p org-brain--visualizing-entry c)
+      (org-brain-remove-child org-brain--visualizing-entry c)))
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
@@ -834,7 +847,10 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
    (list (completing-read "Parent: " (org-brain-files t))))
   (org-brain-invalidate-files-cache)    ; Invalidate cache
   (dolist (p (split-string parent org-brain-batch-separator t " +"))
-    (org-brain-add-parent org-brain--visualizing-entry p))
+    (when (not (org-brain-parent-exists-p org-brain--visualizing-entry p))
+      (org-brain-add-parent org-brain--visualizing-entry p))
+    (when (not (org-brain-child-exists-p p org-brain--visualizing-entry))
+      (org-brain-add-child p org-brain--visualizing-entry)))
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
@@ -845,7 +861,10 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
    (list (completing-read "Parent: "
                           (org-brain-parents org-brain--visualizing-entry))))
   (dolist (p (split-string parent org-brain-batch-separator t " +"))
-    (org-brain-remove-parent org-brain--visualizing-entry p))
+    (when (org-brain-child-exists-p p org-brain--visualizing-entry)
+      (org-brain-remove-child p org-brain--visualizing-entry))
+    (when (org-brain-parent-exists-p org-brain--visualizing-entry p)
+      (org-brain-remove-parent org-brain--visualizing-entry p)))
   (when (string-equal (buffer-name) "*org-brain*")
     (revert-buffer)))
 
