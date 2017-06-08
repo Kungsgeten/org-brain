@@ -4,7 +4,7 @@
 ;; MIT License
 
 ;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
-;; Co-author (caching and extended visualize interface): https://github.com/analyticd
+;; Co-author (caching, storage, and extended visualize interface): https://github.com/analyticd
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25") (org "9"))
