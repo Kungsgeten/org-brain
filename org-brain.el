@@ -146,11 +146,11 @@ will be considered org-brain entries."
   :group 'org-brain
   :type 'boolean)
 
-(defun org-brain-log (msg)
+(defun org-brain-log (msg &rest args)
   "Write MSG to the *Messages* buffer."
   (when org-brain-log
     (setq inhibit-message t)
-    (message msg)
+    (apply #'message msg args)
     (setq inhibit-message nil)))
 
 (defvar org-brain--visualizing-entry nil
@@ -351,15 +351,14 @@ You can choose to EXCLUDE an entry from the list."
   ;; Create the cache if it doesn't yet exist, i.e., first run.
   (unless org-brain-children-cache
     (setf org-brain-children-cache (make-hash-table :test #'equal)))
-  (org-brain-log (format "org-brain-children-cache: %s"
-                         org-brain-children-cache))
+  (org-brain-log "org-brain-children-cache: %s" org-brain-children-cache)
   (let ((children (gethash entry org-brain-children-cache)))
     (push child children)
-    (org-brain-log (format "entry: %s, children: %s" entry children))
+    (org-brain-log "entry: %s, children: %s" entry children)
     (setf (gethash entry org-brain-children-cache)
           children))
-  (org-brain-log (format "After cache update, org-brain-children-cache: %s"
-                         org-brain-children-cache))
+  (org-brain-log "After cache update, org-brain-children-cache: %s"
+                 org-brain-children-cache)
   (org-brain--save-children))
 
 (defun org-brain-parent-exists-p (entry parent)
@@ -375,36 +374,35 @@ You can choose to EXCLUDE an entry from the list."
   ;; Create the cache if it doesn't yet exist, i.e., first run.
   (unless org-brain-parents-cache
     (setf org-brain-parents-cache (make-hash-table :test #'equal)))
-  (org-brain-log (format "org-brain-parents-cache: %s"
-                         org-brain-parents-cache))
+  (org-brain-log "org-brain-parents-cache: %s" org-brain-parents-cache)
   (let ((parents (gethash entry org-brain-parents-cache)))
     (push parent parents)
-    (org-brain-log (format "entry: %s, parents: %s" entry parents))
+    (org-brain-log "entry: %s, parents: %s" entry parents)
     (setf (gethash entry org-brain-parents-cache) parents))
-  (org-brain-log (format "After cache update, org-brain-parents-cache: %s"
-                         org-brain-parents-cache))
+  (org-brain-log "After cache update, org-brain-parents-cache: %s"
+                 org-brain-parents-cache)
   (org-brain--save-parents))
 
 (defun org-brain-remove-child (entry child)
   "In org-brain ENTRY, remove CHILD link. This doesn't delete the
   file pointed to by the link, just the link."
   (let ((children (gethash entry org-brain-children-cache)))
-    (org-brain-log (format "before remove, children: %s" children))
+    (org-brain-log "before remove, children: %s" children)
     (setf (gethash entry org-brain-children-cache)
           (cl-remove child children :test #'equal))
-    (org-brain-log (format "after remove, children: %s"
-                           (gethash entry org-brain-children-cache))))
+    (org-brain-log "after remove, children: %s"
+                   (gethash entry org-brain-children-cache)))
   (org-brain--save-children))
 
 (defun org-brain-remove-parent (entry parent)
   "In org-brain ENTRY, remove PARENT link. This doesn't delete the
   file pointed to by the link, just the link."
   (let ((parents (gethash entry org-brain-parents-cache)))
-    (org-brain-log (format "before remove, parents: %s" parents))
+    (org-brain-log "before remove, parents: %s" parents)
     (setf (gethash entry org-brain-parents-cache)
           (cl-remove parent parents :test #'equal))
-    (org-brain-log (format "after remove, parents: %s"
-                           (gethash entry org-brain-parents-cache))))
+    (org-brain-log "after remove, parents: %s"
+                   (gethash entry org-brain-parents-cache)))
   (org-brain--save-parents))
 
 (defun org-brain--insert-visualize-button (entry)
@@ -483,20 +481,20 @@ also made aware of the change."
   "Given an org buffer's ENTRY and HEADLINE, insert the list of
   files attached to the HEADLINE."
   (when (member "ATTACH" (org-element-property :tags headline))
-    (org-brain-log (format "Entry attachment path: %s"
-                   (file-name-directory (org-brain-entry-path entry))))
+    (org-brain-log "Entry attachment path: %s"
+                   (file-name-directory (org-brain-entry-path entry)))
     (let* ((attach-dir org-attach-directory) ; Issue: non-absolute
-                                             ; (org-attach-dir) error.
-                                             ; Using org-attach-directory
-                                             ; as workaround.
+                                        ; (org-attach-dir) error.
+                                        ; Using org-attach-directory
+                                        ; as workaround.
            (absolute-attach-dir (expand-file-name
                                  attach-dir
                                  (file-name-directory
                                   (org-brain-entry-path entry)))))
       (mapcar (lambda (attachment)
-                (org-brain-log (format "attach-dir: %s, attachment: %s"
-                                       absolute-attach-dir
-                                       attachment))
+                (org-brain-log "attach-dir: %s, attachment: %s"
+                               absolute-attach-dir
+                               attachment)
                 (org-brain--insert-resource-button
                  (format "%s:%s"
                          org-brain--default-link-type-for-attachments
@@ -880,8 +878,8 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
   "Pin ENTRY."
   (unless (cl-position entry org-brain-pins-cache :test #'equal)
     (push entry org-brain-pins-cache))
-  (org-brain-log (format "After pinning entry: %s, org-brain-pins-cache: %s"
-                         entry org-brain-pins-cache))
+  (org-brain-log "After pinning entry: %s, org-brain-pins-cache: %s"
+                 entry org-brain-pins-cache)
   (org-brain--save-pins))
 
 (defun org-brain-visualize-remove-pin ()
@@ -893,9 +891,8 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
 
 (defun org-brain-remove-pin (entry)
   "Unpin ENTRY."
-  (org-brain-log
-   (format "Before unpinning entry: %s, org-brain-pins-cache: %s"
-           entry org-brain-pins-cache))
+  (org-brain-log "Before unpinning entry: %s, org-brain-pins-cache: %s"
+                 entry org-brain-pins-cache)
   (setf org-brain-pins-cache
         (cl-remove entry org-brain-pins-cache :test #'equal))
   (format "After unpinning entry: %s, org-brain-pins-cache: %s"
@@ -974,8 +971,8 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
               'headline
             (lambda (headline)
               (org-element-property :title headline))))))
-  (org-brain-log (format "Visualizing entry: %s" org-brain--visualizing-entry))
-  (org-brain-log (format "Entry to search for: %s" entry))
+  (org-brain-log "Visualizing entry: %s" org-brain--visualizing-entry)
+  (org-brain-log "Entry to search for: %s" entry)
   (re-search-forward (format "^\*+ *%s" entry))
   (backward-char 1)
   (push-button))
@@ -1012,8 +1009,8 @@ PARENT can hold multiple entries, by using `org-brain-batch-separator'."
                   (unless (string-equal raw-link ",") ; Temp fix: handle org
                                                   ; parser bug.
                      raw-link))))))))
-  (org-brain-log (format "Visualizing entry: %s" org-brain--visualizing-entry))
-  (org-brain-log (format "Link to search for: %s" link))
+  (org-brain-log "Visualizing entry: %s" org-brain--visualizing-entry)
+  (org-brain-log "Link to search for: %s" link)
   (when (re-search-forward (format "^ +- *%s\\|^*+ +\\[\\[.*\\]\\[%s"
                                    link link))
     (backward-char 1)
