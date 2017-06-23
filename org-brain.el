@@ -288,7 +288,6 @@ Currently getting text of file entries are not supported."
         (if (org-brain-filep entry)
             nil
           (org-with-point-at (org-brain-entry-marker entry)
-            (deactivate-mark)
             (let ((tags (org-get-tags-at nil t)))
               (unless (member org-brain-exclude-text-tag tags)
                 (goto-char (cdr (org-get-property-block)))
@@ -297,7 +296,7 @@ Currently getting text of file entries are not supported."
                   (save-excursion
                     (or (and (not (member "childless" tags))
                              (org-goto-first-child))
-                        (org-end-of-subtree))
+                        (org-end-of-subtree t))
                     (setq end (point)))
                   (let ((text (buffer-substring (point) end)))
                     (remove-text-properties 0 (length text)
@@ -360,7 +359,7 @@ The car is the raw-link and the cdr is the description."
          (let ((data (let (end)
                        (save-excursion
                          (or (org-goto-first-child)
-                             (org-end-of-subtree))
+                             (org-end-of-subtree t))
                          (setq end (point)))
                        (org-element-parse-secondary-string
                         (buffer-substring-no-properties (point) end)
@@ -550,7 +549,7 @@ If chosen child entry doesn't exist, create it as a new file."
       (org-with-point-at (org-brain-entry-marker entry)
         (if (org-goto-first-child)
             (open-line 1)
-          (org-end-of-subtree))
+          (org-end-of-subtree t))
         (org-insert-heading)
         (org-do-demote)
         (insert child-name)
