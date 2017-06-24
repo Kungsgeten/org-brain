@@ -86,7 +86,16 @@ In version 0.4 =org-brain= uses a combination of headline properties, file
 keywords, =org-id=, and a data file (=org-brain-data-file=).
 
 No data in old configurations should be lost, but you'll have to update the
-connections between entries.
+connections between entries. This can be done by using =M-x
+org-brain-create-relationships-from-links=, but please backup your =org-brain=
+directory first.
+
+It is still possible to add children to an entry by using the =brain:= link, but
+only if the link is inserted with =org-insert-link= (bound to =C-c C-l= in
+=org-mode= by default) or with =org-brain-insert-link=. Linking to specific
+headlines in a file, via =brain:filename::*Headline= is *deprecated* and will no
+longer work, instead you can convert the headline to an entry and link directly
+to that.
 
 * Setup and requirements
 
@@ -175,9 +184,17 @@ may use the commands above, like =M-x org-brain-add-child= for instance.
 
 You may want to create a link to an =org-brain= entry in an =org-mode= file (not
 necessarily an =org-brain= file itself). You can use the =brain:= link type for
-this, or use =M-x org-brain-insert-link=. Another available command is =M-x
-org-brain-agenda=, which can be used to run =org-agenda= on your =org-brain=
-files.
+this, or use =M-x org-brain-insert-link=. Doing this will, if in an =org-brain=
+file, treat the linked entry as a child of the current entry, unless
+=org-brain-brain-link-adds-child= is =nil=.
+
+If you try to add a child/parent/friend to an entry which doesn't exist, that
+entry will be created. The name of a new entry can be written like this:
+=file::headline=. The =headline= will be created as a level one headline in
+=file=.
+
+Another available command is =M-x org-brain-agenda=, which can be used to run
+=org-agenda= on your =org-brain= files.
 
 ** Special tags
 
