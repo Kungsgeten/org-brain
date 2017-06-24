@@ -1,7 +1,5 @@
 #+TITLE:org-brain [[http://melpa.org/#/org-brain][file:http://melpa.org/packages/org-brain-badge.svg]]
 
-*Attention!* =org-brain= will soon be updated to a new version, which unfortunately isn't fully compatible with this version of =org-brain=. Please see [[https://github.com/Kungsgeten/org-brain/tree/org-brain-id][this branch]] for more information.
-
 =org-brain= implements a variant of [[https://en.wikipedia.org/wiki/Concept_map][concept mapping]] in Emacs, using [[http://orgmode.org/][org-mode]]. It
 is heavily inspired by a piece of software called [[http://thebrain.com/][The Brain]], and you can view an
 introduction to that program [[https://www.youtube.com/watch?v=GFqLUBKCFdA][here]]. They also provide [[https://blog.thebrain.com/][a blog]] with great ideas of
