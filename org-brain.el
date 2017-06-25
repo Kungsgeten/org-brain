@@ -727,6 +727,17 @@ If ALL is nil, choose only between externally linked parents."
                    nil t)))
 
 ;;;###autoload
+(defun org-brain-goto-friend (entry)
+  "Goto a friend of ENTRY.
+If run interactively, get ENTRY from context."
+  (interactive (list (org-brain-entry-at-pt)))
+  (org-brain-goto (org-brain-choose-entry
+                   "Friend: "
+                   (org-brain--linked-property-entries
+                    entry "BRAIN_FRIENDS")
+                   nil t)))
+
+;;;###autoload
 (defun org-brain-delete-entry (entry &optional noconfirm)
   "Delete ENTRY and all of its local children.
 If run interactively, ask for the ENTRY.
