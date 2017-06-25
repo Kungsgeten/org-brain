@@ -180,7 +180,9 @@ but keep in mind that only entries with an =ID= property will be considered as
 entries to =org-brain=, you can use =M-x org-id-get-create= to create an =ID=
 property to the current =org-mode= headline. In order to add external
 relationships (for instance to add an entry in a different file as a child) you
-may use the commands above, like =M-x org-brain-add-child= for instance.
+may use the commands above, like =M-x org-brain-add-child= for instance. From
+=org-mode= files you may also want to use the commands
+=org-brain-goto-<relationsship>= to navigate between entries.
 
 You may want to create a link to an =org-brain= entry in an =org-mode= file (not
 necessarily an =org-brain= file itself). You can use the =brain:= link type for
@@ -192,6 +194,10 @@ If you try to add a child/parent/friend to an entry which doesn't exist, that
 entry will be created. The name of a new entry can be written like this:
 =file::headline=. The =headline= will be created as a level one headline in
 =file=.
+
+If you have a headline entry, which you want to convert to a file entry, use
+=M-x org-brain-headline-to-file=. Unfortunately there is currently no function
+to convert a file entry into a headline entry.
 
 Another available command is =M-x org-brain-agenda=, which can be used to run
 =org-agenda= on your =org-brain= files.

@@ -843,6 +843,58 @@ If run interactively, get ENTRY from context."
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
+(defun org-brain-headline-to-file (entry)
+  "Convert headline ENTRY to a file entry.
+Prompt for name of the new file.
+If interactive, also prompt for ENTRY."
+  (interactive (list (org-brain-choose-entry "Entry: "
+                                             (org-brain-headline-entries)
+                                             nil t)))
+  (let* (level
+         (title (org-brain-title entry))
+         (new-entry (read-string "New file entry: " title))
+         (path (org-brain-entry-path new-entry)))
+    (when (file-exists-p path)
+      (error "That file already exists"))
+    (let ((parents (org-brain-parents entry))
+          (external-parents (org-brain--linked-property-entries entry "BRAIN_PARENTS"))
+          (children (org-brain--linked-property-entries entry "BRAIN_CHILDREN"))
+          (friends (org-brain-friends entry))
+          (hl-text (org-with-point-at (org-brain-entry-marker entry)
+                     (setq level (org-outline-level))
+                     (org-get-entry))))
+      (dolist (parent external-parents)
+        (org-brain-remove-relationship parent entry))
+      (dolist (child children)
+        (org-brain-remove-relationship entry child))
+      (dolist (friend friends)
+        (org-brain-remove-friendship entry friend))
+      (org-with-point-at (org-brain-entry-marker entry)
+        (org-cut-subtree)
+        (pop kill-ring)
+        (save-buffer))
+      (with-temp-file path
+        (insert (format "#+TITLE:%s\n\n%s" title hl-text))
+        (delay-mode-hooks
+          (org-mode)
+          (goto-char (point-min))
+          (re-search-forward org-property-drawer-re)
+          (replace-match "")
+          (goto-char (point-max))
+          (let ((level-regex "^"))
+            (dotimes (_i (1+ level))
+              (setq level-regex (concat level-regex "\\*")))
+            (setq level-regex (concat level-regex " "))
+            (while (re-search-backward level-regex nil t)
+              (dotimes (_i level) (org-promote-subtree))))))
+      (dolist (parent parents)
+        (org-brain-add-relationship parent new-entry))
+      (dolist (child children)
+        (org-brain-add-relationship new-entry child))
+      (dolist (friend friends)
+        (org-brain-add-friendship new-entry friend)))))
+
+;;;###autoload
 (defun org-brain-insert-link ()
   "Insert a link to an org-brain entry and suggest a description.
 Adds the linked entry as a child if `org-brain-brain-link-adds-child' is t."
