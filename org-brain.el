@@ -95,6 +95,14 @@ Can be used to prettify the buffer output, e.g. `ascii-art-to-unicode'."
   :group 'org-brain
   :type 'hook)
 
+(defcustom org-brain-after-resource-button-functions nil
+  "Hook run during `org-brain-insert-resource-button'.
+Insert a bullet, then run hook functions, then insert the actual button.
+Each function must take a single argument: the org link to the resource.
+Can for instance be used in combination with `all-the-icons'."
+  :group 'org-brain
+  :type 'hook)
+
 (defcustom org-brain-exclude-text-tag "notext"
   "`org-mode' tag stopping `org-brain-visualize' from fetching entry text.
 Only applies to headline entries."
@@ -1014,6 +1022,7 @@ Setting NOFOCUS to t implies also having NOHISTORY as t."
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
   (insert (make-string (or indent 0) ?\ ) "\n• ")
+  (run-hook-with-args 'org-brain-after-resource-button-functions (car resource))
   (insert-text-button
    (or (cdr resource) (car resource))
    'action (lambda (_x)

@@ -290,6 +290,38 @@ a bit nicer. After installing, add the following to your init-file:
   (add-hook 'org-brain-after-visualize-hook #'aa2u-buffer)
 #+END_SRC
 
+** [[https://github.com/domtronn/all-the-icons.el][all-the-icons]]
+
+#+BEGIN_QUOTE
+A utility package to collect various Icon Fonts and propertize them within Emacs.
+#+END_QUOTE
+
+After installing =all-the-icons= you could decorate the resources in =org-brain=, by using
+=org-brain-after-resource-button-functions=. Here's a small example:
+
+#+BEGIN_SRC emacs-lisp
+  (defun org-brain-insert-resource-icon (link)
+    "Insert an icon, based on content of org-mode LINK."
+    (insert (format "%s "
+                    (cond ((string-prefix-p "http" link)
+                           (cond ((string-match "wikipedia\\.org" link)
+                                  (all-the-icons-faicon "wikipedia-w"))
+                                 ((string-match "github\\.com" link)
+                                  (all-the-icons-octicon "mark-github"))
+                                 ((string-match "vimeo\\.com" link)
+                                  (all-the-icons-faicon "vimeo"))
+                                 ((string-match "youtube\\.com" link)
+                                  (all-the-icons-faicon "youtube"))
+                                 (t
+                                  (all-the-icons-faicon "globe"))))
+                          ((string-prefix-p "brain:" link)
+                           (all-the-icons-fileicon "brain"))
+                          (t
+                           (all-the-icons-icon-for-file link))))))
+
+  (add-hook 'org-brain-after-resource-button-functions #'org-brain-insert-resource-icon)
+#+END_SRC
+
 ** [[http://jblevins.org/projects/deft/][deft]]
 
 #+BEGIN_QUOTE
