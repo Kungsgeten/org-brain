@@ -960,7 +960,7 @@ function."
                (car (split-string (org-element-property :path link) "::"))))))))))
 
 ;;* Visualize
-
+;;;###autoload
 (defun org-brain-visualize (entry &optional nofocus nohistory)
   "View a concept map with ENTRY at the center.
 
