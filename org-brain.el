@@ -349,25 +349,28 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
 (defun org-brain-parents (entry)
   "Get parents of ENTRY.
 Often you want the siblings too, then use `org-brain-siblings' instead."
-  (append (org-brain--linked-property-entries entry "BRAIN_PARENTS")
-          (org-brain--local-parent entry)))
+  (delete-dups
+   (append (org-brain--linked-property-entries entry "BRAIN_PARENTS")
+           (org-brain--local-parent entry))))
 
 (defun org-brain-children (entry)
   "Get children of ENTRY."
-  (append (org-brain--linked-property-entries entry "BRAIN_CHILDREN")
-          (org-brain--local-children entry)))
+  (delete-dups
+   (append (org-brain--linked-property-entries entry "BRAIN_CHILDREN")
+           (org-brain--local-children entry))))
 
 (defun org-brain-siblings (entry)
   "Get siblings of ENTRY.
 Return an alist where key = parent, value = siblings from that parent."
-  (mapcar
-   (lambda (parent)
-     (cons parent (remove entry (org-brain-children parent))))
-   (org-brain-parents entry)))
+  (delete-dups
+   (mapcar
+    (lambda (parent)
+      (cons parent (remove entry (org-brain-children parent))))
+    (org-brain-parents entry))))
 
 (defun org-brain-friends (entry)
   "Get friends of ENTRY."
-  (org-brain--linked-property-entries entry "BRAIN_FRIENDS"))
+  (delete-dups (org-brain--linked-property-entries entry "BRAIN_FRIENDS")))
 
 (defun org-brain-resources (entry)
   "Get alist of links in ENTRY, excluding `org-brain-ignored-resource-links'.
