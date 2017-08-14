@@ -1041,15 +1041,19 @@ Setting NOFOCUS to t implies also having NOHISTORY as t."
              (org-open-link-from-string (car resource)))
    'follow-link t))
 
-(defun org-brain-visualize-add-resource (link &optional description prompt)
-  "Insert LINK with DESCRIPTION in `org-brain--vis-entry'.
-If PROMPT is non nil, use `org-insert-link' even if not being run interactively."
+(defun org-brain-add-resource (link &optional description prompt entry)
+  "Insert LINK with DESCRIPTION in an entry.
+If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
+If ENTRY is omitted, try to get it from context or prompt for it."
   (interactive "i")
-  (unless (eq major-mode 'org-brain-visualize-mode)
-    (error "Not in org-brain-visualize-mode"))
-  (if (org-brain-filep org-brain--vis-entry)
+  (unless entry
+    (setq entry (or (ignore-errors (org-brain-entry-at-pt))
+                    (org-brain-choose-entry "Entry: "
+                                            (append (org-brain-files t)
+                                                    (org-brain-headline-entries))))))
+  (if (org-brain-filep entry)
       ;; File entry
-      (with-current-buffer (find-file-noselect (org-brain-entry-path org-brain--vis-entry))
+      (with-current-buffer (find-file-noselect (org-brain-entry-path entry))
         (goto-char (point-min))
         (or (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
             (goto-char (point-max)))
@@ -1066,7 +1070,7 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
           (insert (format "\n- %s" (org-make-link-string link description))))
         (save-buffer))
     ;; Headline entry
-    (org-with-point-at (org-brain-entry-marker org-brain--vis-entry)
+    (org-with-point-at (org-brain-entry-marker entry)
       (goto-char (cdr (org-get-property-block)))
       (forward-line 1)
       (if (looking-at org-brain-resources-start-re)
@@ -1081,7 +1085,9 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
         (setq description (read-string "Description: " description))
         (insert (format "\n- %s" (org-make-link-string link description)))
         (save-buffer))))
-  (revert-buffer))
+  (org-brain--revert-if-visualizing))
+
+(defalias 'org-brain-visualize-add-resource #'org-brain-add-resource)
 
 (defun org-brain-visualize-attach ()
   "Use `org-attach' on `org-brain--vis-entry'."
@@ -1101,10 +1107,13 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
         (kill-this-buffer))
       (revert-buffer))))
 
-(defun org-brain-visualize-paste-resource ()
-  "Add `current-kill' as a resource link."
+(defun org-brain-paste-resource ()
+  "Add `current-kill' as a resource link.
+See `org-brain-add-resource'."
   (interactive)
-  (org-brain-visualize-add-resource (current-kill 0) nil t))
+  (org-brain-add-resource (current-kill 0) nil t))
+
+(defalias 'org-brain-visualize-paste-resource #'org-brain-paste-resource)
 
 (defun org-brain-visualize-back ()
   "Go back to the previously visualized entry."
@@ -1147,7 +1156,7 @@ If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
 (define-key org-brain-visualize-mode-map "F" 'org-brain-remove-friendship)
 (define-key org-brain-visualize-mode-map "d" 'org-brain-delete-entry)
 ;; (define-key org-brain-visualize-mode-map "r" 'org-brain-rename-entry)
-(define-key org-brain-visualize-mode-map "l" 'org-brain-visualize-add-resource)
+(define-key org-brain-visualize-mode-map "l" 'org-brain-add-resource)
 (define-key org-brain-visualize-mode-map "a" 'org-brain-visualize-attach)
 (define-key org-brain-visualize-mode-map "b" 'org-brain-visualize-back)
 (define-key org-brain-visualize-mode-map "\C-y" 'org-brain-visualize-paste-resource)
