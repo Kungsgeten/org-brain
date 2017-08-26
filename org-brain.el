@@ -120,6 +120,11 @@ Only applies to headline entries."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-show-children-tag "showchildren"
+  "`org-mode' tag which get entire subtree from headline entry during `org-brain-text'."
+  :group 'org-brain
+  :type '(string))
+
 (defcustom org-brain-exclude-tree-tag "nobrain"
   "`org-mode' tag which exclude the headline and its children from org-brain's entries."
   :group 'org-brain
@@ -330,7 +335,8 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                 (end-of-line)
                 (let (end)
                   (save-excursion
-                    (or (and (not (member "childless" tags))
+                    (or (and (not (member org-brain-exclude-children-tag tags))
+                             (not (member org-brain-show-children-tag tags))
                              (org-goto-first-child))
                         (org-end-of-subtree t))
                     (setq end (point)))
