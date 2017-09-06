@@ -130,6 +130,11 @@ Only applies to headline entries."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-wander-interval 3
+  "Seconds between randomized entries, when using `org-brain-visualize-wander'."
+  :group 'org-brain
+  :type 'integer)
+
 ;;;###autoload
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
@@ -706,11 +711,14 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
   "Goto buffer and position of org-brain ENTRY.
 If run interactively, ask for the ENTRY."
   (interactive
-   (list (org-brain-choose-entry
-          "Entry: "
-          (append (org-brain-files t)
-                  (org-brain-headline-entries))
-          nil t)))
+   (progn
+     (org-brain-stop-wandering)
+     (list (org-brain-choose-entry
+            "Entry: "
+            (append (org-brain-files t)
+                    (org-brain-headline-entries))
+            nil t))))
+  (org-brain-stop-wandering)
   (if (org-brain-filep entry)
       (let ((path (org-brain-entry-path entry)))
         (if (file-exists-p path)
@@ -970,7 +978,7 @@ function."
 
 ;;* Visualize
 ;;;###autoload
-(defun org-brain-visualize (entry &optional nofocus nohistory)
+(defun org-brain-visualize (entry &optional nofocus nohistory wander)
   "View a concept map with ENTRY at the center.
 
 When run interactively, prompt for ENTRY. By default, the choices
@@ -985,13 +993,15 @@ You can override `org-brain-visualize-default-choices':
 
 Unless NOFOCUS is non-nil, the `org-brain-visualize' buffer will gain focus.
 Unless NOHISTORY is non-nil, add the entry to `org-brain--vis-history'.
-Setting NOFOCUS to t implies also having NOHISTORY as t."
+Setting NOFOCUS to t implies also having NOHISTORY as t.
+Unless WANDER is t, `org-brain-stop-wandering' will be run."
   (interactive
    (let ((choices (or (cond ((equal current-prefix-arg '(4)) 'all)
                             ((equal current-prefix-arg '(16)) 'files)
                             ((equal current-prefix-arg '(64)) 'root)
                             (t nil))
                       org-brain-visualize-default-choices)))
+     (org-brain-stop-wandering)
      (list
       (org-brain-choose-entry
        "Entry: "
@@ -1003,6 +1013,7 @@ Setting NOFOCUS to t implies also having NOHISTORY as t."
               (make-directory org-brain-path t)
               (mapcar #'org-brain-path-entry-name
                       (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))))))
+  (unless wander (org-brain-stop-wandering))
   (setq org-brain--vis-entry entry)
   (with-current-buffer (get-buffer-create "*org-brain*")
     (read-only-mode -1)
@@ -1032,6 +1043,39 @@ Setting NOFOCUS to t implies also having NOHISTORY as t."
                      (not (equal entry (car org-brain--vis-history)))
                      (< (length org-brain--vis-history) 15))
             (push entry org-brain--vis-history)))))))
+
+;;;###autoload
+(defun org-brain-visualize-random ()
+  "Run `org-brain-visualize' on a random org-brain entry."
+  (interactive)
+  (let ((entries (append (org-brain-files t)
+                         (org-brain-headline-entries))))
+    (org-brain-visualize (nth (random (length entries)) entries) nil nil t)))
+
+(defvar org-brain-wander-timer nil
+  "A timer running `org-brain-visualize-random' at a set interval.
+
+Can be (de)activated by `org-brain-visualize-wander'.")
+
+(defun org-brain-visualize-wander ()
+  (interactive)
+  (if (member org-brain-wander-timer timer-list)
+      (progn
+        (cancel-timer org-brain-wander-timer)
+        (message "Wandering stopped."))
+    (setq org-brain-wander-timer (run-at-time nil org-brain-wander-interval #'org-brain-visualize-random))
+    (message "Wandering started.")))
+
+(defun org-brain-stop-wandering ()
+  "Cancels `org-brain-wander-timer', if it is active."
+  (when (member org-brain-wander-timer timer-list)
+    (cancel-timer org-brain-wander-timer)))
+
+(defun org-brain-visualize-quit ()
+  (interactive)
+  "Like `quit-window', but also stops `org-brain-visualize-wander'."
+  (org-brain-stop-wandering)
+  (quit-window))
 
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
@@ -1135,9 +1179,11 @@ See `org-brain-add-resource'."
 (defun org-brain-visualize-revert (_ignore-auto _noconfirm)
   "Revert function for `org-brain-visualize-mode'."
   (org-brain-visualize org-brain--vis-entry t))
+
 (defun org-brain--revert-if-visualizing ()
   "Revert buffer if in `org-brain-visualize-mode'."
   (when (eq major-mode 'org-brain-visualize-mode)
+    (org-brain-stop-wandering)
     (revert-buffer)))
 
 (define-derived-mode org-brain-visualize-mode
@@ -1170,6 +1216,9 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "b" 'org-brain-visualize-back)
 (define-key org-brain-visualize-mode-map "\C-y" 'org-brain-visualize-paste-resource)
 (define-key org-brain-visualize-mode-map "T" 'org-brain-set-tags)
+(define-key org-brain-visualize-mode-map "q" 'org-brain-visualize-quit)
+(define-key org-brain-visualize-mode-map "r" 'org-brain-visualize-random)
+(define-key org-brain-visualize-mode-map "R" 'org-brain-visualize-wander)
 
 ;;** Drawing helpers
 
