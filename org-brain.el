@@ -480,19 +480,23 @@ The car is the raw-link and the cdr is the description."
 (defun org-brain--linked-property-entries (entry property)
   "Get list of entries linked to in ENTRY by PROPERTY.
 PROPERTY could for instance be BRAIN_CHILDREN."
-  (if (org-brain-filep entry)
-      ;; File entry
-      (mapcar
-       (lambda (x) (or (org-brain-entry-from-id x) x))
-       (mapcar #'org-entry-restore-space
-               (when-let ((kw-values (cdr (assoc property
-                                                 (org-brain-keywords
-                                                  (org-brain-entry-path entry))))))
-                 (org-split-string kw-values "[ \t]"))))
-    ;; Headline entry
-    (mapcar
-     (lambda (x) (or (org-brain-entry-from-id x) x))
-     (org-entry-get-multivalued-property (org-brain-entry-marker entry) property))))
+  (let ((propertylist
+         (if (org-brain-filep entry)
+             ;; File entry
+             (mapcar
+              (lambda (x) (or (org-brain-entry-from-id x) x))
+              (mapcar #'org-entry-restore-space
+                      (when-let ((kw-values (cdr (assoc property
+                                                        (org-brain-keywords
+                                                         (org-brain-entry-path entry))))))
+                        (org-split-string kw-values "[ \t]"))))
+           ;; Headline entry
+           (mapcar
+            (lambda (x) (or (org-brain-entry-from-id x) x))
+            (org-entry-get-multivalued-property (org-brain-entry-marker entry) property)))))
+    (if (equal propertylist '(""))
+        nil
+      propertylist)))
 
 (defun org-brain-add-relationship (parent child)
   "Add external relationship between PARENT and CHILD."
