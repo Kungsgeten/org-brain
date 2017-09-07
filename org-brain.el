@@ -135,6 +135,12 @@ Only applies to headline entries."
   :group 'org-brain
   :type 'integer)
 
+(defcustom org-brain-title-max-length 0
+  "If a title is longer than this, it'll be capped during `org-brain-visualize'.
+If 0 or a negative value, the title won't be capped."
+  :group 'org-brain
+  :type 'integer)
+
 ;;;###autoload
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
@@ -308,12 +314,16 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
   (unless (org-brain-filep entry)
     (org-id-find (nth 2 entry) t)))
 
-(defun org-brain-title (entry)
-  "Get title of ENTRY."
-  (if (org-brain-filep entry)
-      (or (cdr (assoc "TITLE" (org-brain-keywords (org-brain-entry-path entry))))
-          (car (last (split-string entry "/" t))))
-    (nth 1 entry)))
+(defun org-brain-title (entry &optional capped)
+  "Get title of ENTRY. If CAPPED is t, max length is `org-brain-title-max-length'."
+  (let ((title
+         (if (org-brain-filep entry)
+             (or (cdr (assoc "TITLE" (org-brain-keywords (org-brain-entry-path entry))))
+                 (car (last (split-string entry "/" t))))
+           (nth 1 entry))))
+    (if (and capped (> org-brain-title-max-length 0) (> (length title) org-brain-title-max-length))
+        (concat (substring title 0 (1- org-brain-title-max-length)) "…")
+      title)))
 
 (defun org-brain-text (entry)
   "Get the text of ENTRY as string, skipping properties drawer."
@@ -494,9 +504,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
            (mapcar
             (lambda (x) (or (org-brain-entry-from-id x) x))
             (org-entry-get-multivalued-property (org-brain-entry-marker entry) property)))))
-    (if (equal propertylist '(""))
-        nil
-      propertylist)))
+    (if (equal propertylist '("")) nil propertylist)))
 
 (defun org-brain-add-relationship (parent child)
   "Add external relationship between PARENT and CHILD."
@@ -1084,7 +1092,7 @@ Can be (de)activated by `org-brain-visualize-wander'.")
 (defun org-brain-insert-visualize-button (entry)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
-   (org-brain-title entry)
+   (org-brain-title entry t)
    'action (lambda (_x) (org-brain-visualize entry))
    'follow-link t))
 
