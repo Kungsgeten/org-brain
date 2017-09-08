@@ -196,6 +196,11 @@ this, or use =M-x org-brain-insert-link=. Doing this will, if in an =org-brain=
 file, treat the linked entry as a child of the current entry, unless
 =org-brain-brain-link-adds-child= is =nil=.
 
+When adding children, parents, or friends, multiple entries can be added at once
+by separating their titles with =org-brain-entry-separator= (which is =;= by
+default). For instance =M-x org-brain-add-parent RET music;artists= would add
+both =music= and =artists= as parents.
+
 If you try to add a child/parent/friend to an entry which doesn't exist, that
 entry will be created. The name of a new entry can be written like this:
 =file::headline=. The =headline= will be created as a level one headline in

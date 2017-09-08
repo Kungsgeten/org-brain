@@ -141,6 +141,12 @@ If 0 or a negative value, the title won't be capped."
   :group 'org-brain
   :type 'integer)
 
+(defcustom org-brain-entry-separator ";"
+  "Can be used as a separator when adding children, parents, or friends.
+Doing so allows for adding multiple entries at once."
+  :group 'org-brain
+  :type '(string))
+
 ;;;###autoload
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
@@ -274,6 +280,23 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
       entry
     (concat (car entry) "::" (cadr entry))))
 
+(defun org-brain--choose-entry-helper (title targets)
+  "Try to get TITLE as an entry from TARGETS.  Create it if it doesn't exist.
+Meant as a helper function for `org-brain-choose-entry' and `org-brain-choose-entries'."
+  (let ((id (cdr (assoc title targets))))
+    (if id
+        (org-brain-entry-from-id id)
+      (setq title (split-string title "::" t))
+      (let ((entry-path (org-brain-entry-path (car title))))
+        (unless (file-exists-p entry-path)
+          (write-region "" nil entry-path))
+        (if (equal (length title) 2)
+            (with-current-buffer (find-file-noselect entry-path)
+              (goto-char (point-max))
+              (insert (concat "\n* " (cadr title)))
+              (list (car title) (cadr title) (org-id-get-create)))
+          (car title))))))
+
 (defun org-brain-choose-entry (prompt entries &optional predicate require-match initial-input)
   "PROMPT for an entry from ENTRIES and return it.
 For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
@@ -285,20 +308,23 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                                     (nth 2 x))))
                           entries))
          (choice (completing-read prompt targets
-                                  predicate require-match initial-input))
-         (id (cdr (assoc choice targets))))
-    (if id
-        (org-brain-entry-from-id id)
-      (setq choice (split-string choice "::" t))
-      (let ((entry-path (org-brain-entry-path (car choice))))
-        (unless (file-exists-p entry-path)
-          (write-region "" nil entry-path))
-        (if (equal (length choice) 2)
-            (with-current-buffer (find-file-noselect entry-path)
-              (goto-char (point-max))
-              (insert (concat "\n* " (cadr choice)))
-              (list (car choice) (cadr choice) (org-id-get-create)))
-          (car choice))))))
+                                  predicate require-match initial-input)))
+    (org-brain--choose-entry-helper choice targets)))
+
+(defun org-brain-choose-entries (prompt entries)
+  "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
+Return the prompted entries in a list.
+Very similar to `org-brain-choose-entry', but can return several entries."
+  (unless org-id-locations (org-id-locations-load))
+  (let* ((targets (mapcar (lambda (x)
+                            (if (org-brain-filep x)
+                                (cons x nil)
+                              (cons (org-brain-entry-name x)
+                                    (nth 2 x))))
+                          entries))
+         (choices (completing-read prompt targets)))
+    (mapcar (lambda (title) (org-brain--choose-entry-helper title targets))
+            (split-string choices org-brain-entry-separator))))
 
 (defun org-brain-keywords (file)
   "Get alist of `org-mode' keywords and their values in FILE."
@@ -579,45 +605,47 @@ PROPERTY could for instance be BRAIN_CHILDREN."
 ;;;###autoload
 (defun org-brain-add-child ()
   "Add external child to entry at point.
-If chosen child entry doesn't exist, create it as a new file."
+If chosen child entry doesn't exist, create it as a new file.
+Several children can be added, by using `org-brain-entry-separator'."
   (interactive)
-  (org-brain-add-relationship
-   (org-brain-entry-at-pt)
-   (org-brain-choose-entry "Child: "
-                           (append (org-brain-files t)
-                                   (org-brain-headline-entries))))
+  (dolist (child-entry (org-brain-choose-entries
+                        "Child: " (append (org-brain-files t)
+                                          (org-brain-headline-entries))))
+    (org-brain-add-relationship (org-brain-entry-at-pt) child-entry))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
 (defun org-brain-new-child ()
-  "Create a new internal child headline to entry at point."
+  "Create a new internal child headline to entry at point.
+Several children can be created, by using `org-brain-entry-separator'."
   (interactive)
   (let ((entry (org-brain-entry-at-pt))
-        (child-name (read-string "Child name: ")))
-    (when (equal (length child-name) 0)
-      (error "Child name must be at least 1 character"))
-    (if (org-brain-filep entry)
-        ;; File entry
-        (with-current-buffer (find-file-noselect (org-brain-entry-path entry))
-          (goto-char (point-min))
-          (if (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
-              (progn
-                (beginning-of-line)
-                (open-line 1))
-            (goto-char (point-max)))
-          (insert (concat "* " child-name))
+        (child-name-string (read-string "Child name: ")))
+    (dolist (child-name (split-string child-name-string org-brain-entry-separator))
+      (when (equal (length child-name) 0)
+        (error "Child name must be at least 1 character"))
+      (if (org-brain-filep entry)
+          ;; File entry
+          (with-current-buffer (find-file-noselect (org-brain-entry-path entry))
+            (goto-char (point-min))
+            (if (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
+                (progn
+                  (beginning-of-line)
+                  (open-line 1))
+              (goto-char (point-max)))
+            (insert (concat "* " child-name))
+            (org-id-get-create)
+            (save-buffer))
+        ;; Headline entry
+        (org-with-point-at (org-brain-entry-marker entry)
+          (if (org-goto-first-child)
+              (open-line 1)
+            (org-end-of-subtree t))
+          (org-insert-heading)
+          (org-do-demote)
+          (insert child-name)
           (org-id-get-create)
-          (save-buffer))
-      ;; Headline entry
-      (org-with-point-at (org-brain-entry-marker entry)
-        (if (org-goto-first-child)
-            (open-line 1)
-          (org-end-of-subtree t))
-        (org-insert-heading)
-        (org-do-demote)
-        (insert child-name)
-        (org-id-get-create)
-        (save-buffer))))
+          (save-buffer)))))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
@@ -636,13 +664,13 @@ If chosen child entry doesn't exist, create it as a new file."
 ;;;###autoload
 (defun org-brain-add-parent ()
   "Add external parent to entry at point.
-If chosen parent entry doesn't exist, create it as a new file."
+If chosen parent entry doesn't exist, create it as a new file.
+Several parents can be added, by using `org-brain-entry-separator'."
   (interactive)
-  (org-brain-add-relationship
-   (org-brain-choose-entry "Parent: "
-                           (append (org-brain-files t)
-                                   (org-brain-headline-entries)))
-   (org-brain-entry-at-pt))
+  (dolist (parent-entry (org-brain-choose-entries
+                         "Parent: " (append (org-brain-files t)
+                                            (org-brain-headline-entries))))
+    (org-brain-add-relationship parent-entry (org-brain-entry-at-pt)))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
@@ -658,16 +686,9 @@ If chosen parent entry doesn't exist, create it as a new file."
      entry))
   (org-brain--revert-if-visualizing))
 
-;;;###autoload
-(defun org-brain-add-friendship (entry1 entry2 &optional oneway)
+(defun org-brain--internal-add-friendship (entry1 entry2 &optional oneway)
   "Add friendship between ENTRY1 and ENTRY2.
-If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around.
-
-If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY2."
-  (interactive
-   (list (org-brain-entry-at-pt)
-         (org-brain-choose-entry "Friend: " (append (org-brain-files t)
-                                                    (org-brain-headline-entries)))))
+If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around."
   (unless (member entry2 (org-brain-friends entry1))
     (if (org-brain-filep entry1)
         ;; Entry1 = File
@@ -683,10 +704,20 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
       (org-entry-add-to-multivalued-property (org-brain-entry-marker entry1)
                                              "BRAIN_FRIENDS"
                                              (org-brain-entry-identifier entry2))))
-  (if oneway
-      (org-brain--revert-if-visualizing)
-    (org-brain-add-friendship entry2 entry1 t))
+  (unless oneway (org-brain--internal-add-friendship entry2 entry1 t))
   (org-save-all-org-buffers))
+
+;;;###autoload
+(defun org-brain-add-friendship ()
+  "Add a new friend to entry at point.
+If chosen friend entry doesn't exist, create it as a new file.
+Several friends can be added, by using `org-brain-entry-separator'."
+  (interactive)
+  (dolist (friend-entry (org-brain-choose-entries
+                         "Friend: " (append (org-brain-files t)
+                                            (org-brain-headline-entries))))
+    (org-brain--internal-add-friendship (org-brain-entry-at-pt) friend-entry))
+  (org-brain--revert-if-visualizing))
 
 ;;;###autoload
 (defun org-brain-remove-friendship (entry1 entry2 &optional oneway)
@@ -940,7 +971,7 @@ If interactive, also prompt for ENTRY."
       (dolist (child children)
         (org-brain-add-relationship new-entry child))
       (dolist (friend friends)
-        (org-brain-add-friendship new-entry friend)))))
+        (org-brain--internal-add-friendship new-entry friend)))))
 
 ;;;###autoload
 (defun org-brain-insert-link ()
