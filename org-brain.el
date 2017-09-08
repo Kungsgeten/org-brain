@@ -667,8 +667,7 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
   (interactive
    (list (org-brain-entry-at-pt)
          (org-brain-choose-entry "Friend: " (append (org-brain-files t)
-                                                    (org-brain-headline-entries))
-                                 nil t)))
+                                                    (org-brain-headline-entries)))))
   (unless (member entry2 (org-brain-friends entry1))
     (if (org-brain-filep entry1)
         ;; Entry1 = File
