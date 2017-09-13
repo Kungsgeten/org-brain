@@ -269,6 +269,28 @@ experience. Below are some suggestions (feel free to create an issue or send a
 pull request if you have more examples), all of them should be available on
 MELPA.
 
+** [[https://github.com/rexim/org-cliplink][org-cliplink]]
+
+#+BEGIN_QUOTE
+A simple command that takes a URL from the clipboard and inserts an org-mode link with a title of a page found by the URL into the current buffer.
+#+END_QUOTE
+
+Here's a command which uses =org-cliplink= to add a link from the clipboard as an =org-brain= resource. It guesses the description from the URL title. Here I've bound it to =L= in =org-brain-visualize=.
+
+#+BEGIN_SRC emacs-lisp
+  (defun org-brain-cliplink-resource ()
+    "Add a URL from the clipboard as an org-brain resource.
+  Suggest the URL title as a description for resource."
+    (interactive)
+    (let ((url (org-cliplink-clipboard-content)))
+      (org-brain-add-resource
+       url
+       (org-cliplink-retrieve-title-synchronously url)
+       t)))
+
+  (define-key org-brain-visualize-mode-map (kbd "L") #'org-brain-cliplink-resource)
+#+END_SRC
+
 ** [[https://github.com/noctuid/link-hint.el][link-hint]]
 
 #+BEGIN_QUOTE
