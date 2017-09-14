@@ -115,6 +115,9 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
     :config
     (setq org-id-track-globally t)
     (setq org-id-locations-file "~/.emacs.d/.org-id-locations")
+    (push '("b" "Brain" plain (function org-brain-goto-end)
+            "* %i%?" :empty-lines 1)
+          org-capture-templates)
     (setq org-brain-visualize-default-choices 'all)
     (setq org-brain-title-max-length 12))
 #+END_SRC
@@ -131,15 +134,18 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
 4. =org-brain= use =org-id= in order to speed things up. Because of this, the
    variable =org-id-track-globally= should be =t= (which it already is by
    default). You may want to modify =org-id-locations-file= too.
-5. If you have a lot of entries, it might take some time to gather information
+5. You might want to add information at the end of an entry, without visiting
+   the file. A way to do this is to use a [[http://orgmode.org/manual/Capture.html][capture]] template, such as the one
+   presented above.
+6. If you have a lot of entries, it might take some time to gather information
    about all entries when using =org-brain-visualize=. You could change the
    value of =org-brain-visualize-default-choices= (which is ='all= by default)
    to only include files, or even just files in the direct root of
    =org-brain-path=.
-6. If you feel that =org-brain-visualize= is too cluttered, you may want to set
+7. If you feel that =org-brain-visualize= is too cluttered, you may want to set
    =org-brain-show-resources= and/or =org-brain-show-text= to =nil=.
-7. If you have very long entry names, =org-brain-visualize= may take a lot of
-   space. You can cap the shown length of entry titles, by setting
+8. If you have very long entry names, =org-brain-visualize= may take a lot of
+   horizontal space. You can cap the shown length of entry titles, by setting
    =org-brain-title-max-length=.
 
 * Usage

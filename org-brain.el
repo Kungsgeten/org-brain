@@ -749,18 +749,16 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
   (org-save-all-org-buffers))
 
 ;;;###autoload
-(defun org-brain-goto (entry)
+(defun org-brain-goto (&optional entry)
   "Goto buffer and position of org-brain ENTRY.
-If run interactively, ask for the ENTRY."
-  (interactive
-   (progn
-     (org-brain-stop-wandering)
-     (list (org-brain-choose-entry
-            "Entry: "
-            (append (org-brain-files t)
-                    (org-brain-headline-entries))
-            nil t))))
+If ENTRY isn't specified, ask for the ENTRY."
+  (interactive)
   (org-brain-stop-wandering)
+  (unless entry (setq entry (org-brain-choose-entry
+                             "Entry: "
+                             (append (org-brain-files t)
+                                     (org-brain-headline-entries))
+                             nil t)))
   (if (org-brain-filep entry)
       (let ((path (org-brain-entry-path entry)))
         (if (file-exists-p path)
@@ -770,6 +768,38 @@ If run interactively, ask for the ENTRY."
           (org-show-entry)))
     (org-id-goto (nth 2 entry))
     (org-show-entry)))
+
+;;;###autoload
+(defun org-brain-goto-end (&optional entry)
+  "Like `org-brain-goto', but visits the end of ENTRY.
+If ENTRY isn't specified, ask for the ENTRY."
+  (interactive)
+  (org-brain-stop-wandering)
+  (unless entry (setq entry (org-brain-choose-entry
+                             "Entry: "
+                             (append (org-brain-files t)
+                                     (org-brain-headline-entries))
+                             nil t)))
+  (cl-flet ((headline-end
+             ()
+             (let ((tags (org-get-tags-at nil t)))
+               (or (and (not (member org-brain-exclude-children-tag tags))
+                        (not (member org-brain-show-children-tag tags))
+                        (org-goto-first-child))
+                   (org-end-of-subtree t)))))
+    (if (org-brain-filep entry)
+        (let ((path (org-brain-entry-path entry)))
+          (if (file-exists-p path)
+              (progn
+                (find-file path)
+                (goto-char (point-min))
+                (or (outline-next-heading)
+                    (goto-char (point-max))))
+            ;; If file doesn't exists, it is probably an id
+            (org-id-goto entry)
+            (headline-end)))
+      (org-id-goto (nth 2 entry))
+      (headline-end))))
 
 ;;;###autoload
 (defun org-brain-goto-current ()
