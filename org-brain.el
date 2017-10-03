@@ -1431,9 +1431,18 @@ Helper function for `org-brain-visualize'."
       (org-brain-add-relationship entry choice))
     (concat "brain:" (if (org-brain-filep choice) choice (nth 2 choice)))))
 
+(defun org-brain-link-store ()
+  "Store a brain: type link from an `org-brain-visualize-mode' buffer."
+  (when (eq major-mode 'org-brain-visualize-mode)
+    (org-store-link-props
+     :type "brain"
+     :link (concat "brain:" (org-brain-entry-identifier org-brain--vis-entry))
+     :description (org-brain-title org-brain--vis-entry))))
+
 (org-link-set-parameters "brain"
                          :complete 'org-brain-link-complete
-                         :follow 'org-brain-goto)
+                         :follow 'org-brain-goto
+                         :store 'org-brain-link-store)
 
 (provide 'org-brain)
 ;;; org-brain.el ends here
