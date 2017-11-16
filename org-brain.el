@@ -1053,10 +1053,11 @@ function."
 (defun org-brain-visualize (entry &optional nofocus nohistory wander)
   "View a concept map with ENTRY at the center.
 
-When run interactively, prompt for ENTRY. By default, the choices
-presented is determined by `org-brain-visualize-default-choices':
-'all will show all entries, 'files will only show file entries
-and 'root will only show files in the root of `org-brain-path'.
+When run interactively, prompt for ENTRY and suggest
+`org-brain-entry-at-pt'. By default, the choices presented is
+determined by `org-brain-visualize-default-choices': 'all will
+show all entries, 'files will only show file entries and 'root
+will only show files in the root of `org-brain-path'.
 
 You can override `org-brain-visualize-default-choices':
   `\\[universal-argument]' will use 'all.
@@ -1068,11 +1069,12 @@ Unless NOHISTORY is non-nil, add the entry to `org-brain--vis-history'.
 Setting NOFOCUS to t implies also having NOHISTORY as t.
 Unless WANDER is t, `org-brain-stop-wandering' will be run."
   (interactive
-   (let ((choices (or (cond ((equal current-prefix-arg '(4)) 'all)
-                            ((equal current-prefix-arg '(16)) 'files)
-                            ((equal current-prefix-arg '(64)) 'root)
-                            (t nil))
-                      org-brain-visualize-default-choices)))
+   (let ((choices (cond ((equal current-prefix-arg '(4)) 'all)
+                        ((equal current-prefix-arg '(16)) 'files)
+                        ((equal current-prefix-arg '(64)) 'root)
+                        (t org-brain-visualize-default-choices)))
+         (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
+                       (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
      (org-brain-stop-wandering)
      (list
       (org-brain-choose-entry
@@ -1084,7 +1086,8 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
              ((equal choices 'root)
               (make-directory org-brain-path t)
               (mapcar #'org-brain-path-entry-name
-                      (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))))))
+                      (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
+       nil nil def-choice))))
   (unless wander (org-brain-stop-wandering))
   (setq org-brain--vis-entry entry)
   (with-current-buffer (get-buffer-create "*org-brain*")
@@ -1270,6 +1273,8 @@ See `org-brain-add-resource'."
 \\{org-brain-visualize-mode-map}"
   (setq revert-buffer-function #'org-brain-visualize-revert))
 
+;;** Keybindings
+
 (define-key org-brain-visualize-mode-map "p" 'org-brain-add-parent)
 (define-key org-brain-visualize-mode-map "P" 'org-brain-remove-parent)
 (define-key org-brain-visualize-mode-map "c" 'org-brain-add-child)
@@ -1288,7 +1293,6 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "f" 'org-brain-add-friendship)
 (define-key org-brain-visualize-mode-map "F" 'org-brain-remove-friendship)
 (define-key org-brain-visualize-mode-map "d" 'org-brain-delete-entry)
-;; (define-key org-brain-visualize-mode-map "r" 'org-brain-rename-entry)
 (define-key org-brain-visualize-mode-map "l" 'org-brain-add-resource)
 (define-key org-brain-visualize-mode-map "a" 'org-brain-visualize-attach)
 (define-key org-brain-visualize-mode-map "b" 'org-brain-visualize-back)
