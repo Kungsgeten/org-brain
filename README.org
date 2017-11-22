@@ -2,7 +2,7 @@
 
 =org-brain= implements a variant of [[https://en.wikipedia.org/wiki/Concept_map][concept mapping]] in Emacs, using [[http://orgmode.org/][org-mode]]. It
 is heavily inspired by a piece of software called [[http://thebrain.com/][The Brain]], and you can view an
-introduction to that program [[https://www.youtube.com/watch?v=GFqLUBKCFdA][here]]. They also provide [[https://blog.thebrain.com/][a blog]] with great ideas of
+introduction to that program [[https://www.youtube.com/watch?v=GFqLUBKCFdA][here]]. They also provide [[https://www.thebrain.com/blog/][a blog]] with great ideas of
 how you can think when organizing your Brain.
 
 You can think of =org-brain= as a combination of a wiki and a mind map, where
