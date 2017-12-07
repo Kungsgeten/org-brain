@@ -281,28 +281,27 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
       entry
     (concat (car entry) "::" (cadr entry))))
 
-(defun org-brain-entry-data (entry restriction &optional parent)
-  "Retrieve `org-element' data from ENTRY.
-Data from child headlines will not be retrieved.
-See `org-element-parse-secondary-string' for info on RESTRICTION and PARENT."
-  (if (org-brain-filep entry)
-      ;; File
-      (with-temp-buffer
-        (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-        (goto-char (point-min))
-        (or (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
-            (goto-char (point-max)))
-        (org-element-parse-secondary-string
-         (buffer-substring-no-properties (point-min) (point)) restriction parent))
-    ;; Headline
-    (org-with-point-at (org-brain-entry-marker entry)
-      (let (end)
-        (save-excursion
-          (or (org-goto-first-child)
-              (org-end-of-subtree t))
-          (setq end (point)))
-        (org-element-parse-secondary-string
-         (buffer-substring-no-properties (point) end) restriction parent)))))
+(defun org-brain-entry-data (entry)
+  "Run `org-element-parse-buffer' on ENTRY text.
+Isn't recursive, so do not parse local children."
+  (with-temp-buffer
+    (insert (org-brain-text entry t))
+    (delay-mode-hooks
+      (org-mode)
+      (org-element-parse-buffer))))
+
+(defun org-brain-description (entry)
+  "Get description of ENTRY.
+Descriptions are written like this:
+
+#+BEGIN_description
+This is a description.
+#+END_description"
+  (org-element-map (org-brain-entry-data entry) 'special-block
+    (lambda (s-block)
+      (when (string-equal (org-element-property :type s-block) "description")
+        (org-element-interpret-data (org-element-contents s-block))))
+    nil t t))
 
 (defun org-brain--choose-entry-helper (title targets)
   "Try to get TITLE as an entry from TARGETS.  Create it if it doesn't exist.
@@ -375,8 +374,9 @@ Very similar to `org-brain-choose-entry', but can return several entries."
         (concat (substring title 0 (1- org-brain-title-max-length)) "…")
       title)))
 
-(defun org-brain-text (entry)
-  "Get the text of ENTRY as string, skipping properties drawer."
+(defun org-brain-text (entry &optional all-data)
+  "Get the text of ENTRY as string.
+Only get the body text, unless ALL-DATA is t."
   (when-let
       ((entry-text
         (if (org-brain-filep entry)
@@ -386,18 +386,22 @@ Very similar to `org-brain-choose-entry', but can return several entries."
               (goto-char (point-min))
               (or (outline-next-heading)
                   (goto-char (point-max)))
-              (buffer-substring (or (save-excursion
-                                      (when (re-search-backward "^[#:*]" nil t)
-                                        (end-of-line)
-                                        (point)))
-                                    (point-min))
-                                (point)))
+              (buffer-substring-no-properties
+               (or (unless all-data
+                     (save-excursion
+                       (when (re-search-backward "^[#:*]" nil t)
+                         (end-of-line)
+                         (point))))
+                   (point-min))
+               (point)))
           ;; Headline entry
           (org-with-point-at (org-brain-entry-marker entry)
             (let ((tags (org-get-tags-at nil t)))
-              (unless (member org-brain-exclude-text-tag tags)
-                (goto-char (cdr (org-get-property-block)))
-                (end-of-line)
+              (unless (and (member org-brain-exclude-text-tag tags)
+                           (not all-data))
+                (unless all-data
+                  (goto-char (cdr (org-get-property-block)))
+                  (end-of-line))
                 (let (end)
                   (save-excursion
                     (or (and (not (member org-brain-exclude-children-tag tags))
@@ -405,15 +409,13 @@ Very similar to `org-brain-choose-entry', but can return several entries."
                              (org-goto-first-child))
                         (org-end-of-subtree t))
                     (setq end (point)))
-                  (buffer-substring (point) end))))))))
-    (remove-text-properties 0 (length entry-text)
-                            '(line-prefix nil wrap-prefix nil)
-                            entry-text)
+                  (buffer-substring-no-properties (point) end))))))))
     (org-remove-indentation entry-text)
     (with-temp-buffer
       (insert entry-text)
       (goto-char (point-min))
-      (when (re-search-forward org-brain-resources-start-re nil t)
+      (when (and (not all-data)
+                 (re-search-forward org-brain-resources-start-re nil t))
         (re-search-forward org-drawer-regexp nil t))
       (buffer-substring (point) (point-max)))))
 
@@ -449,7 +451,7 @@ A link can be either an org link or an org attachment.
 The car is the raw-link and the cdr is the description."
   (let ((links
          (delete-dups
-          (org-element-map (org-brain-entry-data entry '(link)) 'link
+          (org-element-map (org-brain-entry-data entry) 'link
             (lambda (link)
               (unless (member (org-element-property :type link)
                               org-brain-ignored-resource-links)
@@ -1161,7 +1163,8 @@ Can be (de)activated by `org-brain-visualize-wander'.")
   (insert-text-button
    (org-brain-title entry t)
    'action (lambda (_x) (org-brain-visualize entry))
-   'follow-link t))
+   'follow-link t
+   'help-echo (org-brain-description entry)))
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
@@ -1271,11 +1274,19 @@ See `org-brain-add-resource'."
     (org-brain-stop-wandering)
     (revert-buffer)))
 
+(defun org-brain-visualize-eldoc-function ()
+  "Return description of org-brain entry button at point."
+  (ignore-errors
+    (plist-get (text-properties-at (button-at (point)))
+               'help-echo)))
+
 (define-derived-mode org-brain-visualize-mode
   special-mode  "Org-brain Visualize"
   "Major mode for `org-brain-visualize'.
 \\{org-brain-visualize-mode-map}"
-  (setq revert-buffer-function #'org-brain-visualize-revert))
+  (setq revert-buffer-function #'org-brain-visualize-revert)
+  (add-function :before-until (local 'eldoc-documentation-function)
+                #'org-brain-visualize-eldoc-function))
 
 ;;** Keybindings
 

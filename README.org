@@ -72,31 +72,6 @@ gathered from =org-mode= automatically.
 The relationship entries, pinned entries and resources are all links; they can
 be pressed/clicked to visualize other entries, visit resources etc.
 
-* Backwards compability breaking changes in 0.4
-
-/This is only relevant if you've been using org-brain before version 0.4/
-
-As of version 0.4 (June 2017) =org-brain= has been rewritten, in order to
-increase performance and add more options. Because of this, older setups are
-considered obsolete. Prior to 0.4 only files were considered entries, but now
-also headlines with an =ID= property are included as entries. Prior to 0.4
-=org-brain= was using the =brain:= link and =#+BRAIN_PINNED:= file keyword to
-connect files, which was slow due to the need of searching all files for links.
-In version 0.4 =org-brain= uses a combination of headline properties, file
-keywords, =org-id=, and a data file (=org-brain-data-file=).
-
-No data in old configurations should be lost, but you'll have to update the
-connections between entries. This can be done by using =M-x
-org-brain-create-relationships-from-links=, but please backup your =org-brain=
-directory first.
-
-It is still possible to add children to an entry by using the =brain:= link, but
-only if the link is inserted with =org-insert-link= (bound to =C-c C-l= in
-=org-mode= by default) or with =org-brain-insert-link=. Linking to specific
-headlines in a file, via =brain:filename::*Headline= is *deprecated* and will no
-longer work, instead you can convert the headline to an entry and link directly
-to that.
-
 * Setup and requirements
 
 The easiest way is to get =org-brain= from MELPA. If you do not want to do that,
@@ -247,6 +222,25 @@ is visualized:
 
 Please note that tags only are available for headline entries.
 
+** Entry descriptions
+
+You may add a /description/ to an entry, which should be a short summary of what the entry is about. The description will be shown in =org-brain-visualize= as mouse tooltips for links, and also by =eldoc-mode= if point is at a link. Add a description by using a =#+BEGIN_description= block. Here's an example:
+
+#+BEGIN_SRC org
+  ,* org-brain.el
+    :PROPERTIES:
+    :ID:       7cf9563e-24e7-4823-8742-64b7fcc5cafb
+    :END:
+
+    ,#+BEGIN_description
+    Package for concept mapping using org-mode.
+    ,#+END_description
+
+    ...
+#+END_SRC
+
+At the moment there's no way to add/remove/change descriptions directly from the =org-brain-visualize= interface, sorry!
+
 ** Take note!
 
 =org-brain= creates and uses several headline properties in the =PROPERTIES=
@@ -266,6 +260,31 @@ want to remove these properties, use the corresponding command instead
 
 You might also see that =org-brain= inserts a =RESOURCES= drawer. It is okay to
 modify this drawer manually.
+
+* Backwards compability breaking changes in 0.4
+
+/This is only relevant if you've been using org-brain before version 0.4/
+
+As of version 0.4 (June 2017) =org-brain= has been rewritten, in order to
+increase performance and add more options. Because of this, older setups are
+considered obsolete. Prior to 0.4 only files were considered entries, but now
+also headlines with an =ID= property are included as entries. Prior to 0.4
+=org-brain= was using the =brain:= link and =#+BRAIN_PINNED:= file keyword to
+connect files, which was slow due to the need of searching all files for links.
+In version 0.4 =org-brain= uses a combination of headline properties, file
+keywords, =org-id=, and a data file (=org-brain-data-file=).
+
+No data in old configurations should be lost, but you'll have to update the
+connections between entries. This can be done by using =M-x
+org-brain-create-relationships-from-links=, but please backup your =org-brain=
+directory first.
+
+It is still possible to add children to an entry by using the =brain:= link, but
+only if the link is inserted with =org-insert-link= (bound to =C-c C-l= in
+=org-mode= by default) or with =org-brain-insert-link=. Linking to specific
+headlines in a file, via =brain:filename::*Headline= is *deprecated* and will no
+longer work, instead you can convert the headline to an entry and link directly
+to that.
 
 * Other useful packages
 
