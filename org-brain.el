@@ -281,6 +281,29 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
       entry
     (concat (car entry) "::" (cadr entry))))
 
+(defun org-brain-entry-data (entry restriction &optional parent)
+  "Retrieve `org-element' data from ENTRY.
+Data from child headlines will not be retrieved.
+See `org-element-parse-secondary-string' for info on RESTRICTION and PARENT."
+  (if (org-brain-filep entry)
+      ;; File
+      (with-temp-buffer
+        (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+        (goto-char (point-min))
+        (or (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
+            (goto-char (point-max)))
+        (org-element-parse-secondary-string
+         (buffer-substring-no-properties (point-min) (point)) restriction parent))
+    ;; Headline
+    (org-with-point-at (org-brain-entry-marker entry)
+      (let (end)
+        (save-excursion
+          (or (org-goto-first-child)
+              (org-end-of-subtree t))
+          (setq end (point)))
+        (org-element-parse-secondary-string
+         (buffer-substring-no-properties (point) end) restriction parent)))))
+
 (defun org-brain--choose-entry-helper (title targets)
   "Try to get TITLE as an entry from TARGETS.  Create it if it doesn't exist.
 Meant as a helper function for `org-brain-choose-entry' and `org-brain-choose-entries'."
@@ -424,50 +447,30 @@ Return an alist where key = parent, value = siblings from that parent."
   "Get alist of links in ENTRY, excluding `org-brain-ignored-resource-links'.
 A link can be either an org link or an org attachment.
 The car is the raw-link and the cdr is the description."
-  (if (org-brain-filep entry)
-      ;; File entry
-      (with-temp-buffer
-        (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-        (goto-char (point-min))
-        (or (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
-            (goto-char (point-max)))
-        (org-element-map (org-element-parse-secondary-string
-                          (buffer-substring-no-properties (point-min) (point)) '(link))
-            'link
-          (lambda (link)
-            (unless (member (org-element-property :type link) org-brain-ignored-resource-links)
-              (cons (org-element-property :raw-link link)
-                    (car (org-element-contents link)))))))
-    ;; Headline entry
-    (org-with-point-at (org-brain-entry-marker entry)
-      (unless (member org-brain-exclude-resouces-tag (org-get-tags-at nil t))
-        (append
-         ;; Links
-         (let ((data (let (end)
-                       (save-excursion
-                         (or (org-goto-first-child)
-                             (org-end-of-subtree t))
-                         (setq end (point)))
-                       (org-element-parse-secondary-string
-                        (buffer-substring-no-properties (point) end)
-                        '(link)))))
-           (delete-dups
-            (org-element-map data 'link
-              (lambda (link)
-                (unless (member (org-element-property :type link)
-                                org-brain-ignored-resource-links)
-                  (cons (org-element-property :raw-link link)
-                        (when-let ((desc (car (org-element-contents link))))
-                          (replace-regexp-in-string "[ \t\n\r]+" " " desc)))))
-              nil nil t)))
-         ;; Attachments
-         (when-let ((attach-dir (org-attach-dir)))
-           (mapcar (lambda (attachment)
-                     (cons (format "file:%s"
-                                   (org-link-escape
-                                    (expand-file-name attachment attach-dir)))
-                           attachment))
-                   (org-attach-file-list attach-dir))))))))
+  (let ((links
+         (delete-dups
+          (org-element-map (org-brain-entry-data entry '(link)) 'link
+            (lambda (link)
+              (unless (member (org-element-property :type link)
+                              org-brain-ignored-resource-links)
+                (cons (org-element-property :raw-link link)
+                      (when-let ((desc (car (org-element-contents link))))
+                        (replace-regexp-in-string "[ \t\n\r]+" " " desc)))))
+            nil nil t))))
+    (if (org-brain-filep entry)
+        links
+      ;; Headline entry
+      (org-with-point-at (org-brain-entry-marker entry)
+        (unless (member org-brain-exclude-resouces-tag (org-get-tags-at nil t))
+          (append links
+                  ;; Attachments
+                  (when-let ((attach-dir (org-attach-dir)))
+                    (mapcar (lambda (attachment)
+                              (cons (format "file:%s"
+                                            (org-link-escape
+                                             (expand-file-name attachment attach-dir)))
+                                    attachment))
+                            (org-attach-file-list attach-dir)))))))))
 
 (defun org-brain--local-parent (entry)
   "Get file local parent of ENTRY, as a list."
