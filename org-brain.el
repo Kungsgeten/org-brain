@@ -359,8 +359,14 @@ Very similar to `org-brain-choose-entry', but can return several entries."
               (org-element-property :value kw))))))
 
 (defun org-brain-entry-marker (entry)
-  "Get marker of headline ENTRY."
-  (unless (org-brain-filep entry)
+  "Get marker to ENTRY."
+  (if (org-brain-filep entry)
+      (let ((path (org-brain-entry-path entry)))
+        (if (file-exists-p path)
+            (set-marker (make-marker) 0 (or (get-file-buffer path)
+                                            (create-file-buffer path)))
+          ;; If file doesn't exists, it is probably an id
+          (org-id-find entry t)))
     (org-id-find (nth 2 entry) t)))
 
 (defun org-brain-title (entry &optional capped)
@@ -755,9 +761,10 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
   (org-save-all-org-buffers))
 
 ;;;###autoload
-(defun org-brain-goto (&optional entry)
+(defun org-brain-goto (&optional entry goto-file-func)
   "Goto buffer and position of org-brain ENTRY.
-If ENTRY isn't specified, ask for the ENTRY."
+If ENTRY isn't specified, ask for the ENTRY.
+Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the entry."
   (interactive)
   (org-brain-stop-wandering)
   (unless entry (setq entry (org-brain-choose-entry
@@ -765,53 +772,42 @@ If ENTRY isn't specified, ask for the ENTRY."
                              (append (org-brain-files t)
                                      (org-brain-headline-entries))
                              nil t)))
-  (if (org-brain-filep entry)
-      (let ((path (org-brain-entry-path entry)))
-        (if (file-exists-p path)
-            (find-file path)
-          ;; If file doesn't exists, it is probably an id
-          (org-id-goto entry)
-          (org-show-entry)))
-    (org-id-goto (nth 2 entry))
-    (org-show-entry)))
+  (let ((marker (org-brain-entry-marker entry)))
+    (apply (or goto-file-func #'pop-to-buffer-same-window)
+           (list (marker-buffer marker)))
+    (goto-char (marker-position marker))
+    (org-show-entry))
+  entry)
+
+;;;###autoload
+(defun org-brain-goto-other-window (&optional entry)
+  "Goto buffer and position of org-brain ENTRY in other window.
+If ENTRY isn't specified, ask for the ENTRY."
+  (interactive)
+  (org-brain-goto entry #'pop-to-buffer))
 
 ;;;###autoload
 (defun org-brain-goto-end (&optional entry)
   "Like `org-brain-goto', but visits the end of ENTRY.
 If ENTRY isn't specified, ask for the ENTRY."
   (interactive)
-  (org-brain-stop-wandering)
-  (unless entry (setq entry (org-brain-choose-entry
-                             "Entry: "
-                             (append (org-brain-files t)
-                                     (org-brain-headline-entries))
-                             nil t)))
-  (cl-flet ((headline-end
-             ()
-             (let ((tags (org-get-tags-at nil t)))
-               (or (and (not (member org-brain-exclude-children-tag tags))
-                        (not (member org-brain-show-children-tag tags))
-                        (org-goto-first-child))
-                   (org-end-of-subtree t)))))
-    (if (org-brain-filep entry)
-        (let ((path (org-brain-entry-path entry)))
-          (if (file-exists-p path)
-              (progn
-                (find-file path)
-                (goto-char (point-min))
-                (or (outline-next-heading)
-                    (goto-char (point-max))))
-            ;; If file doesn't exists, it is probably an id
-            (org-id-goto entry)
-            (headline-end)))
-      (org-id-goto (nth 2 entry))
-      (headline-end))))
+  (if (org-brain-filep (org-brain-goto entry))
+      (or (outline-next-heading)
+          (goto-char (point-max)))
+    (let ((tags (org-get-tags-at nil t)))
+      (or (and (not (member org-brain-exclude-children-tag tags))
+               (not (member org-brain-show-children-tag tags))
+               (org-goto-first-child))
+          (org-end-of-subtree t)))))
 
 ;;;###autoload
-(defun org-brain-goto-current ()
-  "Use `org-brain-goto' on `org-brain-entry-at-pt'."
-  (interactive)
-  (org-brain-goto (org-brain-entry-at-pt)))
+(defun org-brain-goto-current (&optional same-window)
+  "Use `org-brain-goto' on `org-brain-entry-at-pt', in other window..
+If run with `\\[universal-argument]', or SAME-WINDOW as t, use current window."
+  (interactive "P")
+  (if same-window
+      (org-brain-goto (org-brain-entry-at-pt))
+    (org-brain-goto (org-brain-entry-at-pt) #'pop-to-buffer)))
 
 ;;;###autoload
 (defun org-brain-goto-child (entry &optional all)
