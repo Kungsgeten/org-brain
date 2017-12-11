@@ -286,9 +286,7 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
 Isn't recursive, so do not parse local children."
   (with-temp-buffer
     (insert (org-brain-text entry t))
-    (delay-mode-hooks
-      (org-mode)
-      (org-element-parse-buffer))))
+    (org-element-parse-buffer)))
 
 (defun org-brain-description (entry)
   "Get description of ENTRY.
@@ -303,25 +301,11 @@ This is a description.
         (org-element-interpret-data (org-element-contents s-block))))
     nil t t))
 
-(defun org-brain--choose-entry-helper (title targets)
-  "Try to get TITLE as an entry from TARGETS.  Create it if it doesn't exist.
-Meant as a helper function for `org-brain-choose-entry' and `org-brain-choose-entries'."
-  (let ((id (cdr (assoc title targets))))
-    (if id
-        (org-brain-entry-from-id id)
-      (setq title (split-string title "::" t))
-      (let ((entry-path (org-brain-entry-path (car title))))
-        (unless (file-exists-p entry-path)
-          (write-region "" nil entry-path))
-        (if (equal (length title) 2)
-            (with-current-buffer (find-file-noselect entry-path)
-              (goto-char (point-max))
-              (insert (concat "\n* " (cadr title)))
-              (list (car title) (cadr title) (org-id-get-create)))
-          (car title))))))
+(defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input)
+  "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
+Return the prompted entries in a list.
+Very similar to `org-brain-choose-entry', but can return several entries.
 
-(defun org-brain-choose-entry (prompt entries &optional predicate require-match initial-input)
-  "PROMPT for an entry from ENTRIES and return it.
 For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
   (unless org-id-locations (org-id-locations-load))
   (let* ((targets (mapcar (lambda (x)
@@ -330,24 +314,33 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                               (cons (org-brain-entry-name x)
                                     (nth 2 x))))
                           entries))
-         (choice (completing-read prompt targets
-                                  predicate require-match initial-input)))
-    (org-brain--choose-entry-helper choice targets)))
+         (choices (completing-read prompt targets
+                                   predicate require-match initial-input)))
+    (mapcar (lambda (title)
+              (if-let ((id (cdr (assoc title targets))))
+                  ;; Headline entry exists, return it
+                  (org-brain-entry-from-id id)
+                ;; File entry
+                (setq title (split-string title "::" t))
+                (let ((entry-path (org-brain-entry-path (car title))))
+                  (unless (file-exists-p entry-path)
+                    (write-region "" nil entry-path))
+                  (if (equal (length title) 2)
+                      ;; Create new headline entry in file
+                      (with-current-buffer (find-file-noselect entry-path)
+                        (goto-char (point-max))
+                        (insert (concat "\n* " (cadr title)))
+                        (list (car title) (cadr title) (org-id-get-create)))
+                    (car title)))))
+            (if org-brain-entry-separator
+                (split-string choices org-brain-entry-separator)
+              (list choices)))))
 
-(defun org-brain-choose-entries (prompt entries)
-  "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
-Return the prompted entries in a list.
-Very similar to `org-brain-choose-entry', but can return several entries."
-  (unless org-id-locations (org-id-locations-load))
-  (let* ((targets (mapcar (lambda (x)
-                            (if (org-brain-filep x)
-                                (cons x nil)
-                              (cons (org-brain-entry-name x)
-                                    (nth 2 x))))
-                          entries))
-         (choices (completing-read prompt targets)))
-    (mapcar (lambda (title) (org-brain--choose-entry-helper title targets))
-            (split-string choices org-brain-entry-separator))))
+(defun org-brain-choose-entry (prompt entries &optional predicate require-match initial-input)
+  "PROMPT for an entry from ENTRIES and return it.
+For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
+  (let ((org-brain-entry-separator nil))
+    (car (org-brain-choose-entries prompt entries predicate require-match initial-input))))
 
 (defun org-brain-keywords (file)
   "Get alist of `org-mode' keywords and their values in FILE."
@@ -862,7 +855,7 @@ If NOCONFIRM is nil, ask if we really want to delete."
   (let ((local-children (org-brain--local-children entry)))
     (when (or noconfirm
               (yes-or-no-p
-               (format "%s have %d local children. Delete them all?"
+               (format "%s and its %d local children will be deleted. Are you sure?"
                        (org-brain-entry-name entry)
                        (length local-children))))
       (dolist (child local-children)
