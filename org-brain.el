@@ -356,8 +356,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
   (if (org-brain-filep entry)
       (let ((path (org-brain-entry-path entry)))
         (if (file-exists-p path)
-            (set-marker (make-marker) 0 (or (get-file-buffer path)
-                                            (create-file-buffer path)))
+            (set-marker (make-marker) 0 (find-file-noselect path))
           ;; If file doesn't exists, it is probably an id
           (org-id-find entry t)))
     (org-id-find (nth 2 entry) t)))
