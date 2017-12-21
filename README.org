@@ -270,6 +270,10 @@ want to remove these properties, use the corresponding command instead
 You might also see that =org-brain= inserts a =RESOURCES= drawer. It is okay to
 modify this drawer manually.
 
+** =org-brain= is slow!
+
+If you feel that =org-brain= is slow while indexing your entries (for instance when running =M-x org-brain-visualize=) you can customize =org-brain-file-entries-use-title=, and set it to =t=. This will display file names when indexing, instead of the file entry's title, which is faster.
+
 * Backwards compability breaking changes in 0.4
 
 /This is only relevant if you've been using org-brain before version 0.4/
