@@ -328,7 +328,8 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
          (choices (completing-read prompt targets
                                    predicate require-match initial-input)))
     (mapcar (lambda (title)
-              (let ((id (cdr (assoc title targets))))
+              (let ((id (or (cdr (assoc title targets))
+                            title)))
                 (or
                  ;; Headline entry exists, return it
                  (org-brain-entry-from-id id)
