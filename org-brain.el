@@ -324,6 +324,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                 (setq title (split-string title "::" t))
                 (let ((entry-path (org-brain-entry-path (car title))))
                   (unless (file-exists-p entry-path)
+                    (make-directory (file-name-directory entry-path) t)
                     (write-region "" nil entry-path))
                   (if (equal (length title) 2)
                       ;; Create new headline entry in file
@@ -840,6 +841,46 @@ If run interactively, get ENTRY from context."
                     entry "BRAIN_FRIENDS")
                    nil t)))
 
+(defun org-brain--remove-relationships (entry)
+  "Remove all external relationships from ENTRY."
+  (dolist (child (org-brain--linked-property-entries
+                  entry "BRAIN_CHILDREN"))
+    (org-brain-remove-relationship entry child))
+  (dolist (parent (org-brain--linked-property-entries
+                   entry "BRAIN_PARENTS"))
+    (org-brain-remove-relationship parent entry))
+  (dolist (friend (org-brain-friends entry))
+    (org-brain-remove-friendship entry friend)))
+
+;;;###autoload
+(defun org-brain-rename-file (file-entry new-name)
+  "Rename FILE-ENTRY to NEW-NAME.
+Both arguments should be relative to `org-brain-path' and should
+not contain `org-brain-files-extension'."
+  (interactive (let ((entry (org-brain-choose-entry
+                             "File entry: " (org-brain-files t) nil t)))
+                 (list entry (read-string "New filename: " entry))))
+  (let ((newpath (org-brain-entry-path new-name))
+        (oldpath (org-brain-entry-path file-entry)))
+    (if (file-exists-p newpath)
+        (error "There's already a file %s" newpath)
+      (let ((children (org-brain--linked-property-entries file-entry "BRAIN_CHILDREN"))
+            (parents (org-brain--linked-property-entries file-entry "BRAIN_PARENTS"))
+            (friends (org-brain-friends file-entry)))
+        (org-brain--remove-relationships file-entry)
+        (org-save-all-org-buffers)
+        (make-directory (file-name-directory newpath) t)
+        (with-temp-file newpath (insert-file-contents oldpath))
+        (org-brain-delete-entry file-entry t)
+        (org-brain-update-id-locations)
+        (dolist (child children)
+          (org-brain-add-relationship new-name child))
+        (dolist (parent parents)
+          (org-brain-add-relationship parent new-name))
+        (dolist (friend friends)
+          (org-brain--internal-add-friendship new-name friend))
+        (message "Renamed %s to %s" file-entry new-name)))))
+
 ;;;###autoload
 (defun org-brain-delete-entry (entry &optional noconfirm)
   "Delete ENTRY and all of its local children.
@@ -859,14 +900,7 @@ If NOCONFIRM is nil, ask if we really want to delete."
                        (length local-children))))
       (dolist (child local-children)
         (org-brain-delete-entry child t))
-      (dolist (child (org-brain--linked-property-entries
-                      entry "BRAIN_CHILDREN"))
-        (org-brain-remove-relationship entry child))
-      (dolist (parent (org-brain--linked-property-entries
-                       entry "BRAIN_PARENTS"))
-        (org-brain-remove-relationship parent entry))
-      (dolist (friend (org-brain-friends entry))
-        (org-brain-remove-friendship entry friend))
+      (org-brain--remove-relationships entry)
       (if (org-brain-filep entry)
           (let ((filename (org-brain-entry-path entry)))
             (if (vc-backend filename)

@@ -194,6 +194,15 @@ to convert a file entry into a headline entry.
 Another available command is =M-x org-brain-agenda=, which can be used to run
 =org-agenda= on your =org-brain= files.
 
+** Renaming files in =org-brain=
+
+Headline entries use =org-id= to identify themselves, so the headlines can be
+manually renamed without worries. File entries, on the other hand, uses the
+filename as the identifier. This will cause problems if you try to manually
+rename files inside of =org-brain=.
+
+In order to rename a file, use =M-x org-brain-rename-file=.
+
 ** Special tags
 
 You might have a headline which you do not really want as an entry in
