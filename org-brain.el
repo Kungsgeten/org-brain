@@ -164,6 +164,11 @@ its own line. If nil (default), children are filled up to the
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-refile-max-level 1
+  "The default max-level used by `org-brain-refile'."
+  :group 'org-brain
+  :type 'integer)
+
 ;;;###autoload
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
@@ -865,6 +870,20 @@ If run interactively, get ENTRY from context."
                    (org-brain--linked-property-entries
                     entry "BRAIN_FRIENDS")
                    nil t)))
+
+;;;###autoload
+(defun org-brain-refile (max-level)
+  "Run `org-refile' to a heading in `org-brain-files', with set MAX-LEVEL.
+If MAX-LEVEL isn't given, use `org-brain-refile-max-level'.
+After refiling, all headlines will be given an id."
+  (interactive "p")
+  (unless current-prefix-arg
+    (setq max-level org-brain-refile-max-level))
+  (let ((org-refile-targets `((org-brain-files . (:maxlevel . ,max-level))))
+        (org-after-refile-insert-hook org-after-refile-insert-hook))
+    (add-hook 'org-after-refile-insert-hook
+              (lambda () (org-map-tree 'org-id-get-create)))
+    (org-refile)))
 
 (defun org-brain--remove-relationships (entry)
   "Remove all external relationships from ENTRY."

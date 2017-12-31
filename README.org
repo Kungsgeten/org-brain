@@ -165,7 +165,8 @@ You can also edit =org-brain= entries directly from =org-mode=. You can use the
 default =org-mode= outline structure to define parent/children relationships,
 but keep in mind that only entries with an =ID= property will be considered as
 entries to =org-brain=, you can use =M-x org-id-get-create= to create an =ID=
-property to the current =org-mode= headline. In order to add external
+property to the current =org-mode= headline. Another alternative is to use =M-x
+org-brain-refile= which will create the ids for you. In order to add external
 relationships (for instance to add an entry in a different file as a child) you
 may use the commands above, like =M-x org-brain-add-child= for instance. From
 =org-mode= files you may also want to use the commands
