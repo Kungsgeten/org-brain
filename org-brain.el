@@ -105,6 +105,11 @@ Can be used to prettify the buffer output, e.g. `ascii-art-to-unicode'."
   :group 'org-brain
   :type 'hook)
 
+(defcustom org-brain-new-entry-hook nil
+  "Hook run after a new headline entry has been created."
+  :group 'org-brain
+  :type 'hook)
+
 (defcustom org-brain-after-resource-button-functions nil
   "Hook run during `org-brain-insert-resource-button'.
 Insert a bullet, then run hook functions, then insert the actual button.
@@ -360,7 +365,9 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                          (with-current-buffer (find-file-noselect entry-path)
                            (goto-char (point-max))
                            (insert (concat "\n* " (cadr id)))
-                           (list (car id) (cadr id) (org-id-get-create)))
+                           (let ((new-id (org-id-get-create)))
+                             (run-hooks 'org-brain-new-entry-hook)
+                             (list (car id) (cadr id) new-id)))
                        (car id)))))))
             (if org-brain-entry-separator
                 (split-string choices org-brain-entry-separator)
@@ -670,6 +677,7 @@ Several children can be created, by using `org-brain-entry-separator'."
               (goto-char (point-max)))
             (insert (concat "* " child-name))
             (org-id-get-create)
+            (run-hooks 'org-brain-new-entry-hook)
             (save-buffer))
         ;; Headline entry
         (org-with-point-at (org-brain-entry-marker entry)
@@ -680,6 +688,7 @@ Several children can be created, by using `org-brain-entry-separator'."
           (org-do-demote)
           (insert child-name)
           (org-id-get-create)
+          (run-hooks 'org-brain-new-entry-hook)
           (save-buffer)))))
   (org-brain--revert-if-visualizing))
 
