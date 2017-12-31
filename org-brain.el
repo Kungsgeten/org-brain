@@ -30,6 +30,7 @@
 
 (require 'org-element)
 (require 'org-attach)
+(require 'org-macs)
 (require 'org-id)
 (require 'picture)
 (require 'subr-x)
@@ -1384,7 +1385,7 @@ Helper function for `org-brain-visualize'."
         (let ((children-links (cdr parent))
               (col-start (+ 3 max-width))
               (parent-title (org-brain-title (car parent))))
-          (goto-line 4)
+          (org-goto-line 4)
           (mapc
            (lambda (child)
              (picture-forward-column col-start)
@@ -1393,7 +1394,7 @@ Helper function for `org-brain-visualize'."
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
            children-links)
-          (goto-line 4)
+          (org-goto-line 4)
           (forward-line (1- (length children-links)))
           (picture-forward-column col-start)
           (push (cons (picture-current-line)
@@ -1408,7 +1409,7 @@ Helper function for `org-brain-visualize'."
       (when parent-positions
         (let ((maxline (line-number-at-pos (point-max))))
           ;; Bottom line
-          (goto-line maxline)
+          (org-goto-line maxline)
           (picture-forward-column (cdar (last parent-positions)))
           (picture-move-down 1)
           (insert (make-string (1+ (- (cdar parent-positions)
@@ -1416,7 +1417,7 @@ Helper function for `org-brain-visualize'."
                                ?-))
           ;; Lines from parents to bottom
           (dolist (pos parent-positions)
-            (goto-line (car pos))
+            (org-goto-line (car pos))
             (picture-forward-column (cdr pos))
             (while (< (line-number-at-pos (point))
                       maxline)
