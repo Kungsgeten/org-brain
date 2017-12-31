@@ -62,6 +62,8 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(directory))
 
+(load org-brain-data-file t)
+
 (defcustom org-brain-visualize-default-choices 'all
   "Which entries to choose from when using `org-brain-visualize'.
 If 'all, choose from all file and headline entries.
@@ -1367,8 +1369,6 @@ See `org-brain-add-resource'."
   "Insert pinned entries.
 Helper function for `org-brain-visualize'."
   (insert "PINNED:")
-  (unless org-brain-pins
-    (load org-brain-data-file t))
   (dolist (pin org-brain-pins)
     (insert "  ")
     (org-brain-insert-visualize-button pin))
