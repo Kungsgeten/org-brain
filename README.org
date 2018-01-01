@@ -195,6 +195,11 @@ to convert a file entry into a headline entry.
 Another available command is =M-x org-brain-agenda=, which can be used to run
 =org-agenda= on your =org-brain= files.
 
+** Slashes in file entry titles
+
+When giving a file entry a title, the title can not contain slashes (=/=) if
+=org-brain-file-entries-use-title= is =t=.
+
 ** Renaming files in =org-brain=
 
 Headline entries use =org-id= to identify themselves, so the headlines can be

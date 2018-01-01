@@ -233,10 +233,20 @@ its own line. If nil (default), children are filled up to the
                         (file-relative-name (expand-file-name path)
                                             (expand-file-name org-brain-path))))
 
-(defun org-brain-entry-path (entry)
-  "Get path of org-brain ENTRY."
+(defun org-brain-entry-path (entry &optional check-title)
+  "Get path of org-brain ENTRY.
+If CHECK-TITLE is non-nil, consider that ENTRY might be a file entry title."
   (let ((name (if (org-brain-filep entry)
-                  entry
+                  (or (and check-title
+                           org-brain-file-entries-use-title
+                           (cdr
+                            (assoc entry
+                                   (mapcar (lambda (x)
+                                             (cons (concat (file-name-directory x)
+                                                           (org-brain-title x))
+                                                   x))
+                                           (org-brain-files t)))))
+                      entry)
                 (car entry))))
     (expand-file-name (org-link-unescape (format "%s.%s" name org-brain-files-extension))
                       org-brain-path)))
@@ -356,7 +366,8 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                  ;; File entry
                  (progn
                    (setq id (split-string id "::" t))
-                   (let ((entry-path (org-brain-entry-path (car id))))
+                   (let* ((entry-path (org-brain-entry-path (car id) t))
+                          (entry-file (org-brain-path-entry-name entry-path)))
                      (unless (file-exists-p entry-path)
                        (make-directory (file-name-directory entry-path) t)
                        (write-region "" nil entry-path))
@@ -367,8 +378,8 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                            (insert (concat "\n* " (cadr id)))
                            (let ((new-id (org-id-get-create)))
                              (run-hooks 'org-brain-new-entry-hook)
-                             (list (car id) (cadr id) new-id)))
-                       (car id)))))))
+                             (list entry-file (cadr id) new-id)))
+                       entry-file))))))
             (if org-brain-entry-separator
                 (split-string choices org-brain-entry-separator)
               (list choices)))))
