@@ -587,6 +587,8 @@ PROPERTY could for instance be BRAIN_CHILDREN."
 
 (defun org-brain-add-relationship (parent child)
   "Add external relationship between PARENT and CHILD."
+  (when (equal parent child)
+    (error "An entry can't be a parent/child to itself"))
   (unless (member child (org-brain-children parent))
 
     (org-save-all-org-buffers)
@@ -744,6 +746,8 @@ Several parents can be added, by using `org-brain-entry-separator'."
 (defun org-brain--internal-add-friendship (entry1 entry2 &optional oneway)
   "Add friendship between ENTRY1 and ENTRY2.
 If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around."
+  (when (equal entry1 entry2)
+    (error "Can't have an entry as a friend to itself"))
   (unless (member entry2 (org-brain-friends entry1))
     (if (org-brain-filep entry1)
         ;; Entry1 = File
