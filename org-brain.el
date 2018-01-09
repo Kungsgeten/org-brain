@@ -205,11 +205,16 @@ its own line. If nil (default), children are filled up to the
 (defun org-brain-id-exclude-taggedp (id)
   "Return t if ID is tagged as being excluded from org-brain."
   (org-with-point-at (org-id-find id t)
-    (let ((tags (org-get-tags)))
-      (or (member org-brain-exclude-tree-tag tags)
-          (and (member org-brain-exclude-children-tag tags)
-               (not (member org-brain-exclude-children-tag
-                            (org-get-tags-at nil t))))))))
+	(org-brain-entry-at-point-excludedp)))
+
+(defun org-brain-entry-at-point-excludedp ()
+  "Return t if the entry at point is tagged as being excluded
+from org-brain."
+  (let ((tags (org-get-tags)))
+	(or (member org-brain-exclude-tree-tag tags)
+		(and (member org-brain-exclude-children-tag tags)
+			 (not (member org-brain-exclude-children-tag
+						  (org-get-tags-at nil t)))))))
 
 (defun org-brain-save-data ()
   "Save data to `org-brain-data-file'."
