@@ -210,7 +210,7 @@ its own line. If nil (default), children are filled up to the
 (defun org-brain-entry-at-point-excludedp ()
   "Return t if the entry at point is tagged as being excluded
 from org-brain."
-  (let ((tags (org-get-tags)))
+  (let ((tags (org-get-tags-at)))
 	(or (member org-brain-exclude-tree-tag tags)
 		(and (member org-brain-exclude-children-tag tags)
 			 (not (member org-brain-exclude-children-tag
