@@ -269,18 +269,25 @@ Ignores \"dotfiles\"."
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
   (unless org-id-locations (org-id-locations-load))
-  (let (ids)
-    (maphash
-     (lambda (id file)
-       (when (and (string-prefix-p (expand-file-name org-brain-path)
-                                   (expand-file-name file))
-                  (not (org-brain-id-exclude-taggedp id)))
-         (let* ((heading (org-id-find id t))
-                (name (org-entry-get heading "ITEM")))
-           (push (list (org-brain-path-entry-name file) name id)
-                 ids))))
-     org-id-locations)
-    ids))
+  (save-window-excursion
+	(let (ids)
+	  (dolist (file (org-brain-files) ids)
+		(find-file file)
+		;; It is faster to loop through ALL entries in all org-brain-files and
+		;; discard the ones that don't have IDS, than it is to seek out the
+		;; entries in `org-id-locations' one by one.
+		(org-map-entries
+		 (lambda ()
+		   (let ((id (org-entry-get (point) "ID"))
+				 (excluded (org-brain-entry-at-point-excludedp)))
+			 (when (and id (not excluded))
+			   (push (list
+					  (org-brain-path-entry-name file)
+					  (org-entry-get (point) "ITEM")
+					  id)
+					 ids)))
+		   nil 'file)))
+	  ids)))
 
 (defun org-brain-entry-from-id (id)
   "Get entry from ID."
