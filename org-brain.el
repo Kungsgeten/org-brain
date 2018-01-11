@@ -205,11 +205,16 @@ its own line. If nil (default), children are filled up to the
 (defun org-brain-id-exclude-taggedp (id)
   "Return t if ID is tagged as being excluded from org-brain."
   (org-with-point-at (org-id-find id t)
-    (let ((tags (org-get-tags-at)))
-      (or (member org-brain-exclude-tree-tag tags)
-          (and (member org-brain-exclude-children-tag tags)
-               (not (member org-brain-exclude-children-tag
-                            (org-get-tags-at nil t))))))))
+    (org-brain-entry-at-point-excludedp)))
+
+(defun org-brain-entry-at-point-excludedp ()
+  "Return t if the entry at point is tagged as being excluded
+from org-brain."
+  (let ((tags (org-get-tags-at)))
+    (or (member org-brain-exclude-tree-tag tags)
+        (and (member org-brain-exclude-children-tag tags)
+             (not (member org-brain-exclude-children-tag
+                          (org-get-tags-at nil t)))))))
 
 (defun org-brain-save-data ()
   "Save data to `org-brain-data-file'."
@@ -265,17 +270,23 @@ Ignores \"dotfiles\"."
   "Get all org-brain headline entries."
   (unless org-id-locations (org-id-locations-load))
   (let (ids)
-    (maphash
-     (lambda (id file)
-       (when (and (string-prefix-p (expand-file-name org-brain-path)
-                                   (expand-file-name file))
-                  (not (org-brain-id-exclude-taggedp id)))
-         (let* ((heading (org-id-find id t))
-                (name (org-entry-get heading "ITEM")))
-           (push (list (org-brain-path-entry-name file) name id)
-                 ids))))
-     org-id-locations)
-    ids))
+    (dolist (file (org-brain-files) ids)
+      (with-current-buffer
+        (find-file-noselect file)
+        ;; It is faster to loop through ALL entries in all org-brain-files and
+        ;; discard the ones that don't have IDS, than it is to seek out the
+        ;; entries in `org-id-locations' one by one.
+        (org-map-entries
+         (lambda ()
+           (let ((id (org-entry-get (point) "ID")))
+             (when (and id (not (org-brain-entry-at-point-excludedp)))
+               (push (list
+                      (org-brain-path-entry-name file)
+                      (org-entry-get (point) "ITEM")
+                      id)
+                     ids)))
+           nil 'file)))
+      ids)))
 
 (defun org-brain-entry-from-id (id)
   "Get entry from ID."
@@ -1493,8 +1504,8 @@ Helper function for `org-brain-visualize'."
     (dolist (child children)
       (let ((child-title (org-brain-title child)))
         (when (or org-brain-visualize-one-child-per-line
-				  (> (+ (current-column) (length child-title))
-					 fill-column))
+                  (> (+ (current-column) (length child-title))
+                     fill-column))
           (insert "\n"))
         (org-brain-insert-visualize-button child)
         (insert "  ")))))
