@@ -269,10 +269,10 @@ Ignores \"dotfiles\"."
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
   (unless org-id-locations (org-id-locations-load))
-  (save-window-excursion
-    (let (ids)
-      (dolist (file (org-brain-files) ids)
-        (find-file file)
+  (let (ids)
+    (dolist (file (org-brain-files) ids)
+      (with-current-buffer
+        (find-file-noselect file)
         ;; It is faster to loop through ALL entries in all org-brain-files and
         ;; discard the ones that don't have IDS, than it is to seek out the
         ;; entries in `org-id-locations' one by one.
