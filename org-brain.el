@@ -278,9 +278,8 @@ Ignores \"dotfiles\"."
         ;; entries in `org-id-locations' one by one.
         (org-map-entries
          (lambda ()
-           (let ((id (org-entry-get (point) "ID"))
-                 (excluded (org-brain-entry-at-point-excludedp)))
-             (when (and id (not excluded))
+           (let ((id (org-entry-get (point) "ID")))
+             (when (and id (not (org-brain-entry-at-point-excludedp)))
                (push (list
                       (org-brain-path-entry-name file)
                       (org-entry-get (point) "ITEM")
