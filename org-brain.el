@@ -180,6 +180,10 @@ its own line. If nil (default), children are filled up to the
 (defvar org-brain--vis-history nil
   "History previously visualized entries. Newest first.")
 
+(defvar org-brain--vis-src-beg nil)
+(defvar org-brain--vis-src-end nil)
+(defvar org-brain--vis-src-buffer nil)
+
 (defvar org-brain-resources-start-re "^[ \t]*:RESOURCES:[ \t]*$"
   "Regular expression matching the first line of a resources drawer.")
 
@@ -399,8 +403,10 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
 (defun org-brain-text (entry &optional all-data)
   "Get the text of ENTRY as string.
 Only get the body text, unless ALL-DATA is t."
-  (when-let
-      ((entry-text
+  (let*
+      ((src-beg nil)
+       (src-end nil)
+       (entry-text
         (if (org-brain-filep entry)
             ;; File entry
             (with-temp-buffer
@@ -424,22 +430,29 @@ Only get the body text, unless ALL-DATA is t."
                 (unless all-data
                   (goto-char (cdr (org-get-property-block)))
                   (end-of-line))
-                (let (end)
+                (let (beg end)
                   (save-excursion
                     (or (and (not (member org-brain-exclude-children-tag tags))
                              (not (member org-brain-show-children-tag tags))
                              (org-goto-first-child))
                         (org-end-of-subtree t))
-                    (setq end (point)))
-                  (buffer-substring-no-properties (point) end))))))))
-    (org-remove-indentation entry-text)
-    (with-temp-buffer
-      (insert entry-text)
-      (goto-char (point-min))
-      (when (and (not all-data)
-                 (re-search-forward org-brain-resources-start-re nil t))
-        (re-search-forward org-drawer-regexp nil t))
-      (buffer-substring (point) (point-max)))))
+                    (setq end (point))
+                    (setq src-end end))
+                  (save-excursion
+                    (setq beg (point))
+                    (setq src-beg beg)
+                    (buffer-substring-no-properties beg end)))))))))
+    (when entry-text
+      (org-remove-indentation entry-text)
+      (setq org-brain--vis-src-beg src-beg)
+      (setq org-brain--vis-src-end src-end)
+      (with-temp-buffer
+        (insert entry-text)
+        (goto-char (point-min))
+        (when (and (not all-data)
+                   (re-search-forward org-brain-resources-start-re nil t))
+          (re-search-forward org-drawer-regexp nil t))
+        (buffer-substring (point) (point-max))))))
 
 (defun org-brain-parents (entry)
   "Get parents of ENTRY.
@@ -1140,34 +1153,38 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
        nil nil def-choice))))
   (unless wander (org-brain-stop-wandering))
   (setq org-brain--vis-entry entry)
-  (with-current-buffer (get-buffer-create "*org-brain*")
-    (read-only-mode -1)
-    (delete-region (point-min) (point-max))
-    (org-brain--vis-pinned)
-    (org-brain--vis-parents-siblings entry)
-    ;; Insert entry title
-    (let ((title (org-brain-title entry)))
-      (let ((half-title-length (/ (length title) 2)))
-        (if (>= half-title-length (current-column))
-            (delete-char (- (current-column)))
-          (ignore-errors (delete-char (- half-title-length)))))
-      (let ((entry-pos (point)))
-        (insert title)
-        (org-brain--vis-friends entry)
-        (org-brain--vis-children entry)
-        (when (and org-brain-show-resources)
-          (org-brain--vis-resources (org-brain-resources entry)))
-        (if org-brain-show-text
-            (org-brain--vis-text entry)
-          (run-hooks 'org-brain-after-visualize-hook))
-        (org-brain-visualize-mode)
-        (goto-char entry-pos)
-        (unless nofocus
-          (pop-to-buffer "*org-brain*")
-          (when (and (not nohistory)
-                     (not (equal entry (car org-brain--vis-history)))
-                     (< (length org-brain--vis-history) 15))
-            (push entry org-brain--vis-history)))))))
+  (let ((outline-buf (get-buffer-create "*org-brain*"))
+        (entry-buf (get-buffer-create "*org-brain-entry*")))
+    (with-current-buffer outline-buf
+      (read-only-mode -1)
+      (delete-region (point-min) (point-max))
+      (org-brain--vis-pinned)
+      (org-brain--vis-parents-siblings entry)
+      ;; Insert entry title
+      (let ((title (org-brain-title entry)))
+        (let ((half-title-length (/ (length title) 2)))
+          (if (>= half-title-length (current-column))
+              (delete-char (- (current-column)))
+            (ignore-errors (delete-char (- half-title-length)))))
+        (let ((entry-pos (point)))
+          (insert title)
+          (org-brain--vis-friends entry)
+          (org-brain--vis-children entry)
+          (when (and org-brain-show-resources)
+            (org-brain--vis-resources (org-brain-resources entry)))
+          (when org-brain-show-text
+            (org-brain--vis-text entry-buf entry))
+          (run-hooks 'org-brain-after-visualize-hook)
+          (org-brain-visualize-mode)
+          (goto-char entry-pos)
+          (unless nofocus
+            (display-buffer outline-buf)
+            (when (get-buffer entry-buf)
+              (display-buffer entry-buf))
+            (when (and (not nohistory)
+                       (not (equal entry (car org-brain--vis-history)))
+                       (< (length org-brain--vis-history) 15))
+              (push entry org-brain--vis-history))))))))
 
 ;;;###autoload
 (defun org-brain-visualize-random ()
@@ -1475,21 +1492,46 @@ Helper function for `org-brain-visualize'."
     (insert "\n\n--- Resources ---------------------------------\n")
     (mapc #'org-brain-insert-resource-button resources)))
 
-(defun org-brain--vis-text (entry)
-  "Insert text of ENTRY.
+(defvar org-brain--source-buffer nil)
+
+(defun org-brain--vis-text-save ()
+  (set-buffer-modified-p nil)
+  (let ((edited-text (buffer-string))
+	(beg org-brain--vis-src-beg)
+        (end org-brain--vis-src-end))
+    (with-current-buffer org-brain--source-buffer
+      (undo-boundary)
+      (goto-char beg)
+      (delete-region beg end)
+      (insert "\n")
+      (insert edited-text)
+      (insert "\n")
+      (setq end (point))
+      (save-buffer))
+    (setq org-brain--vis-src-end end)))
+
+(defun org-brain--vis-text (buf entry)
+  "Insert text of ENTRY in buffer BUF.
 Helper function for `org-brain-visualize'."
-  (if-let ((text (org-brain-text entry)))
+  (if-let (text (org-brain-text entry))
       (progn
         (setq text (string-trim text))
-        (if (> (length text) 0)
-            (progn
-              (insert "\n\n--- Entry -------------------------------------\n\n")
-              (run-hooks 'org-brain-after-visualize-hook)
-              (insert text))
-          (run-hooks 'org-brain-after-visualize-hook)))
-    (run-hooks 'org-brain-after-visualize-hook)))
+        (with-current-buffer buf
+          (if (> (length text) 0)
+              (progn
+                (setq-local org-brain--source-buffer (marker-buffer
+                                                      (org-brain-entry-marker entry)))
+                (setq buffer-offer-save t)
+                (setq buffer-file-name
+                      (concat (buffer-file-name org-brain--source-buffer)
+                              "[" (buffer-name) "]"))
+                (read-only-mode -1)
+                (delete-region (point-min) (point-max))
+                (insert (org-fontify-like-in-org-mode text))
+                (set-buffer-modified-p nil)
+                (setq-local write-contents-functions '(org-brain--vis-text-save)))
+            (kill-buffer buf))))))
 
-;;* Brain link
 (defun org-brain-link-complete ()
   "Create an org-link target string to a file in `org-brain-path'."
   (let ((entry (ignore-errors (org-brain-entry-at-pt)))
