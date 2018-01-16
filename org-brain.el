@@ -414,14 +414,16 @@ Only get the body text, unless ALL-DATA is t."
               (goto-char (point-min))
               (or (outline-next-heading)
                   (goto-char (point-max)))
-              (buffer-substring-no-properties
-               (or (unless all-data
-                     (save-excursion
-                       (when (re-search-backward "^[#:*]" nil t)
-                         (end-of-line)
-                         (point))))
-                   (point-min))
-               (point)))
+              (let ((beg (or (unless all-data
+                               (save-excursion
+                                 (when (re-search-backward "^[#:*]" nil t)
+                                   (end-of-line)
+                                   (point))))
+                             (point-min)))
+                    (end (point)))
+                (setq src-beg beg)
+                (setq src-end end)
+                (buffer-substring-no-properties beg end)))
           ;; Headline entry
           (org-with-point-at (org-brain-entry-marker entry)
             (let ((tags (org-get-tags-at nil t)))
