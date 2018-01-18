@@ -308,7 +308,7 @@ visibility rendering/formatting in-buffer."
   (let ((pom (or pom (point))))
 	(if org-brain-headline-links-only-show-visible
 		(org-brain-replace-links-with-visible-parts (org-entry-get pom "ITEM"))
-	  (org-entry-get (point) "ITEM"))))
+	  (org-entry-get pom "ITEM"))))
 
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
