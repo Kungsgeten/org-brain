@@ -292,7 +292,7 @@ descriptions only (if applicable, otherwise shows the link destination)."
 	  (setq start (match-end 0)))
 	(concat ret-str (substring-no-properties raw-str start nil))))
 
-(defun org-brain-headline-at (pom)
+(defun org-brain-headline-at (&optional pom)
   "Return the full headline of the entry at point.
 
 If `org-brain-headline-links-only-show-visible' is nil, the links
