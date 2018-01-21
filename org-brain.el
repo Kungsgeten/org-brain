@@ -327,8 +327,7 @@ visibility rendering/formatting in-buffer."
              (when (and id (not (org-brain-entry-at-point-excludedp)))
                (push (list
                       (org-brain-path-entry-name file)
-					  (org-brain-replace-links-with-visible-parts
-					   (org-brain-headline-at (point)))
+                      (org-brain-headline-at (point))
                       id)
                      ids)))
            nil 'file)))
