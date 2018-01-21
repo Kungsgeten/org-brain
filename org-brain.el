@@ -278,19 +278,19 @@ Ignores \"dotfiles\"."
   "Return `str', with all bracketed links replaced with the link
 descriptions only (if applicable, otherwise shows the link destination)."
   (let ((ret-str "")
-		(start 0)
-		match-start)
-	(while (setq match-start (string-match org-bracket-link-regexp raw-str start))
-	  (setq ret-str
-			(concat ret-str
-					;; Include everything not part of the string.
-					(substring-no-properties raw-str start match-start)
-					;; Include either the link description, or the link
-					;; destination.
-					(or (match-string-no-properties 3 raw-str)
-						(match-string-no-properties 1 raw-str))))
-	  (setq start (match-end 0)))
-	(concat ret-str (substring-no-properties raw-str start nil))))
+        (start 0)
+        match-start)
+    (while (setq match-start (string-match org-bracket-link-regexp raw-str start))
+      (setq ret-str
+            (concat ret-str
+                    ;; Include everything not part of the string.
+                    (substring-no-properties raw-str start match-start)
+                    ;; Include either the link description, or the link
+                    ;; destination.
+                    (or (match-string-no-properties 3 raw-str)
+                        (match-string-no-properties 1 raw-str))))
+      (setq start (match-end 0)))
+    (concat ret-str (substring-no-properties raw-str start nil))))
 
 (defun org-brain-headline-at (&optional pom)
   "Return the full headline of the entry at point.
@@ -306,9 +306,9 @@ returned.)
 This is done via regex, and does not depend on org-mode's
 visibility rendering/formatting in-buffer."
   (let ((pom (or pom (point))))
-	(if org-brain-headline-links-only-show-visible
-		(org-brain-replace-links-with-visible-parts (org-entry-get pom "ITEM"))
-	  (org-entry-get pom "ITEM"))))
+    (if org-brain-headline-links-only-show-visible
+        (org-brain-replace-links-with-visible-parts (org-entry-get pom "ITEM"))
+      (org-entry-get pom "ITEM"))))
 
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
@@ -339,8 +339,8 @@ visibility rendering/formatting in-buffer."
   (when-let ((path (gethash id org-id-locations)))
     (list
      (org-brain-path-entry-name path)
-	 (org-brain-replace-links-with-visible-parts
-	  (org-brain-headline-at (org-id-find id t)))
+     (org-brain-replace-links-with-visible-parts
+      (org-brain-headline-at (org-id-find id t)))
      id)))
 
 (defun org-brain-entry-identifier (entry)
