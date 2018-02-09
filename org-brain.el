@@ -86,6 +86,14 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-headline-links-only-show-visible nil
+  "Only show visible parts (descriptions) of headline links.
+
+See the docstring for `org-brain-headline-at' for more info
+on how this is implemented."
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-brain-link-adds-child t
   "If brain: links should add the linked entry as a child.
 Applicable for `org-insert-link' and `org-brain-insert-link'."
@@ -266,6 +274,43 @@ Ignores \"dotfiles\"."
     (directory-files-recursively
      org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension))))
 
+(defun org-brain-replace-links-with-visible-parts (raw-str)
+  "Return RAW-STR, with all bracketed links replaced with the
+link descriptions only (if applicable, otherwise shows the link
+destination)."
+  (let ((ret-str "")
+        (start 0)
+        match-start)
+    (while (setq match-start (string-match org-bracket-link-regexp raw-str start))
+      (setq ret-str
+            (concat ret-str
+                    ;; Include everything not part of the string.
+                    (substring-no-properties raw-str start match-start)
+                    ;; Include either the link description, or the link
+                    ;; destination.
+                    (or (match-string-no-properties 3 raw-str)
+                        (match-string-no-properties 1 raw-str))))
+      (setq start (match-end 0)))
+    (concat ret-str (substring-no-properties raw-str start nil))))
+
+(defun org-brain-headline-at (&optional pom)
+  "Return the full headline of the entry at point.
+
+If `org-brain-headline-links-only-show-visible' is nil, the links
+will be returned raw (all of the bracket syntax visible.)
+
+If `org-brain-headline-links-only-show-visible' is non-nil,
+returns only the visible parts of links in the heading. (For any
+links that have descriptions, only the descriptions will be
+returned.)
+
+This is done via regex, and does not depend on org-mode's
+visibility rendering/formatting in-buffer."
+  (let ((pom (or pom (point))))
+    (if org-brain-headline-links-only-show-visible
+        (org-brain-replace-links-with-visible-parts (org-entry-get pom "ITEM"))
+      (org-entry-get pom "ITEM"))))
+
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
   (unless org-id-locations (org-id-locations-load))
@@ -282,7 +327,7 @@ Ignores \"dotfiles\"."
              (when (and id (not (org-brain-entry-at-point-excludedp)))
                (push (list
                       (org-brain-path-entry-name file)
-                      (org-entry-get (point) "ITEM")
+                      (org-brain-headline-at (point))
                       id)
                      ids)))
            nil 'file)))
@@ -294,7 +339,8 @@ Ignores \"dotfiles\"."
   (when-let ((path (gethash id org-id-locations)))
     (list
      (org-brain-path-entry-name path)
-     (org-entry-get (org-id-find id t) "ITEM")
+     (org-brain-replace-links-with-visible-parts
+      (org-brain-headline-at (org-id-find id t)))
      id)))
 
 (defun org-brain-entry-identifier (entry)
