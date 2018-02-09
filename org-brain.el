@@ -275,9 +275,7 @@ Ignores \"dotfiles\"."
      org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension))))
 
 (defun org-brain-replace-links-with-visible-parts (raw-str)
-  "Return RAW-STR, with all bracketed links replaced with the
-link descriptions only (if applicable, otherwise shows the link
-destination)."
+  "Get RAW-STR with its links replaced by their descriptions."
   (let ((ret-str "")
         (start 0)
         match-start)
@@ -294,7 +292,7 @@ destination)."
     (concat ret-str (substring-no-properties raw-str start nil))))
 
 (defun org-brain-headline-at (&optional pom)
-  "Return the full headline of the entry at point.
+  "Return the full headline of the entry at POM.
 
 If `org-brain-headline-links-only-show-visible' is nil, the links
 will be returned raw (all of the bracket syntax visible.)
