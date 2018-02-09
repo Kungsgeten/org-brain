@@ -337,11 +337,9 @@ visibility rendering/formatting in-buffer."
   "Get entry from ID."
   (unless org-id-locations (org-id-locations-load))
   (when-let ((path (gethash id org-id-locations)))
-    (list
-     (org-brain-path-entry-name path)
-     (org-brain-replace-links-with-visible-parts
-      (org-brain-headline-at (org-id-find id t)))
-     id)))
+    (list (org-brain-path-entry-name path)
+          (org-brain-headline-at (org-id-find id t))
+          id)))
 
 (defun org-brain-entry-identifier (entry)
   "Get identifier of ENTRY.
