@@ -86,7 +86,7 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   :group 'org-brain
   :type '(boolean))
 
-(defcustom org-brain-headline-links-only-show-visible nil
+(defcustom org-brain-headline-links-only-show-visible t
   "Only show visible parts (descriptions) of headline links.
 
 See the docstring for `org-brain-headline-at' for more info
