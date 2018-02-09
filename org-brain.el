@@ -7,7 +7,7 @@
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25") (org "9"))
-;; Version: 0.4
+;; Version: 0.45
 
 ;;; Commentary:
 
@@ -878,6 +878,8 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
     (goto-char (marker-position marker))
     (org-show-entry))
   entry)
+
+(define-obsolete-function-alias 'org-brain-open 'org-brain-goto "0.4")
 
 ;;;###autoload
 (defun org-brain-goto-other-window (&optional entry)
