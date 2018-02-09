@@ -86,11 +86,7 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   :group 'org-brain
   :type '(boolean))
 
-<<<<<<< HEAD
-(defcustom org-brain-headline-links-only-show-visible nil
-=======
 (defcustom org-brain-headline-links-only-show-visible t
->>>>>>> Sodel-the-Vociferous-visible-parts-of-links-in-headlines
   "Only show visible parts (descriptions) of headline links.
 
 See the docstring for `org-brain-headline-at' for more info
@@ -279,13 +275,7 @@ Ignores \"dotfiles\"."
      org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension))))
 
 (defun org-brain-replace-links-with-visible-parts (raw-str)
-<<<<<<< HEAD
-  "Return RAW-STR, with all bracketed links replaced with the
-link descriptions only (if applicable, otherwise shows the link
-destination)."
-=======
   "Get RAW-STR with its links replaced by their descriptions."
->>>>>>> Sodel-the-Vociferous-visible-parts-of-links-in-headlines
   (let ((ret-str "")
         (start 0)
         match-start)
@@ -302,11 +292,7 @@ destination)."
     (concat ret-str (substring-no-properties raw-str start nil))))
 
 (defun org-brain-headline-at (&optional pom)
-<<<<<<< HEAD
-  "Return the full headline of the entry at point.
-=======
   "Return the full headline of the entry at POM.
->>>>>>> Sodel-the-Vociferous-visible-parts-of-links-in-headlines
 
 If `org-brain-headline-links-only-show-visible' is nil, the links
 will be returned raw (all of the bracket syntax visible.)
@@ -349,17 +335,9 @@ visibility rendering/formatting in-buffer."
   "Get entry from ID."
   (unless org-id-locations (org-id-locations-load))
   (when-let ((path (gethash id org-id-locations)))
-<<<<<<< HEAD
-    (list
-     (org-brain-path-entry-name path)
-     (org-brain-replace-links-with-visible-parts
-      (org-brain-headline-at (org-id-find id t)))
-     id)))
-=======
     (list (org-brain-path-entry-name path)
           (org-brain-headline-at (org-id-find id t))
           id)))
->>>>>>> Sodel-the-Vociferous-visible-parts-of-links-in-headlines
 
 (defun org-brain-entry-identifier (entry)
   "Get identifier of ENTRY.
