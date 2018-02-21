@@ -1,6 +1,6 @@
 ;;; org-brain.el --- Org-mode concept mapping         -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017  Erik Sjöstrand
+;; Copyright (C) 2017--2018  Erik Sjöstrand
 ;; MIT License
 
 ;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
@@ -53,7 +53,7 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(string))
 
-(defcustom org-brain-ignored-resource-links '("fuzzy" "radio" "brain")
+(defcustom org-brain-ignored-resource-links '("fuzzy" "radio" "brain" "brain-child" "brain-parent" "brain-friend")
   "`org-link-types' which shouldn't be shown as resources in `org-brain-visualize'."
   :group 'org-brain
   :type '(repeat string))
@@ -91,12 +91,6 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
 
 See the docstring for `org-brain-headline-at' for more info
 on how this is implemented."
-  :group 'org-brain
-  :type '(boolean))
-
-(defcustom org-brain-brain-link-adds-child t
-  "If brain: links should add the linked entry as a child.
-Applicable for `org-insert-link' and `org-brain-insert-link'."
   :group 'org-brain
   :type '(boolean))
 
@@ -171,9 +165,8 @@ Doing so allows for adding multiple entries at once."
   :type '(string))
 
 (defcustom org-brain-visualize-one-child-per-line nil
-  "If non-nil, each child of the visualized entry is listed on
-its own line. If nil (default), children are filled up to the
-`fill-column'."
+  "If non-nil, each child of the visualized entry is listed on its own line.
+If nil (default), children are filled up to the `fill-column'."
   :group 'org-brain
   :type '(boolean))
 
@@ -216,8 +209,7 @@ its own line. If nil (default), children are filled up to the
     (org-brain-entry-at-point-excludedp)))
 
 (defun org-brain-entry-at-point-excludedp ()
-  "Return t if the entry at point is tagged as being excluded
-from org-brain."
+  "Return t if the entry at point is tagged as being excluded from org-brain."
   (let ((tags (org-get-tags-at)))
     (or (member org-brain-exclude-tree-tag tags)
         (and (member org-brain-exclude-children-tag tags)
@@ -643,7 +635,6 @@ PROPERTY could for instance be BRAIN_CHILDREN."
   (when (equal parent child)
     (error "An entry can't be a parent/child to itself"))
   (unless (member child (org-brain-children parent))
-
     (org-save-all-org-buffers)
     (if (org-brain-filep parent)
         ;; Parent = File
@@ -1108,8 +1099,8 @@ If run interactively, get ENTRY from context."
 Prompt for name of the new file.
 If interactive, also prompt for ENTRY."
   (interactive (list (org-brain-choose-entry "Entry: "
-                                             (org-brain-headline-entries)
-                                             nil t)))
+                                     (org-brain-headline-entries)
+                                     nil t)))
   (let* (level
          (title (org-brain-title entry))
          (new-entry (read-string "New file entry: " title))
@@ -1153,23 +1144,6 @@ If interactive, also prompt for ENTRY."
         (org-brain-add-relationship new-entry child))
       (dolist (friend friends)
         (org-brain--internal-add-friendship new-entry friend)))))
-
-;;;###autoload
-(defun org-brain-insert-link ()
-  "Insert a link to an org-brain entry and suggest a description.
-Adds the linked entry as a child if `org-brain-brain-link-adds-child' is t."
-  (interactive)
-  (let* ((entry-at-pt (ignore-errors (org-brain-entry-at-pt)))
-         (entry (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                          (org-brain-headline-entries))))
-         (title (org-brain-title entry))
-         (desc (read-string "Description: " title)))
-    (when (and entry-at-pt org-brain-brain-link-adds-child)
-      (org-brain-add-relationship entry-at-pt entry))
-    (insert (org-make-link-string (concat "brain:" (if (org-brain-filep entry)
-                                                       entry
-                                                     (nth 2 entry)))
-                                  desc))))
 
 ;;;###autoload
 (defun org-brain-agenda ()
@@ -1593,14 +1567,20 @@ Helper function for `org-brain-visualize'."
     (run-hooks 'org-brain-after-visualize-hook)))
 
 ;;* Brain link
-(defun org-brain-link-complete ()
-  "Create an org-link target string to a file in `org-brain-path'."
+(defun org-brain-link-complete (&optional link-type)
+  "Create an org-link target string to a file in `org-brain-path'.
+LINK-TYPE will be \"brain:\" by default."
+  (setq link-type (or link-type "brain:"))
   (let ((entry (ignore-errors (org-brain-entry-at-pt)))
         (choice (org-brain-choose-entry "Entry: " (append (org-brain-files t)
                                                   (org-brain-headline-entries)))))
-    (when (and entry org-brain-brain-link-adds-child)
-      (org-brain-add-relationship entry choice))
-    (concat "brain:" (if (org-brain-filep choice) choice (nth 2 choice)))))
+    (cond ((string-equal link-type "brain-child:")
+           (org-brain-add-relationship entry choice))
+          ((string-equal link-type "brain-parent:")
+           (org-brain-add-relationship choice entry))
+          ((string-equal link-type "brain-friend:")
+           (org-brain--internal-add-friendship entry choice)))
+    (concat link-type (if (org-brain-filep choice) choice (nth 2 choice)))))
 
 (defun org-brain-link-store ()
   "Store a brain: type link from an `org-brain-visualize-mode' buffer."
@@ -1614,6 +1594,18 @@ Helper function for `org-brain-visualize'."
                          :complete 'org-brain-link-complete
                          :follow 'org-brain-goto
                          :store 'org-brain-link-store)
+
+(org-link-set-parameters "brain-child"
+                         :complete (lambda () (org-brain-link-complete "brain-child:"))
+                         :follow 'org-brain-goto)
+
+(org-link-set-parameters "brain-parent"
+                         :complete (lambda () (org-brain-link-complete "brain-parent:"))
+                         :follow 'org-brain-goto)
+
+(org-link-set-parameters "brain-friend"
+                         :complete (lambda () (org-brain-link-complete "brain-friend:"))
+                         :follow 'org-brain-goto)
 
 (provide 'org-brain)
 ;;; org-brain.el ends here

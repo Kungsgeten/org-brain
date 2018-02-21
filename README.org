@@ -129,11 +129,11 @@ If you find that =org-brain= is missing entries, or list entries which doesn't
 exist, try using =M-x org-brain-update-id-locations=, which syncs the
 =org-brain= entries with the =org-id= caching system.
 
+** =org-brain-visualize=
+
 The primary usage of =org-brain= is through =M-x org-brain-visualize= (which you
 might want to bind to a key). From there you can browse entries, add/remove
-relationships, open entries for editing etc. Most of the commands available in
-=org-brain-visualize= can also be used in =org-mode= directly, in which case
-they will operate on the "entry at point". The following keybindings are
+relationships, open entries for editing etc. The following keybindings are
 available in =org-brain-visualize=:
 
 | Key        | Command                              | Description                                                  |
@@ -161,32 +161,53 @@ available in =org-brain-visualize=:
 | r          | =org-brain-visualize-random=         | Visualize one of your entries at random.                     |
 | R          | =org-brain-visualize-wander=         | Visualize at random, in a set interval. =R= again to cancel. |
 
-You can also edit =org-brain= entries directly from =org-mode=. You can use the
+You can also use =org-store-link= inside of =org-brain-visualize= in order to
+store a link to the currently visualized =org-brain= entry.
+
+** Editing from =org-mode=
+
+You can edit =org-brain= entries directly from =org-mode=. You can use the
 default =org-mode= outline structure to define parent/children relationships,
 but keep in mind that only entries with an =ID= property will be considered as
-entries to =org-brain=, you can use =M-x org-id-get-create= to create an =ID=
+entries to =org-brain=; use =M-x org-id-get-create= to create an =ID=
 property to the current =org-mode= headline. Another alternative is to use =M-x
-org-brain-refile= which will create the ids for you. In order to add external
-relationships (for instance to add an entry in a different file as a child) you
-may use the commands above, like =M-x org-brain-add-child= for instance. From
-=org-mode= files you may also want to use the commands
-=org-brain-goto-<relationsship>= to navigate between entries.
+org-brain-refile= which will create the ids for you.
+
+Most of the commands available in =org-brain-visualize= can also be used in
+=org-mode= directly, in which case they will operate on the "entry at point". In
+other words you can use =M-x org-brain-add-child= directly from =org-mode= in
+order to add a child to the =org-brain= entry at point. You may also want to use
+the commands =org-brain-goto-<relationsship>= to navigate between entries.
 
 You may want to create a link to an =org-brain= entry in an =org-mode= file (not
-necessarily an =org-brain= file itself). You can use the =brain:= link type for
-this, or use =M-x org-brain-insert-link=. Doing this will, if in an =org-brain=
-file, treat the linked entry as a child of the current entry, unless
-=org-brain-brain-link-adds-child= is =nil=.
+necessarily an =org-brain= file itself). =org-brain= provides several link types
+for this purpose. You can use =org-insert-link= (bound to =C-c C-l= in
+=org-mode= by default) to insert one of these links. They all have in common
+that they, when clicked, will open the =org-brain= entry for editing. When
+inserting a link like this, =org-brain= will run completion upon all your
+entries.
 
-When adding children, parents, or friends, multiple entries can be added at once
-by separating their titles with =org-brain-entry-separator= (which is =;= by
-default). For instance =M-x org-brain-add-parent RET music;artists= would add
-both =music= and =artists= as parents.
+- =brain:= :: The default kind of link. Just let's you visit another =org-brain= entry when clicked.
+- =brain-child:= :: When inserted using =org-insert-link= this will make
+                    the linked entry a child to the current =org-brain= entry,
+                    upon completion. Keep in mind that this doesn't work if you
+                    type the link manually; only by completion through
+                    =org-insert-link=.
+- =brain-parent:= :: Like =brain-child:= but makes the linked entry a parent of
+     the current entry.
+- =brain-friend:= :: Like =brain-child:= but adds the linked entry as a friend.
+
+** General information
 
 If you try to add a child/parent/friend to an entry which doesn't exist, that
 entry will be created. The name of a new entry can be written like this:
 =file::headline=. The =headline= will be created as a level one headline in
 =file=.
+
+When adding children, parents, or friends, multiple entries can be added at once
+by separating their titles with =org-brain-entry-separator= (which is =;= by
+default). For instance =M-x org-brain-add-parent RET music;artists= would add
+both =music= and =artists= as parents.
 
 If you have a headline entry, which you want to convert to a file entry, use
 =M-x org-brain-headline-to-file=. Unfortunately there is currently no function
@@ -298,12 +319,11 @@ connections between entries. This can be done by using =M-x
 org-brain-create-relationships-from-links=, but please backup your =org-brain=
 directory first.
 
-It is still possible to add children to an entry by using the =brain:= link, but
+It is still possible to add children to an entry by using the =brain-child:= link, but
 only if the link is inserted with =org-insert-link= (bound to =C-c C-l= in
-=org-mode= by default) or with =org-brain-insert-link=. Linking to specific
-headlines in a file, via =brain:filename::*Headline= is *deprecated* and will no
-longer work, instead you can convert the headline to an entry and link directly
-to that.
+=org-mode= by default). Linking to specific headlines in a file, via
+=brain:filename::*Headline= is *deprecated* and will no longer work, instead you
+can convert the headline to an entry and link directly to that.
 
 * Other useful packages
 
