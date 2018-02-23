@@ -211,6 +211,8 @@ entries.
      the current entry.
 - =brain-friend:= :: Like =brain-child:= but adds the linked entry as a friend.
 
+The names of the relationship inserting links (=brain-child=, =brain-parent= and =brain-friend=) can be customized with the variables =org-brain-child-link-name=, =org-brain-parent-link-name=, and =org-brain-friend-link-name=. This customization should be done before loading =org-brain=. If you're using =use-package=, put the customization in the =:init= block.
+
 ** General information
 
 If you try to add a child/parent/friend to an entry which doesn't exist, that

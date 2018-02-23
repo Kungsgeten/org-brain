@@ -175,6 +175,27 @@ If nil (default), children are filled up to the `fill-column'."
   :group 'org-brain
   :type 'integer)
 
+(defcustom org-brain-child-link-name "brain-child"
+  "The name for `org-mode' links, creating child relationships.
+Must be set before `org-brain' is loaded.
+Insert links using `org-insert-link'."
+  :group 'org-brain
+  :type '(string))
+
+(defcustom org-brain-parent-link-name "brain-parent"
+  "The name for `org-mode' links, creating parent relationships.
+Must be set before `org-brain' is loaded.
+Insert links using `org-insert-link'."
+  :group 'org-brain
+  :type '(string))
+
+(defcustom org-brain-friend-link-name "brain-friend"
+  "The name for `org-mode' links, creating friend relationships.
+Must be set before `org-brain' is loaded.
+Insert links using `org-insert-link'."
+  :group 'org-brain
+  :type '(string))
+
 ;;;###autoload
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
@@ -1687,18 +1708,18 @@ Return the position of ENTRY in the buffer."
 ;;* Brain link
 (defun org-brain-link-complete (&optional link-type)
   "Create an org-link target string to a file in `org-brain-path'.
-LINK-TYPE will be \"brain:\" by default."
-  (setq link-type (or link-type "brain:"))
+LINK-TYPE will be \"brain\" by default."
+  (setq link-type (or link-type "brain"))
   (let ((entry (ignore-errors (org-brain-entry-at-pt)))
         (choice (org-brain-choose-entry "Entry: " (append (org-brain-files t)
                                                   (org-brain-headline-entries)))))
-    (cond ((string-equal link-type "brain-child:")
+    (cond ((string-equal link-type org-brain-child-link-name)
            (org-brain-add-relationship entry choice))
-          ((string-equal link-type "brain-parent:")
+          ((string-equal link-type org-brain-parent-link-name)
            (org-brain-add-relationship choice entry))
-          ((string-equal link-type "brain-friend:")
+          ((string-equal link-type org-brain-friend-link-name)
            (org-brain--internal-add-friendship entry choice)))
-    (concat link-type (if (org-brain-filep choice) choice (nth 2 choice)))))
+    (concat link-type ":" (if (org-brain-filep choice) choice (nth 2 choice)))))
 
 (defun org-brain-link-store ()
   "Store a brain: type link from an `org-brain-visualize-mode' buffer."
@@ -1713,16 +1734,16 @@ LINK-TYPE will be \"brain:\" by default."
                          :follow 'org-brain-goto
                          :store 'org-brain-link-store)
 
-(org-link-set-parameters "brain-child"
-                         :complete (lambda () (org-brain-link-complete "brain-child:"))
+(org-link-set-parameters org-brain-child-link-name
+                         :complete (lambda () (org-brain-link-complete org-brain-child-link-name))
                          :follow 'org-brain-goto)
 
-(org-link-set-parameters "brain-parent"
-                         :complete (lambda () (org-brain-link-complete "brain-parent:"))
+(org-link-set-parameters org-brain-parent-link-name
+                         :complete (lambda () (org-brain-link-complete org-brain-parent-link-name))
                          :follow 'org-brain-goto)
 
-(org-link-set-parameters "brain-friend"
-                         :complete (lambda () (org-brain-link-complete "brain-friend:"))
+(org-link-set-parameters org-brain-friend-link-name
+                         :complete (lambda () (org-brain-link-complete org-brain-friend-link-name))
                          :follow 'org-brain-goto)
 
 (provide 'org-brain)
