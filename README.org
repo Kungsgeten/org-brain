@@ -6,7 +6,7 @@ introduction to that program [[https://www.youtube.com/watch?v=GFqLUBKCFdA][here
 how you can think when organizing your Brain.
 
 You can think of =org-brain= as a combination of a wiki and a mind map, where
-each wiki page / mind-map node is an =org-mode= file which resides in your
+each wiki page / mind map node is an =org-mode= file which resides in your
 =org-brain-path=, or a headline with an ID property in one of those files. These
 are called /entries/. Entries can be linked together, and you can then
 view the network of links as a mind map, using =M-x org-brain-visualize=.
@@ -68,6 +68,9 @@ is a pinned entry in the example above. =org-brain-visualize= also show a list
 of the entry's resources (links and attachments), and the text in the entry. The
 example above have three resources, and a short text. The resources and text is
 gathered from =org-mode= automatically.
+
+There's also the option to visualize the entry as a tree, or similar to a
+mind map, where you can zoom in order to show grandparents and grandchildren.
 
 The relationship entries, pinned entries and resources are all links; they can
 be pressed/clicked to visualize other entries, visit resources etc.
@@ -138,6 +141,7 @@ available in =org-brain-visualize=:
 
 | Key        | Command                              | Description                                                  |
 |------------+--------------------------------------+--------------------------------------------------------------|
+| m          | =org-brain-visualize-mind-map=       | Toggle between normal and mind-map visualization.            |
 | j or TAB   | =forward-button=                     | Goto next link                                               |
 | k or S-TAB | =backward-button=                    | Goto previous link                                           |
 | b          | =org-brain-visualize-back=           | Like the back button in a web browser.                       |
@@ -163,6 +167,16 @@ available in =org-brain-visualize=:
 
 You can also use =org-store-link= inside of =org-brain-visualize= in order to
 store a link to the currently visualized =org-brain= entry.
+
+When using the mind map visualization (toggle by pressing =m=), you can use the
+following keybindings in order to add/remove grandparents/grandchildren:
+
+| Key | Command                                  | Description                   |
+|-----+------------------------------------------+-------------------------------|
+| +   | =org-brain-visualize-add-grandchild=     | Add another grandchild level  |
+| -   | =org-brain-visualize-remove-grandchild=  | Remove a grandchild level     |
+| z   | =org-brain-visualize-add-grandparent=    | Add another grandparent level |
+| Z   | =org-brain-visualize-remove-grandparent= | Remove a grandparent level    |
 
 ** Editing from =org-mode=
 
@@ -299,7 +313,7 @@ modify this drawer manually.
 
 ** =org-brain= is slow!
 
-If you feel that =org-brain= is slow while indexing your entries (for instance when running =M-x org-brain-visualize=) you can customize =org-brain-file-entries-use-title=, and set it to =t=. This will display file names when indexing, instead of the file entry's title, which is faster.
+If you feel that =org-brain= is slow while indexing your entries (for instance when running =M-x org-brain-visualize=) you can customize =org-brain-file-entries-use-title=, and set it to =nil=. This will display file names when indexing, instead of the file entry's title, which is faster.
 
 * Backwards compability breaking changes in 0.4
 

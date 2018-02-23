@@ -7,7 +7,7 @@
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25") (org "9"))
-;; Version: 0.45
+;; Version: 0.5
 
 ;;; Commentary:
 
@@ -1214,35 +1214,43 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
                       (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
        nil nil def-choice))))
   (unless wander (org-brain-stop-wandering))
-  (setq org-brain--vis-entry entry)
   (with-current-buffer (get-buffer-create "*org-brain*")
+    (unless (eq org-brain--vis-entry entry)
+      (setq org-brain--vis-entry entry)
+      (setq org-brain-mind-map-parent-level (default-value 'org-brain-mind-map-parent-level))
+      (setq org-brain-mind-map-child-level (default-value 'org-brain-mind-map-child-level)))
     (read-only-mode -1)
     (delete-region (point-min) (point-max))
     (org-brain--vis-pinned)
-    (org-brain--vis-parents-siblings entry)
-    ;; Insert entry title
-    (let ((title (org-brain-title entry)))
-      (let ((half-title-length (/ (length title) 2)))
-        (if (>= half-title-length (current-column))
-            (delete-char (- (current-column)))
-          (ignore-errors (delete-char (- half-title-length)))))
-      (let ((entry-pos (point)))
-        (insert title)
-        (org-brain--vis-friends entry)
-        (org-brain--vis-children entry)
-        (when (and org-brain-show-resources)
-          (org-brain--vis-resources (org-brain-resources entry)))
-        (if org-brain-show-text
-            (org-brain--vis-text entry)
-          (run-hooks 'org-brain-after-visualize-hook))
-        (org-brain-visualize-mode)
-        (goto-char entry-pos)
-        (unless nofocus
-          (pop-to-buffer "*org-brain*")
-          (when (and (not nohistory)
-                     (not (equal entry (car org-brain--vis-history)))
-                     (< (length org-brain--vis-history) 15))
-            (push entry org-brain--vis-history)))))))
+    (let (entry-pos)
+      (if org-brain-visualizing-mind-map
+          (setq entry-pos (org-brain-mind-map org-brain--vis-entry org-brain-mind-map-parent-level org-brain-mind-map-child-level))
+        (insert "\n\n")
+        (org-brain--vis-parents-siblings entry)
+        ;; Insert entry title
+        (let ((title (org-brain-title entry)))
+          (let ((half-title-length (/ (length title) 2)))
+            (if (>= half-title-length (current-column))
+                (delete-char (- (current-column)))
+              (ignore-errors (delete-char (- half-title-length)))))
+          (setq entry-pos (point))
+          (insert title)
+          (org-brain--vis-friends entry)
+          (org-brain--vis-children entry)))
+      (when (and org-brain-show-resources)
+        (org-brain--vis-resources (org-brain-resources entry)))
+      (if org-brain-show-text
+          (org-brain--vis-text entry)
+        (run-hooks 'org-brain-after-visualize-hook))
+      (unless (eq major-mode 'org-brain-visualize-mode)
+        (org-brain-visualize-mode))
+      (goto-char entry-pos))
+    (unless nofocus
+      (pop-to-buffer "*org-brain*")
+      (when (and (not nohistory)
+                 (not (equal entry (car org-brain--vis-history)))
+                 (< (length org-brain--vis-history) 15))
+        (push entry org-brain--vis-history)))))
 
 ;;;###autoload
 (defun org-brain-visualize-random ()
@@ -1306,9 +1314,8 @@ If ENTRY is omitted, try to get it from context or prompt for it."
   (interactive "i")
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
-                    (org-brain-choose-entry "Entry: "
-                                            (append (org-brain-files t)
-                                                    (org-brain-headline-entries))))))
+                    (org-brain-choose-entry "Entry: " (append (org-brain-files t)
+                                                      (org-brain-headline-entries))))))
   (cl-flet ((insert-resource-link
              ()
              (unless (and link (not prompt))
@@ -1439,6 +1446,11 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "q" 'org-brain-visualize-quit)
 (define-key org-brain-visualize-mode-map "r" 'org-brain-visualize-random)
 (define-key org-brain-visualize-mode-map "R" 'org-brain-visualize-wander)
+(define-key org-brain-visualize-mode-map "m" 'org-brain-visualize-mind-map)
+(define-key org-brain-visualize-mode-map "+" 'org-brain-visualize-add-grandchild)
+(define-key org-brain-visualize-mode-map "-" 'org-brain-visualize-remove-grandchild)
+(define-key org-brain-visualize-mode-map "z" 'org-brain-visualize-add-grandparent)
+(define-key org-brain-visualize-mode-map "Z" 'org-brain-visualize-remove-grandparent)
 
 ;;** Drawing helpers
 
@@ -1449,7 +1461,7 @@ Helper function for `org-brain-visualize'."
   (dolist (pin org-brain-pins)
     (insert "  ")
     (org-brain-insert-visualize-button pin))
-  (insert "\n\n\n"))
+  (insert "\n"))
 
 (defun org-brain--vis-parents-siblings (entry)
   "Insert parents and siblings of ENTRY.
@@ -1565,6 +1577,112 @@ Helper function for `org-brain-visualize'."
               (insert text))
           (run-hooks 'org-brain-after-visualize-hook)))
     (run-hooks 'org-brain-after-visualize-hook)))
+
+;;* Mind-map
+
+(defun org-brain-map-create-indentation (level)
+  "Return a string of spaces, length determined by indentation LEVEL."
+  (make-string (* level 2) ? ))
+
+(defun org-brain-insert-recursive-child-buttons (entry max-level indent)
+  "Use `org-brain-insert-visualize-button' on ENTRY and its children.
+Also insert buttons for grand-children, up to MAX-LEVEL.
+Each button is indented, starting at level determined by INDENT."
+  (insert (org-brain-map-create-indentation indent))
+  (org-brain-insert-visualize-button entry)
+  (insert "\n")
+  (dolist (child (and (> max-level 0) (org-brain-children entry)))
+    (org-brain-insert-recursive-child-buttons child (1- max-level) (1+ indent))))
+
+(defun org-brain-tree-depth (tree)
+  "Return depth of nested TREE."
+  (if (atom tree)
+      0
+    (1+ (cl-reduce #'max (mapcar #'org-brain-tree-depth tree)))))
+
+(defun org-brain-recursive-parents (entry max-level)
+  "Return a tree of ENTRY and its (grand)parents, up to MAX-LEVEL."
+  (cons (org-brain-title entry)
+        (when (> max-level 0)
+          (mapcar (lambda (x) (org-brain-recursive-parents x (1- max-level)))
+                  (org-brain-parents entry)))))
+
+(defun org-brain-insert-recursive-parent-buttons (entry max-level indent)
+  "Use `org-brain-insert-visualize-button' on ENTRY and its parents.
+Also insert buttons for grand-parents, up to MAX-LEVEL.
+Each button is indented, starting at level determined by INDENT."
+  (dolist (parent (and (> max-level 0) (org-brain-parents entry)))
+    (org-brain-insert-recursive-parent-buttons parent (1- max-level) (1- indent)))
+  (insert (org-brain-map-create-indentation indent))
+  (org-brain-insert-visualize-button entry)
+  (insert "\n"))
+
+(defun org-brain-mind-map (entry parent-max-level children-max-level)
+  "Insert a tree of buttons for the parents and children of ENTRY.
+Insert friends to ENTRY in a row above the tree.
+Will also insert grand-parents up to PARENT-MAX-LEVEL, and
+children up to CHILDREN-MAX-LEVEL.
+Return the position of ENTRY in the buffer."
+  (insert "FRIENDS:")
+  (dolist (friend (org-brain-friends entry))
+    (insert "  ")
+    (org-brain-insert-visualize-button friend))
+  (insert "\n\n")
+  (let ((indent (1- (org-brain-tree-depth (org-brain-recursive-parents entry parent-max-level))))
+        (entry-pos))
+    (dolist (parent (org-brain-siblings entry))
+      (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
+      (dolist (sibling (cdr parent))
+        (insert (org-brain-map-create-indentation indent))
+        (org-brain-insert-visualize-button sibling)
+        (insert "\n")))
+    (insert (org-brain-map-create-indentation indent))
+    (setq entry-pos (point))
+    (insert (org-brain-title entry) "\n")
+    (dolist (child (org-brain-children entry))
+      (org-brain-insert-recursive-child-buttons child (1- children-max-level) (1+ indent)))
+    entry-pos))
+
+(defvar org-brain-visualizing-mind-map nil)
+(defvar-local org-brain-mind-map-child-level 1)
+(defvar-local org-brain-mind-map-parent-level 1)
+
+(defun org-brain-visualize-mind-map ()
+  "Toggle mind-map view of `org-brain-visualize'."
+  (interactive)
+  (when (eq major-mode 'org-brain-visualize-mode)
+    (setq org-brain-visualizing-mind-map (not org-brain-visualizing-mind-map))
+    (org-brain-visualize org-brain--vis-entry)))
+
+(defun org-brain-visualize-add-grandchild ()
+  "Add another grandchild level to the visualized buffer."
+  (interactive)
+  (setq org-brain-visualizing-mind-map t)
+  (cl-incf org-brain-mind-map-child-level)
+  (org-brain--revert-if-visualizing))
+
+(defun org-brain-visualize-remove-grandchild ()
+  "Remove a grandchild level from the visualized buffer."
+  (interactive)
+  (setq org-brain-visualizing-mind-map t)
+  (when (> org-brain-mind-map-child-level 1)
+    (cl-decf org-brain-mind-map-child-level))
+  (org-brain--revert-if-visualizing))
+
+(defun org-brain-visualize-add-grandparent ()
+  "Add another grandparent level to the visualized buffer."
+  (interactive)
+  (setq org-brain-visualizing-mind-map t)
+  (cl-incf org-brain-mind-map-parent-level)
+  (org-brain--revert-if-visualizing))
+
+(defun org-brain-visualize-remove-grandparent ()
+  "Remove a grandparent level from the visualized buffer."
+  (interactive)
+  (setq org-brain-visualizing-mind-map t)
+  (when (> org-brain-mind-map-parent-level 1)
+    (cl-decf org-brain-mind-map-parent-level))
+  (org-brain--revert-if-visualizing))
 
 ;;* Brain link
 (defun org-brain-link-complete (&optional link-type)
