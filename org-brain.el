@@ -1595,7 +1595,12 @@ Helper function for `org-brain-visualize'."
             (progn
               (insert "\n\n--- Entry -------------------------------------\n\n")
               (run-hooks 'org-brain-after-visualize-hook)
-              (insert text))
+              (insert (with-temp-buffer
+                        (insert text)
+                        (delay-mode-hooks
+                          (org-mode)
+                          (font-lock-ensure (point-min) (point-max))
+                          (buffer-substring (point-min) (point-max))))))
           (run-hooks 'org-brain-after-visualize-hook)))
     (run-hooks 'org-brain-after-visualize-hook)))
 
