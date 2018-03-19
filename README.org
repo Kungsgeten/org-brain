@@ -88,7 +88,7 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
     :init
     (setq org-brain-path "directory/path/where-i-want-org-brain")
     ;; For Evil users
-    (eval-after-load 'evil
+    (with-eval-after-load 'evil
       (evil-set-initial-state 'org-brain-visualize-mode 'emacs))
     :config
     (setq org-id-track-globally t)
