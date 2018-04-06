@@ -202,6 +202,16 @@ Insert links using `org-insert-link'."
   (interactive)
   (org-id-update-id-locations (org-brain-files)))
 
+;;;###autoload
+(defun org-brain-switch-brain (directory)
+  "Choose another DIRECTORY to be your `org-brain-path'."
+  (interactive "D")
+  (setq org-brain-path directory)
+  (setq org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path))
+  (load org-brain-data-file t)
+  (org-brain-update-id-locations)
+  (message "Switched org-brain to %s" directory))
+
 ;;* API
 
 ;; An entry is either a string or a list of three strings.
@@ -322,27 +332,19 @@ visibility rendering/formatting in-buffer."
         (org-brain-replace-links-with-visible-parts (org-entry-get pom "ITEM"))
       (org-entry-get pom "ITEM"))))
 
+(defun org-brain--headline-entry-at-point ()
+  "Get headline entry at point."
+  (when-let ((id (org-entry-get (point) "ID"))
+             (_ (not (org-brain-entry-at-point-excludedp))))
+    (list
+     (org-brain-path-entry-name (buffer-file-name))
+     (org-brain-headline-at (point))
+     id)))
+
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
-  (unless org-id-locations (org-id-locations-load))
-  (let (ids)
-    (dolist (file (org-brain-files) ids)
-      (with-current-buffer
-        (find-file-noselect file)
-        ;; It is faster to loop through ALL entries in all org-brain-files and
-        ;; discard the ones that don't have IDS, than it is to seek out the
-        ;; entries in `org-id-locations' one by one.
-        (org-map-entries
-         (lambda ()
-           (let ((id (org-entry-get (point) "ID")))
-             (when (and id (not (org-brain-entry-at-point-excludedp)))
-               (push (list
-                      (org-brain-path-entry-name file)
-                      (org-brain-headline-at (point))
-                      id)
-                     ids)))
-           nil 'file)))
-      ids)))
+  (remove nil (org-map-entries #'org-brain--headline-entry-at-point
+                               nil (org-brain-files))))
 
 (defun org-brain-entry-from-id (id)
   "Get entry from ID."

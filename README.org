@@ -293,6 +293,10 @@ You may add a /description/ to an entry, which should be a short summary of what
 
 At the moment there's no way to add/remove/change descriptions directly from the =org-brain-visualize= interface, sorry!
 
+** Having multiple brains
+
+You can have multiple brains simply by having more than one brain folder. In this way, each folder becomes a separate brain. You can switch between these using =M-x org-brain-switch-brain=.
+
 ** Take note!
 
 =org-brain= creates and uses several headline properties in the =PROPERTIES=
