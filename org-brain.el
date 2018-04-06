@@ -1145,6 +1145,7 @@ If interactive, also prompt for ENTRY."
         (org-cut-subtree)
         (pop kill-ring)
         (save-buffer))
+      (make-directory (file-name-directory path) t)
       (with-temp-file path
         (insert (format "#+TITLE:%s\n\n%s" title hl-text))
         (delay-mode-hooks
