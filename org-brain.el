@@ -492,24 +492,42 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
 
 (defun org-brain-text (entry &optional all-data)
   "Get the text of ENTRY as string.
-Only get the body text, unless ALL-DATA is t."
+Only get the body text, unless ALL-DATA is t.  ALL-DATA will
+ignore `org-brain-exclude-children-tag' and
+`org-brain-show-children-tag' on file entries."
   (when-let
       ((entry-text
         (if (org-brain-filep entry)
             ;; File entry
             (with-temp-buffer
               (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-              (goto-char (point-min))
-              (or (outline-next-heading)
-                  (goto-char (point-max)))
-              (buffer-substring-no-properties
-               (or (unless all-data
-                     (save-excursion
-                       (when (re-search-backward "^[#:*]" nil t)
-                         (end-of-line)
-                         (point))))
-                   (point-min))
-               (point)))
+              (if (and (not all-data)
+                       (let ((filetags (split-string
+                                        (cdr (assoc "FILETAGS"
+                                                    (org-brain-keywords entry)))
+                                        ":" t)))
+                         (or (member org-brain-show-children-tag filetags)
+                             (member org-brain-exclude-children-tag filetags))))
+                  ;; Get entire buffer
+                  (buffer-substring-no-properties
+                   (or (save-excursion
+                         (when (re-search-backward "^[#:*]" nil t)
+                           (end-of-line)
+                           (point)))
+                       (point-min))
+                   (point-max))
+                ;; Get text up to first heading
+                (goto-char (point-min))
+                (or (outline-next-heading)
+                    (goto-char (point-max)))
+                (buffer-substring-no-properties
+                 (or (unless all-data
+                       (save-excursion
+                         (when (re-search-backward "^[#:*]" nil t)
+                           (end-of-line)
+                           (point))))
+                     (point-min))
+                 (point))))
           ;; Headline entry
           (org-with-point-at (org-brain-entry-marker entry)
             (let ((tags (org-get-tags-at nil t)))
@@ -1106,14 +1124,31 @@ If run interactively, get ENTRY from context and prompt for TITLE."
 
 ;;;###autoload
 (defun org-brain-set-tags (entry)
-  "Use `org-set-tags' on headline ENTRY.
+  "Modify the ENTRY tags.
+Use `org-set-tags' on headline ENTRY.
+Instead sets #+FILETAGS on file ENTRY.
 If run interactively, get ENTRY from context."
   (interactive (list (org-brain-entry-at-pt)))
-  (when (org-brain-filep entry)
-    (error "Can only set tags on headline entries"))
-  (org-with-point-at (org-brain-entry-marker entry)
-    (org-set-tags)
-    (save-buffer))
+  (if (org-brain-filep entry)
+      (with-current-buffer (find-file-noselect (org-brain-entry-path entry))
+        (let ((tag-str (read-string "FILETAGS: "
+                                    (mapconcat #'identity org-file-tags ":"))))
+          (goto-char (point-min))
+          (when (assoc "FILETAGS" (org-brain-keywords entry))
+            (re-search-forward "^#\\+FILETAGS:")
+            (kill-whole-line))
+          (insert (format "#+FILETAGS: %s\n" tag-str)))
+        ;; From org.el
+        (let ((org-inhibit-startup-visibility-stuff t)
+              (org-startup-align-all-tables nil))
+          (when (boundp 'org-table-coordinate-overlays)
+            (mapc #'delete-overlay org-table-coordinate-overlays)
+            (setq org-table-coordinate-overlays nil))
+          (org-save-outline-visibility 'use-markers (org-mode-restart)))
+        (save-buffer))
+    (org-with-point-at (org-brain-entry-marker entry)
+      (org-set-tags)
+      (save-buffer)))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload

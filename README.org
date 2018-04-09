@@ -258,7 +258,7 @@ can use to tag the headline:
                  =org-brain-exclude-tree-tag=.
 - =:childless:= :: This tag does not exclude the headline, but it excludes the
                    subheadings. You can change the tag name by modifying
-                   =org-brain-exclude-children-tag=.
+                   =org-brain-exclude-children-tag=. Works on file entries.
 
 The following tags modifies the kind of information that is shown when an entry
 is visualized:
@@ -270,9 +270,8 @@ is visualized:
      =org-brain-exclude-resources-tag=.
 - =:showchildren:= :: By default local child entries aren't shown as text. By
      setting this tag the entry get the entire subtree as text. You can change
-     the tag name by modifying =org-brain-show-children-tag=.
-
-Please note that tags only are available for headline entries.
+     the tag name by modifying =org-brain-show-children-tag=. Works on file
+     entries.
 
 ** Entry descriptions
 
