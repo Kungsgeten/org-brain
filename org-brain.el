@@ -502,10 +502,11 @@ ignore `org-brain-exclude-children-tag' and
             (with-temp-buffer
               (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
               (if (and (not all-data)
-                       (let ((filetags (split-string
-                                        (cdr (assoc "FILETAGS"
-                                                    (org-brain-keywords entry)))
-                                        ":" t)))
+                       (let ((filetags (ignore-errors
+                                         (split-string
+                                          (cdr (assoc "FILETAGS"
+                                                      (org-brain-keywords entry)))
+                                          ":" t))))
                          (or (member org-brain-show-children-tag filetags)
                              (member org-brain-exclude-children-tag filetags))))
                   ;; Get entire buffer
