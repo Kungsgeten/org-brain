@@ -908,6 +908,7 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
   (let ((marker (org-brain-entry-marker entry)))
     (apply (or goto-file-func #'pop-to-buffer-same-window)
            (list (marker-buffer marker)))
+    (widen)
     (goto-char (marker-position marker))
     (org-show-entry))
   entry)
