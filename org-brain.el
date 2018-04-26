@@ -998,8 +998,11 @@ After refiling, all headlines will be given an id."
               (lambda () (org-map-tree 'org-id-get-create)))
     (org-refile)))
 
-(defun org-brain--remove-relationships (entry)
-  "Remove all external relationships from ENTRY."
+(defun org-brain--remove-relationships (entry &optional recursive)
+  "Remove all external relationships from ENTRY.
+Also unpin the entry.
+
+If RECURSIVE is t, remove local children's relationships."
   (dolist (child (org-brain--linked-property-entries
                   entry "BRAIN_CHILDREN"))
     (org-brain-remove-relationship entry child))
@@ -1007,7 +1010,11 @@ After refiling, all headlines will be given an id."
                    entry "BRAIN_PARENTS"))
     (org-brain-remove-relationship parent entry))
   (dolist (friend (org-brain-friends entry))
-    (org-brain-remove-friendship entry friend)))
+    (org-brain-remove-friendship entry friend))
+  (ignore-errors (org-brain-pin entry -1))
+  (when recursive
+    (dolist (child (org-brain--local-children entry))
+      (org-brain--remove-relationships child t))))
 
 ;;;###autoload
 (defun org-brain-rename-file (file-entry new-name)
@@ -1067,6 +1074,61 @@ If NOCONFIRM is nil, ask if we really want to delete."
         (org-with-point-at (org-brain-entry-marker entry)
           (org-mark-subtree)
           (delete-region (region-beginning) (region-end))))))
+  (delete entry org-brain--vis-history)
+  (org-save-all-org-buffers)
+  (org-brain--revert-if-visualizing))
+
+;;;###autoload
+(defun org-brain-insert-relationships (entry &optional recursive)
+  "Insert an `org-mode' list of relationships to ENTRY.
+Local children are not included in the list.
+If run interactively, get ENTRY from context.
+
+Normally the list is inserted at point, but if RECURSIVE is t
+insert at end of ENTRY.  Then recurse in the local (grand)children
+of ENTRY and insert there too."
+  (interactive (list (org-brain-entry-at-pt)))
+  (cl-flet ((list-to-items
+             (list)
+             (when list
+               `(unordered
+                 ,@(mapcar (lambda (x)
+                             (list (org-make-link-string
+                                    (format "brain:%s" (org-brain-entry-identifier x))
+                                    (org-brain-title x))))
+                           list)))))
+    (save-excursion
+      (when recursive
+        (org-brain-goto-end entry)
+        (newline 2))
+      (insert
+       ":RELATIONSHIPS:\n"
+       (org-list-to-org `(unordered
+                          ,(remq nil `("Parents"
+                                       ,(list-to-items (org-brain-parents entry))))
+                          ,(remq nil `("Children"
+                                       ,(list-to-items (org-brain--linked-property-entries
+                                                        entry "BRAIN_CHILDREN"))))
+                          ,(remq nil `("Friends"
+                                       ,(list-to-items (org-brain-friends entry))))))
+       "\n:END:\n")))
+  (when recursive
+    (dolist (child (org-brain--local-children entry))
+      (org-brain-insert-relationships child t))))
+
+;;;###autoload
+(defun org-brain-archive (entry)
+  "Use `org-archive-subtree-default' on ENTRY.
+If run interactively, get ENTRY from context.
+Before archiving, recursively run `org-brain-insert-relationships' on ENTRY.
+Remove external relationships from ENTRY, in order to clean up the brain."
+  (interactive (list (org-brain-entry-at-pt)))
+  (when (org-brain-filep entry)
+    (user-error "Only headline entries can be archived"))
+  (org-brain-insert-relationships entry t)
+  (org-brain--remove-relationships entry t)
+  (org-with-point-at (org-brain-entry-marker entry)
+    (org-archive-subtree-default))
   (delete entry org-brain--vis-history)
   (org-save-all-org-buffers)
   (org-brain--revert-if-visualizing))
@@ -1501,6 +1563,7 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "d" 'org-brain-delete-entry)
 (define-key org-brain-visualize-mode-map "l" 'org-brain-add-resource)
 (define-key org-brain-visualize-mode-map "a" 'org-brain-visualize-attach)
+(define-key org-brain-visualize-mode-map "A" 'org-brain-archive)
 (define-key org-brain-visualize-mode-map "b" 'org-brain-visualize-back)
 (define-key org-brain-visualize-mode-map "\C-y" 'org-brain-visualize-paste-resource)
 (define-key org-brain-visualize-mode-map "T" 'org-brain-set-tags)
