@@ -101,6 +101,14 @@ filenames will be shown instead, which is faster."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-visualize-text-hook nil
+  "Hook runs after inserting `org-brain-text' in `org-brain-visualize'.
+
+Can be used to prettify the entry text, e.g.
+`org-display-inline-images'."
+  :group 'org-brain
+  :type 'hook)
+
 (defcustom org-brain-after-visualize-hook nil
   "Hook run after `org-brain-visualize', but before `org-brain-text'.
 Can be used to prettify the buffer output, e.g. `ascii-art-to-unicode'."
@@ -1719,7 +1727,8 @@ Helper function for `org-brain-visualize'."
                         (delay-mode-hooks
                           (org-mode)
                           (font-lock-ensure (point-min) (point-max))
-                          (buffer-substring (point-min) (point-max))))))
+                          (buffer-string))))
+              (run-hooks 'org-brain-visualize-text-hook))
           (run-hooks 'org-brain-after-visualize-hook)))
     (run-hooks 'org-brain-after-visualize-hook)))
 
