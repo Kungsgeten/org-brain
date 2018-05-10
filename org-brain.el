@@ -216,6 +216,7 @@ Insert links using `org-insert-link'."
   (interactive "D")
   (setq org-brain-path directory)
   (setq org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path))
+  (setq org-brain-pins nil)
   (load org-brain-data-file t)
   (org-brain-update-id-locations)
   (message "Switched org-brain to %s" directory))
