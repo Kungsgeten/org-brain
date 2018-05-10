@@ -1296,6 +1296,20 @@ function."
                (org-brain-path-entry-name file)
                (car (split-string (org-element-property :path link) "::"))))))))))
 
+;;* Sorting
+
+(defun org-brain-title< (entry1 entry2)
+  "Return non-nil if title of ENTRY1 is less than ENTRY2 in lexicographic order.
+Case is significant."
+  (string< (org-brain-title entry1) (org-brain-title entry2)))
+
+(defvar org-brain-visualize-sort-function 'org-brain-title<
+  "How to sort lists of relationships when visualizing.
+Should be a function which accepts two entries as arguments.
+The function returns t if the first entry is smaller than the second.
+
+If you don't want to sort the relationships, set this to `ignore'.")
+
 ;;* Visualize
 ;;;###autoload
 (defun org-brain-visualize (entry &optional nofocus nohistory wander)
@@ -1582,7 +1596,7 @@ See `org-brain-add-resource'."
   "Insert pinned entries.
 Helper function for `org-brain-visualize'."
   (insert "PINNED:")
-  (dolist (pin org-brain-pins)
+  (dolist (pin (sort org-brain-pins org-brain-visualize-sort-function))
     (insert "  ")
     (org-brain-insert-visualize-button pin))
   (insert "\n"))
@@ -1593,7 +1607,9 @@ Helper function for `org-brain-visualize'."
   (when-let ((siblings (org-brain-siblings entry)))
     (let ((parent-positions nil)
           (max-width 0))
-      (dolist (parent siblings)
+      (dolist (parent (sort siblings (lambda (x y)
+                                       (funcall org-brain-visualize-sort-function
+                                                (car x) (car y)))))
         (let ((children-links (cdr parent))
               (col-start (+ 3 max-width))
               (parent-title (org-brain-title (car parent))))
@@ -1605,7 +1621,7 @@ Helper function for `org-brain-visualize'."
              (org-brain-insert-visualize-button child)
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
-           children-links)
+           (sort children-links org-brain-visualize-sort-function))
           (org-goto-line 4)
           (forward-line (1- (length children-links)))
           (picture-forward-column col-start)
@@ -1659,7 +1675,7 @@ Helper function for `org-brain-visualize'."
 Helper function for `org-brain-visualize'."
   (when-let ((children (org-brain-children entry)))
     (insert "\n\n")
-    (dolist (child children)
+    (dolist (child (sort children org-brain-visualize-sort-function))
       (let ((child-title (org-brain-title child)))
         (when (or org-brain-visualize-one-child-per-line
                   (> (+ (current-column) (length child-title))
@@ -1673,7 +1689,7 @@ Helper function for `org-brain-visualize'."
 Helper function for `org-brain-visualize'."
   (when-let ((friends (org-brain-friends entry)))
     (insert " ←→ ")
-    (dolist (friend friends)
+    (dolist (friend (sort friends org-brain-visualize-sort-function))
       (let ((column (current-column)))
         (org-brain-insert-visualize-button friend)
         (picture-move-down 1)
@@ -1720,7 +1736,7 @@ Each button is indented, starting at level determined by INDENT."
   (insert (org-brain-map-create-indentation indent))
   (org-brain-insert-visualize-button entry)
   (insert "\n")
-  (dolist (child (and (> max-level 0) (org-brain-children entry)))
+  (dolist (child (and (> max-level 0) (sort (org-brain-children entry) org-brain-visualize-sort-function)))
     (org-brain-insert-recursive-child-buttons child (1- max-level) (1+ indent))))
 
 (defun org-brain-tree-depth (tree)
@@ -1740,7 +1756,8 @@ Each button is indented, starting at level determined by INDENT."
   "Use `org-brain-insert-visualize-button' on ENTRY and its parents.
 Also insert buttons for grand-parents, up to MAX-LEVEL.
 Each button is indented, starting at level determined by INDENT."
-  (dolist (parent (and (> max-level 0) (org-brain-parents entry)))
+  (dolist (parent (and (> max-level 0)
+                       (sort (org-brain-parents entry) org-brain-visualize-sort-function)))
     (org-brain-insert-recursive-parent-buttons parent (1- max-level) (1- indent)))
   (insert (org-brain-map-create-indentation indent))
   (org-brain-insert-visualize-button entry)
@@ -1753,22 +1770,24 @@ Will also insert grand-parents up to PARENT-MAX-LEVEL, and
 children up to CHILDREN-MAX-LEVEL.
 Return the position of ENTRY in the buffer."
   (insert "FRIENDS:")
-  (dolist (friend (org-brain-friends entry))
+  (dolist (friend (sort (org-brain-friends entry) org-brain-visualize-sort-function))
     (insert "  ")
     (org-brain-insert-visualize-button friend))
   (insert "\n\n")
   (let ((indent (1- (org-brain-tree-depth (org-brain-recursive-parents entry parent-max-level))))
         (entry-pos))
-    (dolist (parent (org-brain-siblings entry))
+    (dolist (parent (sort (org-brain-siblings entry) (lambda (x y)
+                                               (funcall org-brain-visualize-sort-function
+                                                        (car x) (car y)))))
       (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
-      (dolist (sibling (cdr parent))
+      (dolist (sibling (sort (cdr parent) org-brain-visualize-sort-function))
         (insert (org-brain-map-create-indentation indent))
         (org-brain-insert-visualize-button sibling)
         (insert "\n")))
     (insert (org-brain-map-create-indentation indent))
     (setq entry-pos (point))
     (insert (org-brain-title entry) "\n")
-    (dolist (child (org-brain-children entry))
+    (dolist (child (sort (org-brain-children entry) org-brain-visualize-sort-function))
       (org-brain-insert-recursive-child-buttons child (1- children-max-level) (1+ indent)))
     entry-pos))
 
