@@ -1441,7 +1441,8 @@ cancelled manually with `org-brain-stop-wandering'."
    (org-brain-title entry t)
    'action (lambda (_x) (org-brain-visualize entry))
    'follow-link t
-   'help-echo (org-brain-description entry)))
+   'help-echo (org-brain-description entry)
+   'aa2u-text t))
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
@@ -1451,7 +1452,8 @@ cancelled manually with `org-brain-stop-wandering'."
    (or (cdr resource) (car resource))
    'action (lambda (_x)
              (org-open-link-from-string (car resource)))
-   'follow-link t))
+   'follow-link t
+   'aa2u-text t))
 
 (defun org-brain-add-resource (link &optional description prompt entry)
   "Insert LINK with DESCRIPTION in an entry.
