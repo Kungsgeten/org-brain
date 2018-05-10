@@ -126,6 +126,20 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
    horizontal space. You can cap the shown length of entry titles, by setting
    =org-brain-title-max-length=.
 
+* Headline and file entries
+
+There are two types of entries in =org-brain=: /headline/ entries and /file/
+entries. For the most part these are used the same way, and the main difference
+between them is how their content is stored inside your =org-brain= directory.
+All .org-files inside the =org-brain-path= are considered as /file/ entries (the
+content typically being the text before the first headline in the file) and all
+headlines /with an ID property/ inside these files are considered as /headline/
+entries.
+
+If you have a headline entry, which you want to convert to a file entry, use
+=M-x org-brain-headline-to-file=. Unfortunately there is currently no function
+to convert a file entry into a headline entry.
+
 * Usage
 
 If you find that =org-brain= is missing entries, or list entries which doesn't
@@ -225,10 +239,6 @@ When adding children, parents, or friends, multiple entries can be added at once
 by separating their titles with =org-brain-entry-separator= (which is =;= by
 default). For instance =M-x org-brain-add-parent RET music;artists= would add
 both =music= and =artists= as parents.
-
-If you have a headline entry, which you want to convert to a file entry, use
-=M-x org-brain-headline-to-file=. Unfortunately there is currently no function
-to convert a file entry into a headline entry.
 
 Another available command is =M-x org-brain-agenda=, which can be used to run
 =org-agenda= on your =org-brain= files.
