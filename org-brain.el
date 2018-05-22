@@ -554,9 +554,8 @@ ignore `org-brain-exclude-children-tag' and
                         (org-end-of-subtree t))
                     (setq end (point)))
                   (buffer-substring-no-properties (point) end))))))))
-    (org-remove-indentation entry-text)
     (with-temp-buffer
-      (insert entry-text)
+      (insert (org-remove-indentation entry-text))
       (goto-char (point-min))
       (when (and (not all-data)
                  (re-search-forward org-brain-resources-start-re nil t))
