@@ -1076,7 +1076,7 @@ If NOCONFIRM is nil, ask if we really want to delete."
   (let ((local-children (org-brain--local-children entry)))
     (when (or noconfirm
               (yes-or-no-p
-               (format "%s and its %d local children will be deleted. Are you sure?"
+               (format "%s and its %d local children will be deleted. Are you sure? "
                        (org-brain-entry-name entry)
                        (length local-children))))
       (dolist (child local-children)
