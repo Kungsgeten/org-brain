@@ -12,15 +12,15 @@
 ;;; Commentary:
 
 ;; org-brain implements a variant of concept mapping with org-mode, it is
-;; inspired by The Brain software (http://thebrain.com). An org-brain is a
+;; inspired by The Brain software (http://thebrain.com).  An org-brain is a
 ;; network of org-mode entries, where each entry is a file or a headline, and
 ;; you can get a visual overview of the relationships between the entries:
-;; parents, children, siblings and friends. This visual overview can also be
-;; used to browse your entries. You can think of entries as nodes in a mind map,
+;; parents, children, siblings and friends.  This visual overview can also be
+;; used to browse your entries.  You can think of entries as nodes in a mind map,
 ;; or pages in a wiki.
 
 ;; All org files put into your `org-brain-path' directory will be considered
-;; entries in your org-brain. Headlines with an ID property in your entry file(s)
+;; entries in your org-brain.  Headlines with an ID property in your entry file(s)
 ;; are also considered as entries.
 
 ;; Use `org-brain-visualize' to see the relationships between entries, quickly
@@ -96,7 +96,7 @@ on how this is implemented."
 
 (defcustom org-brain-file-entries-use-title t
   "If file entries should show their title, when choosing entries from a list.
-This can potentially be slow. If set to nil, the relative
+This can potentially be slow.  If set to nil, the relative
 filenames will be shown instead, which is faster."
   :group 'org-brain
   :type '(boolean))
@@ -232,7 +232,7 @@ Insert links using `org-insert-link'."
   "The last entry argument to `org-brain-visualize'.")
 
 (defvar org-brain--vis-history nil
-  "History previously visualized entries. Newest first.")
+  "History previously visualized entries.  Newest first.")
 
 (defvar org-brain-resources-start-re "^[ \t]*:RESOURCES:[ \t]*$"
   "Regular expression matching the first line of a resources drawer.")
@@ -330,7 +330,7 @@ If `org-brain-headline-links-only-show-visible' is nil, the links
 will be returned raw (all of the bracket syntax visible.)
 
 If `org-brain-headline-links-only-show-visible' is non-nil,
-returns only the visible parts of links in the heading. (For any
+returns only the visible parts of links in the heading.  (For any
 links that have descriptions, only the descriptions will be
 returned.)
 
@@ -343,12 +343,12 @@ visibility rendering/formatting in-buffer."
 
 (defun org-brain--headline-entry-at-point ()
   "Get headline entry at point."
-  (when-let ((id (org-entry-get (point) "ID"))
-             (_ (not (org-brain-entry-at-point-excludedp))))
-    (list
-     (org-brain-path-entry-name (buffer-file-name))
-     (org-brain-headline-at (point))
-     id)))
+  (unless (org-brain-entry-at-point-excludedp)
+    (when-let ((id (org-entry-get (point) "ID")))
+      (list
+       (org-brain-path-entry-name (buffer-file-name))
+       (org-brain-headline-at (point))
+       id))))
 
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
@@ -489,7 +489,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
     (org-id-find (nth 2 entry) t)))
 
 (defun org-brain-title (entry &optional capped)
-  "Get title of ENTRY. If CAPPED is t, max length is `org-brain-title-max-length'."
+  "Get title of ENTRY.  If CAPPED is t, max length is `org-brain-title-max-length'."
   (let ((title
          (if (org-brain-filep entry)
              (or (cdr (assoc "TITLE" (org-brain-keywords entry)))
@@ -839,9 +839,9 @@ Several parents can be added, by using `org-brain-entry-separator'."
   (let ((entry (org-brain-entry-at-pt)))
     (org-brain-remove-relationship
      (org-brain-choose-entry "Parent: "
-                     (org-brain--linked-property-entries
-                      entry "BRAIN_PARENTS")
-                     nil t)
+                             (org-brain--linked-property-entries
+                              entry "BRAIN_PARENTS")
+                             nil t)
      entry))
   (org-brain--revert-if-visualizing))
 
@@ -1076,7 +1076,7 @@ If NOCONFIRM is nil, ask if we really want to delete."
   (let ((local-children (org-brain--local-children entry)))
     (when (or noconfirm
               (yes-or-no-p
-               (format "%s and its %d local children will be deleted. Are you sure?"
+               (format "%s and its %d local children will be deleted. Are you sure? "
                        (org-brain-entry-name entry)
                        (length local-children))))
       (dolist (child local-children)
@@ -1155,7 +1155,7 @@ Remove external relationships from ENTRY, in order to clean up the brain."
   "Change if ENTRY is pinned or not.
 If run interactively, get ENTRY from context.
 
-If STATUS is positive, pin the entry. If negative, remove the pin.
+If STATUS is positive, pin the entry.  If negative, remove the pin.
 If STATUS is omitted, toggle between pinned / not pinned."
   (interactive (list (org-brain-entry-at-pt)))
   (cond ((eq status nil)
@@ -1238,8 +1238,8 @@ If run interactively, get ENTRY from context."
 Prompt for name of the new file.
 If interactive, also prompt for ENTRY."
   (interactive (list (org-brain-choose-entry "Entry: "
-                                     (org-brain-headline-entries)
-                                     nil t)))
+                                             (org-brain-headline-entries)
+                                             nil t)))
   (let* (level
          (title (org-brain-title entry))
          (new-entry (read-string "New file entry: " title))
@@ -1302,7 +1302,7 @@ org-brain setups to the system introduced in version 0.4. Please
 make a backup of your `org-brain-path' before running this
 function."
   (interactive)
-  (when (y-or-n-p "This function is meant for old configurations. Are you sure you want to scan for links? ")
+  (when (y-or-n-p "This function is meant for old configurations.  Are you sure you want to scan for links? ")
     (dolist (file (org-brain-files))
       (with-temp-buffer
         (insert-file-contents file)
@@ -1333,7 +1333,7 @@ If you don't want to sort the relationships, set this to `ignore'.")
   "View a concept map with ENTRY at the center.
 
 When run interactively, prompt for ENTRY and suggest
-`org-brain-entry-at-pt'. By default, the choices presented is
+`org-brain-entry-at-pt'.  By default, the choices presented is
 determined by `org-brain-visualize-default-choices': 'all will
 show all entries, 'files will only show file entries and 'root
 will only show files in the root of `org-brain-path'.
@@ -1471,7 +1471,7 @@ If ENTRY is omitted, try to get it from context or prompt for it."
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
                     (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                      (org-brain-headline-entries))))))
+                                                              (org-brain-headline-entries))))))
   (cl-flet ((insert-resource-link
              ()
              (unless (and link (not prompt))
@@ -1797,8 +1797,8 @@ Return the position of ENTRY in the buffer."
   (let ((indent (1- (org-brain-tree-depth (org-brain-recursive-parents entry parent-max-level))))
         (entry-pos))
     (dolist (parent (sort (org-brain-siblings entry) (lambda (x y)
-                                               (funcall org-brain-visualize-sort-function
-                                                        (car x) (car y)))))
+                                                       (funcall org-brain-visualize-sort-function
+                                                                (car x) (car y)))))
       (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
       (dolist (sibling (sort (cdr parent) org-brain-visualize-sort-function))
         (insert (org-brain-map-create-indentation indent))
@@ -1859,7 +1859,7 @@ LINK-TYPE will be \"brain\" by default."
   (setq link-type (or link-type "brain"))
   (let ((entry (ignore-errors (org-brain-entry-at-pt)))
         (choice (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                  (org-brain-headline-entries)))))
+                                                          (org-brain-headline-entries)))))
     (cond ((string-equal link-type org-brain-child-link-name)
            (org-brain-add-relationship entry choice))
           ((string-equal link-type org-brain-parent-link-name)
