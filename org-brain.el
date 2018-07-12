@@ -839,9 +839,9 @@ Several parents can be added, by using `org-brain-entry-separator'."
   (let ((entry (org-brain-entry-at-pt)))
     (org-brain-remove-relationship
      (org-brain-choose-entry "Parent: "
-                     (org-brain--linked-property-entries
-                      entry "BRAIN_PARENTS")
-                     nil t)
+                             (org-brain--linked-property-entries
+                              entry "BRAIN_PARENTS")
+                             nil t)
      entry))
   (org-brain--revert-if-visualizing))
 
@@ -1238,8 +1238,8 @@ If run interactively, get ENTRY from context."
 Prompt for name of the new file.
 If interactive, also prompt for ENTRY."
   (interactive (list (org-brain-choose-entry "Entry: "
-                                     (org-brain-headline-entries)
-                                     nil t)))
+                                             (org-brain-headline-entries)
+                                             nil t)))
   (let* (level
          (title (org-brain-title entry))
          (new-entry (read-string "New file entry: " title))
@@ -1471,7 +1471,7 @@ If ENTRY is omitted, try to get it from context or prompt for it."
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
                     (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                      (org-brain-headline-entries))))))
+                                                              (org-brain-headline-entries))))))
   (cl-flet ((insert-resource-link
              ()
              (unless (and link (not prompt))
@@ -1797,8 +1797,8 @@ Return the position of ENTRY in the buffer."
   (let ((indent (1- (org-brain-tree-depth (org-brain-recursive-parents entry parent-max-level))))
         (entry-pos))
     (dolist (parent (sort (org-brain-siblings entry) (lambda (x y)
-                                               (funcall org-brain-visualize-sort-function
-                                                        (car x) (car y)))))
+                                                       (funcall org-brain-visualize-sort-function
+                                                                (car x) (car y)))))
       (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
       (dolist (sibling (sort (cdr parent) org-brain-visualize-sort-function))
         (insert (org-brain-map-create-indentation indent))
@@ -1859,7 +1859,7 @@ LINK-TYPE will be \"brain\" by default."
   (setq link-type (or link-type "brain"))
   (let ((entry (ignore-errors (org-brain-entry-at-pt)))
         (choice (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                  (org-brain-headline-entries)))))
+                                                          (org-brain-headline-entries)))))
     (cond ((string-equal link-type org-brain-child-link-name)
            (org-brain-add-relationship entry choice))
           ((string-equal link-type org-brain-parent-link-name)
