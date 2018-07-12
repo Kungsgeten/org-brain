@@ -343,12 +343,12 @@ visibility rendering/formatting in-buffer."
 
 (defun org-brain--headline-entry-at-point ()
   "Get headline entry at point."
-  (when-let ((id (org-entry-get (point) "ID"))
-             (_ (not (org-brain-entry-at-point-excludedp))))
-    (list
-     (org-brain-path-entry-name (buffer-file-name))
-     (org-brain-headline-at (point))
-     id)))
+  (unless (org-brain-entry-at-point-excludedp)
+    (when-let ((id (org-entry-get (point) "ID")))
+      (list
+       (org-brain-path-entry-name (buffer-file-name))
+       (org-brain-headline-at (point))
+       id))))
 
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
