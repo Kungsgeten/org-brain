@@ -59,7 +59,7 @@ entries. There are four different types of relationships in =org-brain=:
              between two entries. Friends must be added manually. In the example
              above, /Computer games/ and /Game programming/ are friends.
 
-[[https://blog.thebrain.com/thought-relationships/][Here's an article]] describing how you can use the different relationships (The
+[[http://blogarchive.thebrain.com/thought-relationships/][Here's an article]] describing how you can use the different relationships (The
 Brain's /jump thoughts/ are the equivalent of /friends/ in =org-brain=).
 
 Apart from the visualized entry's relationships, =org-brain-visualize= also show
