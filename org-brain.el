@@ -816,7 +816,7 @@ Several children can be added, by using `org-brain-entry-separator'."
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
-(defun org-brain-new-child ()
+(defun org-brain-add-child-headline ()
   "Create a new internal child headline to entry at point.
 Several children can be created, by using `org-brain-entry-separator'."
   (interactive)
@@ -850,6 +850,8 @@ Several children can be created, by using `org-brain-entry-separator'."
           (run-hooks 'org-brain-new-entry-hook)
           (save-buffer)))))
   (org-brain--revert-if-visualizing))
+
+(define-obsolete-function-alias 'org-brain-new-child 'org-brain-add-child-headline "0.5")
 
 ;;;###autoload
 (defun org-brain-remove-child ()
