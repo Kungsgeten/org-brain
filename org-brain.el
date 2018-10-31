@@ -101,6 +101,34 @@ filenames will be shown instead, which is faster."
   :group 'org-brain
   :type '(boolean))
 
+(defface org-brain-title
+  '((t . (:height 2.0 :inherit font-lock-keyword-face)))
+  "Face for the currently selected entry")
+
+(defface org-brain-wires
+  '((t . (:foreground "LightGoldenrodYellow")))
+  "Face for the wires connecting entries")
+
+(defface org-brain-button
+  '((t . (:inherit button)))
+  "Face for buttons in the org-brain visualize buffer")
+
+(defface org-brain-parent
+  '((t . (:bold t :inherit org-brain-button)))
+  "Face for the entries' parent nodes")
+
+(defface org-brain-child
+  '((t . (:bold nil :inherit org-brain-button)))
+  "Face for the entries' child nodes")
+
+(defface org-brain-friend
+  '((t . (:inherit org-brain-button)))
+  "Face for the entries' friend nodes")
+
+(defface org-brain-pinned
+  '((t . (:height 1.5 :inherit org-brain-button)))
+  "Face for pinned entries")
+
 (defcustom org-brain-visualize-text-hook nil
   "Hook runs after inserting `org-brain-text' in `org-brain-visualize'.
 
@@ -1389,7 +1417,9 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
                 (delete-char (- (current-column)))
               (ignore-errors (delete-char (- half-title-length)))))
           (setq entry-pos (point))
-          (insert title)
+          (insert (propertize title
+                              'face 'org-brain-title
+                              'aa2u-text t))
           (org-brain--vis-friends entry)
           (org-brain--vis-children entry)))
       (when (and org-brain-show-resources)
@@ -1444,14 +1474,17 @@ cancelled manually with `org-brain-stop-wandering'."
   (org-brain-stop-wandering)
   (quit-window))
 
-(defun org-brain-insert-visualize-button (entry)
+
+(defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
    (org-brain-title entry t)
    'action (lambda (_x) (org-brain-visualize entry))
    'follow-link t
    'help-echo (org-brain-description entry)
-   'aa2u-text t))
+   'aa2u-text t
+   'face (or face 'org-brain-button)
+   ))
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
@@ -1618,8 +1651,11 @@ Helper function for `org-brain-visualize'."
   (insert "PINNED:")
   (dolist (pin (sort (copy-sequence org-brain-pins) org-brain-visualize-sort-function))
     (insert "  ")
-    (org-brain-insert-visualize-button pin))
+    (org-brain-insert-visualize-button pin 'org-brain-pinned))
   (insert "\n"))
+
+(defun org-brain--insert-wire (&rest strings)
+  (insert (propertize (string-join strings) 'face 'org-brain-wires)))
 
 (defun org-brain--vis-parents-siblings (entry)
   "Insert parents and siblings of ENTRY.
@@ -1637,8 +1673,8 @@ Helper function for `org-brain-visualize'."
           (mapc
            (lambda (child)
              (picture-forward-column col-start)
-             (insert (make-string (1+ (length parent-title)) ?\ ) "+-")
-             (org-brain-insert-visualize-button child)
+             (org-brain--insert-wire (make-string (1+ (length parent-title)) ?\ ) "+-")
+             (org-brain-insert-visualize-button child 'org-brain-child)
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
            (sort children-links org-brain-visualize-sort-function))
@@ -1648,10 +1684,10 @@ Helper function for `org-brain-visualize'."
           (push (cons (picture-current-line)
                       (+ (current-column) (/ (length parent-title) 2)))
                 parent-positions)
-          (org-brain-insert-visualize-button (car parent))
+          (org-brain-insert-visualize-button (car parent) 'org-brain-parent)
           (setq max-width (max max-width (current-column)))
           (when children-links
-            (insert "-")
+            (org-brain--insert-wire "-")
             (delete-char (+ 1 (length parent-title))))))
       ;; Draw lines
       (when parent-positions
@@ -1660,9 +1696,9 @@ Helper function for `org-brain-visualize'."
           (org-goto-line maxline)
           (picture-forward-column (cdar (last parent-positions)))
           (picture-move-down 1)
-          (insert (make-string (1+ (- (cdar parent-positions)
-                                      (cdar (last parent-positions))))
-                               ?-))
+          (org-brain--insert-wire (make-string (1+ (- (cdar parent-positions)
+                                                      (cdar (last parent-positions))))
+                                               ?-))
           ;; Lines from parents to bottom
           (dolist (pos parent-positions)
             (org-goto-line (car pos))
@@ -1670,24 +1706,24 @@ Helper function for `org-brain-visualize'."
             (while (< (line-number-at-pos (point))
                       maxline)
               (picture-move-down 1)
-              (insert "|")
+              (org-brain--insert-wire "|")
               (unless (looking-at-p "\n") (delete-char 1)))
             (picture-move-down 1)
             (ignore-errors
               (delete-char 1))
-            (insert "+"))
+            (org-brain--insert-wire "+"))
           ;; Line to main entry
           (move-to-column (/ (+ (cdar (last parent-positions))
                                 (cdar parent-positions))
                              2))
           (delete-char 1)
           (when (> (length parent-positions) 1)
-            (insert "+")
+            (org-brain--insert-wire "+")
             (backward-char 1)
             (picture-move-down 1)
-            (insert "|")
+            (org-brain--insert-wire "|")
             (picture-move-down 1))
-          (insert "▽"))))
+          (org-brain--insert-wire "▽"))))
     (picture-move-down 1)))
 
 (defun org-brain--vis-children (entry)
@@ -1701,17 +1737,17 @@ Helper function for `org-brain-visualize'."
                   (> (+ (current-column) (length child-title))
                      fill-column))
           (insert "\n"))
-        (org-brain-insert-visualize-button child)
+        (org-brain-insert-visualize-button child 'org-brain-child)
         (insert "  ")))))
 
 (defun org-brain--vis-friends (entry)
   "Insert friends of ENTRY.
 Helper function for `org-brain-visualize'."
   (when-let ((friends (org-brain-friends entry)))
-    (insert " ←→ ")
+    (org-brain--insert-wire " ←→ ")
     (dolist (friend (sort friends org-brain-visualize-sort-function))
       (let ((column (current-column)))
-        (org-brain-insert-visualize-button friend)
+        (org-brain-insert-visualize-button friend 'org-brain-friend)
         (picture-move-down 1)
         (move-to-column column t)))
     (kill-whole-line)
@@ -1755,7 +1791,7 @@ Helper function for `org-brain-visualize'."
 Also insert buttons for grand-children, up to MAX-LEVEL.
 Each button is indented, starting at level determined by INDENT."
   (insert (org-brain-map-create-indentation indent))
-  (org-brain-insert-visualize-button entry)
+  (org-brain-insert-visualize-button entry 'org-brain-child)
   (insert "\n")
   (dolist (child (and (> max-level 0) (sort (org-brain-children entry) org-brain-visualize-sort-function)))
     (org-brain-insert-recursive-child-buttons child (1- max-level) (1+ indent))))
@@ -1781,7 +1817,7 @@ Each button is indented, starting at level determined by INDENT."
                        (sort (org-brain-parents entry) org-brain-visualize-sort-function)))
     (org-brain-insert-recursive-parent-buttons parent (1- max-level) (1- indent)))
   (insert (org-brain-map-create-indentation indent))
-  (org-brain-insert-visualize-button entry)
+  (org-brain-insert-visualize-button entry 'org-brain-parent)
   (insert "\n"))
 
 (defun org-brain-mind-map (entry parent-max-level children-max-level)
@@ -1793,7 +1829,7 @@ Return the position of ENTRY in the buffer."
   (insert "FRIENDS:")
   (dolist (friend (sort (org-brain-friends entry) org-brain-visualize-sort-function))
     (insert "  ")
-    (org-brain-insert-visualize-button friend))
+    (org-brain-insert-visualize-button friend 'org-brain-friend))
   (insert "\n\n")
   (let ((indent (1- (org-brain-tree-depth (org-brain-recursive-parents entry parent-max-level))))
         (entry-pos))
@@ -1803,11 +1839,13 @@ Return the position of ENTRY in the buffer."
       (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
       (dolist (sibling (sort (cdr parent) org-brain-visualize-sort-function))
         (insert (org-brain-map-create-indentation indent))
-        (org-brain-insert-visualize-button sibling)
+        (org-brain-insert-visualize-button sibling 'org-brain-friend) ;; should there be a "sibling" face?
         (insert "\n")))
     (insert (org-brain-map-create-indentation indent))
     (setq entry-pos (point))
-    (insert (org-brain-title entry) "\n")
+    (insert (propertize (org-brain-title entry)
+                        'face 'org-brain-title
+                        'aa2u-text t) "\n")
     (dolist (child (sort (org-brain-children entry) org-brain-visualize-sort-function))
       (org-brain-insert-recursive-child-buttons child (1- children-max-level) (1+ indent)))
     entry-pos))
