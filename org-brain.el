@@ -86,6 +86,11 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-quit-after-goto nil
+  "Should the *org-brain* buffer window close itself after executing a goto command?"
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-headline-links-only-show-visible t
   "Only show visible parts (descriptions) of headline links.
 
@@ -968,6 +973,8 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
                              (append (org-brain-files t)
                                      (org-brain-headline-entries))
                              nil t)))
+  (when org-brain-quit-after-goto
+    (org-brain-visualize-quit))
   (let ((marker (org-brain-entry-marker entry)))
     (apply (or goto-file-func #'pop-to-buffer-same-window)
            (list (marker-buffer marker)))
