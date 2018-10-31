@@ -973,7 +973,8 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
            (list (marker-buffer marker)))
     (widen)
     (goto-char (marker-position marker))
-    (org-show-entry))
+    (when (org-at-heading-p)
+      (org-show-subtree)))
   entry)
 
 (define-obsolete-function-alias 'org-brain-open 'org-brain-goto "0.4")
@@ -1491,7 +1492,6 @@ cancelled manually with `org-brain-stop-wandering'."
   (interactive)
   (org-brain-stop-wandering)
   (quit-window))
-
 
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
