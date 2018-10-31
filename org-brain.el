@@ -194,6 +194,11 @@ If 0 or a negative value, the title won't be capped."
   :group 'org-brain
   :type 'integer)
 
+(defcustom org-brain-cap-mind-map-titles nil
+  "Whether to cap entries longer than org-brain-title-max-length in mind map visualization mode"
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-entry-separator ";"
   "Can be used as a separator when adding children, parents, or friends.
 Doing so allows for adding multiple entries at once."
@@ -1478,7 +1483,8 @@ cancelled manually with `org-brain-stop-wandering'."
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
-   (org-brain-title entry t)
+   (org-brain-title entry (or (not org-brain-visualizing-mind-map)
+                              org-brain-cap-mind-map-titles))
    'action (lambda (_x) (org-brain-visualize entry))
    'follow-link t
    'help-echo (org-brain-description entry)
