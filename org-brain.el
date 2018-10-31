@@ -810,8 +810,8 @@ If chosen child entry doesn't exist, create it as a new file.
 Several children can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (child-entry (org-brain-choose-entries
-                        "Child: " (append (org-brain-files t)
-                                          (org-brain-headline-entries))))
+                        "Add child: " (append (org-brain-files t)
+                                              (org-brain-headline-entries))))
     (org-brain-add-relationship (org-brain-entry-at-pt) child-entry))
   (org-brain--revert-if-visualizing))
 
@@ -821,7 +821,7 @@ Several children can be added, by using `org-brain-entry-separator'."
 Several children can be created, by using `org-brain-entry-separator'."
   (interactive)
   (let ((entry (org-brain-entry-at-pt))
-        (child-name-string (read-string "Child name: ")))
+        (child-name-string (read-string "Add child headline: ")))
     (dolist (child-name (split-string child-name-string org-brain-entry-separator))
       (when (equal (length child-name) 0)
         (error "Child name must be at least 1 character"))
@@ -856,7 +856,7 @@ Several children can be created, by using `org-brain-entry-separator'."
   "Remove child from entry at point."
   (interactive)
   (let* ((entry (org-brain-entry-at-pt))
-         (child (org-brain-choose-entry "Child: "
+         (child (org-brain-choose-entry "Remove child: "
                                         (org-brain-children entry)
                                         nil t)))
     (if (member child (org-brain--local-children entry))
@@ -871,8 +871,8 @@ If chosen parent entry doesn't exist, create it as a new file.
 Several parents can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (parent-entry (org-brain-choose-entries
-                         "Parent: " (append (org-brain-files t)
-                                            (org-brain-headline-entries))))
+                         "Add parent: " (append (org-brain-files t)
+                                                (org-brain-headline-entries))))
     (org-brain-add-relationship parent-entry (org-brain-entry-at-pt)))
   (org-brain--revert-if-visualizing))
 
@@ -882,7 +882,7 @@ Several parents can be added, by using `org-brain-entry-separator'."
   (interactive)
   (let ((entry (org-brain-entry-at-pt)))
     (org-brain-remove-relationship
-     (org-brain-choose-entry "Parent: "
+     (org-brain-choose-entry "Remove parent: "
                              (org-brain--linked-property-entries
                               entry "BRAIN_PARENTS")
                              nil t)
@@ -919,8 +919,8 @@ If chosen friend entry doesn't exist, create it as a new file.
 Several friends can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (friend-entry (org-brain-choose-entries
-                         "Friend: " (append (org-brain-files t)
-                                            (org-brain-headline-entries))))
+                         "Add friend: " (append (org-brain-files t)
+                                                (org-brain-headline-entries))))
     (org-brain--internal-add-friendship (org-brain-entry-at-pt) friend-entry))
   (org-brain--revert-if-visualizing))
 
@@ -933,7 +933,7 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
   (interactive
    (let ((entry-at-pt (org-brain-entry-at-pt)))
      (list entry-at-pt
-           (org-brain-choose-entry "Remove: " (org-brain-friends entry-at-pt) nil t))))
+           (org-brain-choose-entry "Remove friend: " (org-brain-friends entry-at-pt) nil t))))
   (when (member entry2 (org-brain-friends entry1))
     (if (org-brain-filep entry1)
         ;; Entry1 = File
@@ -962,7 +962,7 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
   (interactive)
   (org-brain-stop-wandering)
   (unless entry (setq entry (org-brain-choose-entry
-                             "Entry: "
+                             "Goto entry: "
                              (append (org-brain-files t)
                                      (org-brain-headline-entries))
                              nil t)))
@@ -1013,7 +1013,7 @@ If run interactively, get ENTRY from context.
 If ALL is nil, choose only between externally linked children."
   (interactive (list (org-brain-entry-at-pt)))
   (org-brain-goto (org-brain-choose-entry
-                   "Child: "
+                   "Goto child: "
                    (if all
                        (org-brain-children entry)
                      (org-brain--linked-property-entries
@@ -1027,7 +1027,7 @@ If run interactively, get ENTRY from context.
 If ALL is nil, choose only between externally linked parents."
   (interactive (list (org-brain-entry-at-pt)))
   (org-brain-goto (org-brain-choose-entry
-                   "Parent: "
+                   "Goto parent: "
                    (if all
                        (org-brain-parents entry)
                      (org-brain--linked-property-entries
@@ -1040,7 +1040,7 @@ If ALL is nil, choose only between externally linked parents."
 If run interactively, get ENTRY from context."
   (interactive (list (org-brain-entry-at-pt)))
   (org-brain-goto (org-brain-choose-entry
-                   "Friend: "
+                   "Goto friend: "
                    (org-brain--linked-property-entries
                     entry "BRAIN_FRIENDS")
                    nil t)))
@@ -1083,7 +1083,7 @@ If RECURSIVE is t, remove local children's relationships."
 Both arguments should be relative to `org-brain-path' and should
 not contain `org-brain-files-extension'."
   (interactive (let ((entry (org-brain-choose-entry
-                             "File entry: " (org-brain-files t) nil t)))
+                             "Rename file: " (org-brain-files t) nil t)))
                  (list entry (read-string "New filename: " entry))))
   (let ((newpath (org-brain-entry-path new-name))
         (oldpath (org-brain-entry-path file-entry)))
@@ -1113,8 +1113,8 @@ If run interactively, ask for the ENTRY.
 If NOCONFIRM is nil, ask if we really want to delete."
   (interactive
    (list (org-brain-choose-entry
-          "Entry: " (append (org-brain-files t)
-                            (org-brain-headline-entries))
+          "Delete entry: " (append (org-brain-files t)
+                                   (org-brain-headline-entries))
           nil t)
          nil))
   (let ((local-children (org-brain--local-children entry)))
@@ -1281,7 +1281,7 @@ If run interactively, get ENTRY from context."
   "Convert headline ENTRY to a file entry.
 Prompt for name of the new file.
 If interactive, also prompt for ENTRY."
-  (interactive (list (org-brain-choose-entry "Entry: "
+  (interactive (list (org-brain-choose-entry "Convert entry: "
                                              (org-brain-headline-entries)
                                              nil t)))
   (let* (level
@@ -1521,18 +1521,19 @@ If ENTRY is omitted, try to get it from context or prompt for it."
   (interactive "i")
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
-                    (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                              (org-brain-headline-entries))))))
+                    (org-brain-choose-entry "Insert link in entry: "
+                                            (append (org-brain-files t)
+                                                    (org-brain-headline-entries))))))
   (cl-flet ((insert-resource-link
              ()
              (unless (and link (not prompt))
-               (setq link (read-string "Link: " link))
+               (setq link (read-string "Insert link: " link))
                (when (string-match org-bracket-link-regexp link)
                  (let ((linkdesc (match-string 3 link)))
                    (when (and (not description) linkdesc)
                      (setq description linkdesc))
                    (setq link (match-string 1 link))))
-               (setq description (read-string "Description: " description)))
+               (setq description (read-string "Link description: " description)))
              (newline-and-indent)
              (insert (format "- %s" (org-make-link-string link description)))
              (save-buffer)))
