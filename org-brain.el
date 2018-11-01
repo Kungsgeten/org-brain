@@ -102,32 +102,36 @@ filenames will be shown instead, which is faster."
   :type '(boolean))
 
 (defface org-brain-title
-  '((t . (:height 2.0 :inherit font-lock-keyword-face)))
-  "Face for the currently selected entry")
+  '((t . (:inherit 'org-level-1)))
+  "Face for the currently selected entry.")
 
 (defface org-brain-wires
-  '((t . (:foreground "LightGoldenrodYellow")))
-  "Face for the wires connecting entries")
+  `((t . (:inherit 'font-lock-comment-face :italic nil)))
+  "Face for the wires connecting entries.")
 
 (defface org-brain-button
   '((t . (:inherit button)))
-  "Face for buttons in the org-brain visualize buffer")
+  "Face for buttons in the org-brain visualize buffer.")
 
 (defface org-brain-parent
-  '((t . (:bold t :inherit org-brain-button)))
-  "Face for the entries' parent nodes")
+  '((t . (:inherit (font-lock-builtin-face org-brain-button))))
+  "Face for the entries' parent nodes.")
 
 (defface org-brain-child
-  '((t . (:bold nil :inherit org-brain-button)))
-  "Face for the entries' child nodes")
+  '((t . (:inherit org-brain-button)))
+  "Face for the entries' child nodes.")
+
+(defface org-brain-sibling
+  '((t . (:inherit org-brain-child)))
+  "Face for the entries' sibling nodes.")
 
 (defface org-brain-friend
   '((t . (:inherit org-brain-button)))
-  "Face for the entries' friend nodes")
+  "Face for the entries' friend nodes.")
 
 (defface org-brain-pinned
-  '((t . (:height 1.5 :inherit org-brain-button)))
-  "Face for pinned entries")
+  '((t . (:inherit org-brain-button)))
+  "Face for pinned entries.")
 
 (defcustom org-brain-visualize-text-hook nil
   "Hook runs after inserting `org-brain-text' in `org-brain-visualize'.
@@ -1661,7 +1665,8 @@ Helper function for `org-brain-visualize'."
   (insert "\n"))
 
 (defun org-brain--insert-wire (&rest strings)
-  (insert (propertize (string-join strings) 'face 'org-brain-wires)))
+  "Helper function for drawing fontified wires in the org-brain visualization buffer."
+  (insert (propertize (apply 'concat strings) 'face 'org-brain-wires)))
 
 (defun org-brain--vis-parents-siblings (entry)
   "Insert parents and siblings of ENTRY.
@@ -1680,7 +1685,7 @@ Helper function for `org-brain-visualize'."
            (lambda (child)
              (picture-forward-column col-start)
              (org-brain--insert-wire (make-string (1+ (length parent-title)) ?\ ) "+-")
-             (org-brain-insert-visualize-button child 'org-brain-child)
+             (org-brain-insert-visualize-button child 'org-brain-sibling)
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
            (sort children-links org-brain-visualize-sort-function))
@@ -1845,7 +1850,7 @@ Return the position of ENTRY in the buffer."
       (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
       (dolist (sibling (sort (cdr parent) org-brain-visualize-sort-function))
         (insert (org-brain-map-create-indentation indent))
-        (org-brain-insert-visualize-button sibling 'org-brain-friend) ;; should there be a "sibling" face?
+        (org-brain-insert-visualize-button sibling 'org-brain-sibling)
         (insert "\n")))
     (insert (org-brain-map-create-indentation indent))
     (setq entry-pos (point))
