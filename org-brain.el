@@ -1882,35 +1882,45 @@ Return the position of ENTRY in the buffer."
     (setq org-brain-visualizing-mind-map (not org-brain-visualizing-mind-map))
     (org-brain-visualize org-brain--vis-entry)))
 
-(defun org-brain-visualize-add-grandchild ()
-  "Add another grandchild level to the visualized buffer."
+;;** Show/hide nested levels
+(defun org-brain-show-descendant-level ()
+  "Show one more level of descendant entries to the right in the mind-map visualization buffer."
   (interactive)
   (setq org-brain-visualizing-mind-map t)
   (cl-incf org-brain-mind-map-child-level)
   (org-brain--revert-if-visualizing))
 
-(defun org-brain-visualize-remove-grandchild ()
-  "Remove a grandchild level from the visualized buffer."
+(defun org-brain-hide-descendant-level ()
+  "Hide the rightmost level of descendant entries in the mind-map visualization buffer."
   (interactive)
   (setq org-brain-visualizing-mind-map t)
   (when (> org-brain-mind-map-child-level 1)
     (cl-decf org-brain-mind-map-child-level))
   (org-brain--revert-if-visualizing))
 
-(defun org-brain-visualize-add-grandparent ()
-  "Add another grandparent level to the visualized buffer."
+(defun org-brain-show-ancestor-level ()
+  "Show one more level of ancestor entries to the left in the mind-map visualization buffer."
   (interactive)
   (setq org-brain-visualizing-mind-map t)
   (cl-incf org-brain-mind-map-parent-level)
   (org-brain--revert-if-visualizing))
 
-(defun org-brain-visualize-remove-grandparent ()
-  "Remove a grandparent level from the visualized buffer."
+(defun org-brain-hide-ancestor-level ()
+  "Hide the leftmost level of ancestor entries in the mind-map visualization buffer."
   (interactive)
   (setq org-brain-visualizing-mind-map t)
   (when (> org-brain-mind-map-parent-level 1)
     (cl-decf org-brain-mind-map-parent-level))
   (org-brain--revert-if-visualizing))
+
+(define-obsolete-function-alias
+  'org-brain-visualize-add-grandchild 'org-brain-show-descendant-level "0.5")
+(define-obsolete-function-alias
+  'org-brain-visualize-remove-grandchild 'org-brain-hide-descendant-level "0.5")
+(define-obsolete-function-alias
+  'org-brain-visualize-add-grandparent 'org-brain-show-ancestor-level "0.5")
+(define-obsolete-function-alias
+  'org-brain-visualize-remove-grandparent 'org-brain-hide-ancestor-level "0.5")
 
 ;;* Brain link
 (defun org-brain-link-complete (&optional link-type)
