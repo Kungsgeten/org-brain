@@ -378,19 +378,26 @@ visibility rendering/formatting in-buffer."
         (org-brain-replace-links-with-visible-parts (org-entry-get pom "ITEM"))
       (org-entry-get pom "ITEM"))))
 
-(defun org-brain--headline-entry-at-point ()
-  "Get headline entry at point."
+(defun org-brain--name-and-id-at-point ()
+  "Get name and id of headline entry at point.
+Respect excluded entries."
   (unless (org-brain-entry-at-point-excludedp)
     (when-let ((id (org-entry-get (point) "ID")))
-      (list
-       (org-brain-path-entry-name (buffer-file-name))
-       (org-brain-headline-at (point))
-       id))))
+      (list (org-brain-headline-at (point)) id))))
 
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
-  (remove nil (org-map-entries #'org-brain--headline-entry-at-point
-                               nil (org-brain-files))))
+  (with-temp-buffer
+    (delay-mode-hooks
+      (org-mode)
+      (remove nil
+              (mapcan
+               (lambda (file)
+                 (insert-file-contents file nil nil nil 'replace)
+                 (mapcar (lambda (entry)
+                           (and entry (cons (org-brain-path-entry-name file) entry)))
+                         (org-map-entries #'org-brain--name-and-id-at-point)))
+               (org-brain-files))))))
 
 (defun org-brain-entry-from-id (id)
   "Get entry from ID."
@@ -850,8 +857,8 @@ Several children can be created, by using `org-brain-entry-separator'."
   (interactive)
   (let* ((entry (org-brain-entry-at-pt))
          (child (org-brain-choose-entry "Child: "
-                                        (org-brain-children entry)
-                                        nil t)))
+                                (org-brain-children entry)
+                                nil t)))
     (if (member child (org-brain--local-children entry))
         (org-brain-delete-entry child)
       (org-brain-remove-relationship entry child)))
@@ -876,9 +883,9 @@ Several parents can be added, by using `org-brain-entry-separator'."
   (let ((entry (org-brain-entry-at-pt)))
     (org-brain-remove-relationship
      (org-brain-choose-entry "Parent: "
-                             (org-brain--linked-property-entries
-                              entry "BRAIN_PARENTS")
-                             nil t)
+                     (org-brain--linked-property-entries
+                      entry "BRAIN_PARENTS")
+                     nil t)
      entry))
   (org-brain--revert-if-visualizing))
 
@@ -1006,12 +1013,12 @@ If run interactively, get ENTRY from context.
 If ALL is nil, choose only between externally linked children."
   (interactive (list (org-brain-entry-at-pt)))
   (org-brain-goto (org-brain-choose-entry
-                   "Child: "
-                   (if all
-                       (org-brain-children entry)
-                     (org-brain--linked-property-entries
-                      entry "BRAIN_CHILDREN"))
-                   nil t)))
+           "Child: "
+           (if all
+               (org-brain-children entry)
+             (org-brain--linked-property-entries
+              entry "BRAIN_CHILDREN"))
+           nil t)))
 
 ;;;###autoload
 (defun org-brain-goto-parent (entry &optional all)
