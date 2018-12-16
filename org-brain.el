@@ -522,6 +522,11 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                   (org-element-property :value kw)))))
     (error "Only file entries have keywords")))
 
+(defun org-brain--missing-id-error (entry)
+  "Error message to be shown if id of ENTRY isn't found by `org-id-find'."
+  (error "Couldn't find entry %s, try running org-brain-update-id-locations. "
+         (org-brain-entry-name entry)))
+
 (defun org-brain-entry-marker (entry)
   "Get marker to ENTRY."
   (if (org-brain-filep entry)
@@ -529,8 +534,10 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
         (if (file-exists-p path)
             (set-marker (make-marker) 0 (find-file-noselect path))
           ;; If file doesn't exists, it is probably an id
-          (org-id-find entry t)))
-    (org-id-find (nth 2 entry) t)))
+          (or (org-id-find entry t)
+              (org-brain--missing-id-error entry))))
+    (or (org-id-find (nth 2 entry) t)
+        (org-brain--missing-id-error entry))))
 
 (defun org-brain-title (entry &optional capped)
   "Get title of ENTRY.  If CAPPED is t, max length is `org-brain-title-max-length'."
@@ -1500,8 +1507,7 @@ cancelled manually with `org-brain-stop-wandering'."
    'follow-link t
    'help-echo (org-brain-description entry)
    'aa2u-text t
-   'face (or face 'org-brain-button)
-   ))
+   'face (or face 'org-brain-button)))
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
