@@ -171,14 +171,15 @@ available in =org-brain-visualize=:
 | T          | =org-brain-set-tags=                 | Change the tags of the entry.                                |
 | d          | =org-brain-delete-entry=             | Choose an entry to delete.                                   |
 | l          | =org-brain-visualize-add-resource=   | Add a new resource link in entry                             |
+| r          | =org-brain-open-resource=            | Shortcut to choose and open a resource from the entry.       |
 | C-y        | =org-brain-visualize-paste-resource= | Add a new resource link from clipboard                       |
 | a          | =org-brain-visualize-attach=         | Run =org-attach= on entry (headline entries only)            |
 | A          | =org-brain-archive=                  | Archive the entry (headline entries only)                    |
 | o          | =org-brain-goto-current=             | Open current entry for editing                               |
 | O          | =org-brain-goto=                     | Choose and edit one of your =org-brain= entries              |
 | v          | =org-brain-visualize=                | Choose and visualize a different entry                       |
-| r          | =org-brain-visualize-random=         | Visualize one of your entries at random.                     |
-| R          | =org-brain-visualize-wander=         | Visualize at random, in a set interval. =R= again to cancel. |
+| w          | =org-brain-visualize-random=         | Visualize one of your entries at random.                     |
+| W          | =org-brain-visualize-wander=         | Visualize at random, in a set interval. =W= again to cancel. |
 
 You can also use =org-store-link= inside of =org-brain-visualize= in order to
 store a link to the currently visualized =org-brain= entry.

@@ -668,6 +668,25 @@ The car is the raw-link and the cdr is the description."
                                     attachment))
                             (org-attach-file-list attach-dir)))))))))
 
+(defun org-brain--choose-resource (entry)
+  "Use `completing-read' to get link to a resource from ENTRY."
+  (let ((resources (mapcar (lambda (x)
+                             (cons (or (cdr x) (car x)) (car x)))
+                           (org-brain-resources entry))))
+    (if (equal (length resources) 1)
+        (cdar resources)
+      (cdr (assoc (completing-read "Resource: " resources nil t) resources)))))
+
+;;;###autoload
+(defun org-brain-open-resource (entry)
+  "Choose and open a resource from ENTRY.
+Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
+  (interactive (list (or (ignore-errors (org-brain-entry-at-pt))
+                         (org-brain-choose-entry
+                          "Resource from: "
+                          (append (org-brain-files t) (org-brain-headline-entries))))))
+  (org-open-link-from-string (org-brain--choose-resource entry)))
+
 (defun org-brain--local-parent (entry)
   "Get file local parent of ENTRY, as a list."
   (if-let ((parent
@@ -1652,14 +1671,15 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "F" 'org-brain-remove-friendship)
 (define-key org-brain-visualize-mode-map "d" 'org-brain-delete-entry)
 (define-key org-brain-visualize-mode-map "l" 'org-brain-add-resource)
+(define-key org-brain-visualize-mode-map "r" 'org-brain-open-resource)
 (define-key org-brain-visualize-mode-map "a" 'org-brain-visualize-attach)
 (define-key org-brain-visualize-mode-map "A" 'org-brain-archive)
 (define-key org-brain-visualize-mode-map "b" 'org-brain-visualize-back)
 (define-key org-brain-visualize-mode-map "\C-y" 'org-brain-visualize-paste-resource)
 (define-key org-brain-visualize-mode-map "T" 'org-brain-set-tags)
 (define-key org-brain-visualize-mode-map "q" 'org-brain-visualize-quit)
-(define-key org-brain-visualize-mode-map "r" 'org-brain-visualize-random)
-(define-key org-brain-visualize-mode-map "R" 'org-brain-visualize-wander)
+(define-key org-brain-visualize-mode-map "w" 'org-brain-visualize-random)
+(define-key org-brain-visualize-mode-map "W" 'org-brain-visualize-wander)
 (define-key org-brain-visualize-mode-map "m" 'org-brain-visualize-mind-map)
 (define-key org-brain-visualize-mode-map "+" 'org-brain-visualize-add-grandchild)
 (define-key org-brain-visualize-mode-map "-" 'org-brain-visualize-remove-grandchild)
