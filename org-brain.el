@@ -58,6 +58,11 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(repeat string))
 
+(defcustom org-brain-suggest-stored-link-as-resource t
+  "If `org-brain-add-resource' should suggest the last link saved with `org-store-link'."
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path)
   "Where org-brain data is saved."
   :group 'org-brain
@@ -1543,7 +1548,12 @@ cancelled manually with `org-brain-stop-wandering'."
   "Insert LINK with DESCRIPTION in an entry.
 If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
 If ENTRY is omitted, try to get it from context or prompt for it."
-  (interactive "i")
+  (interactive (or (and org-brain-suggest-stored-link-as-resource
+                        (when-let ((last-stored-link (car org-stored-links)))
+                          (list (substring-no-properties (car last-stored-link))
+                                (cadr last-stored-link)
+                                t)))
+                   '(nil)))
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
                     (org-brain-choose-entry "Entry: " (append (org-brain-files t)
