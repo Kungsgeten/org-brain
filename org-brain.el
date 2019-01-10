@@ -874,7 +874,7 @@ Several children can be created, by using `org-brain-entry-separator'."
           (if (org-goto-first-child)
               (open-line 1)
             (org-end-of-subtree t))
-          (org-insert-heading)
+          (org-insert-heading nil t)
           (org-do-demote)
           (insert child-name)
           (org-id-get-create)
