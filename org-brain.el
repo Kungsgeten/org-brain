@@ -1358,7 +1358,12 @@ If interactive, also prompt for ENTRY."
       (dolist (child children)
         (org-brain-add-relationship new-entry child))
       (dolist (friend friends)
-        (org-brain--internal-add-friendship new-entry friend)))))
+        (org-brain--internal-add-friendship new-entry friend))
+      (when (equal entry org-brain--vis-entry)
+        (setq org-brain--vis-entry new-entry))
+      (when (member entry org-brain-pins)
+        (org-brain-pin entry -1)
+        (org-brain-pin new-entry 1)))))
 
 ;;;###autoload
 (defun org-brain-agenda ()
