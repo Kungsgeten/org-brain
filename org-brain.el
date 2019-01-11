@@ -91,6 +91,11 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-quit-after-goto nil
+  "Should the *org-brain* buffer window close itself after executing a goto command?"
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-headline-links-only-show-visible t
   "Only show visible parts (descriptions) of headline links.
 
@@ -841,18 +846,18 @@ If chosen child entry doesn't exist, create it as a new file.
 Several children can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (child-entry (org-brain-choose-entries
-                        "Child: " (append (org-brain-files t)
-                                          (org-brain-headline-entries))))
+                        "Add child: " (append (org-brain-files t)
+                                              (org-brain-headline-entries))))
     (org-brain-add-relationship (org-brain-entry-at-pt) child-entry))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
-(defun org-brain-new-child ()
+(defun org-brain-add-child-headline ()
   "Create a new internal child headline to entry at point.
 Several children can be created, by using `org-brain-entry-separator'."
   (interactive)
   (let ((entry (org-brain-entry-at-pt))
-        (child-name-string (read-string "Child name: ")))
+        (child-name-string (read-string "Add child headline: ")))
     (dolist (child-name (split-string child-name-string org-brain-entry-separator))
       (when (equal (length child-name) 0)
         (error "Child name must be at least 1 character"))
@@ -882,12 +887,14 @@ Several children can be created, by using `org-brain-entry-separator'."
           (save-buffer)))))
   (org-brain--revert-if-visualizing))
 
+(define-obsolete-function-alias 'org-brain-new-child 'org-brain-add-child-headline "0.5")
+
 ;;;###autoload
 (defun org-brain-remove-child ()
   "Remove child from entry at point."
   (interactive)
   (let* ((entry (org-brain-entry-at-pt))
-         (child (org-brain-choose-entry "Child: "
+         (child (org-brain-choose-entry "Remove child: "
                                         (org-brain-children entry)
                                         nil t)))
     (if (member child (org-brain--local-children entry))
@@ -902,8 +909,8 @@ If chosen parent entry doesn't exist, create it as a new file.
 Several parents can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (parent-entry (org-brain-choose-entries
-                         "Parent: " (append (org-brain-files t)
-                                            (org-brain-headline-entries))))
+                         "Add parent: " (append (org-brain-files t)
+                                                (org-brain-headline-entries))))
     (org-brain-add-relationship parent-entry (org-brain-entry-at-pt)))
   (org-brain--revert-if-visualizing))
 
@@ -913,7 +920,7 @@ Several parents can be added, by using `org-brain-entry-separator'."
   (interactive)
   (let ((entry (org-brain-entry-at-pt)))
     (org-brain-remove-relationship
-     (org-brain-choose-entry "Parent: "
+     (org-brain-choose-entry "Remove parent: "
                              (org-brain--linked-property-entries
                               entry "BRAIN_PARENTS")
                              nil t)
@@ -950,8 +957,8 @@ If chosen friend entry doesn't exist, create it as a new file.
 Several friends can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (friend-entry (org-brain-choose-entries
-                         "Friend: " (append (org-brain-files t)
-                                            (org-brain-headline-entries))))
+                         "Add friend: " (append (org-brain-files t)
+                                                (org-brain-headline-entries))))
     (org-brain--internal-add-friendship (org-brain-entry-at-pt) friend-entry))
   (org-brain--revert-if-visualizing))
 
@@ -964,7 +971,7 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
   (interactive
    (let ((entry-at-pt (org-brain-entry-at-pt)))
      (list entry-at-pt
-           (org-brain-choose-entry "Remove: " (org-brain-friends entry-at-pt) nil t))))
+           (org-brain-choose-entry "Remove friend: " (org-brain-friends entry-at-pt) nil t))))
   (when (member entry2 (org-brain-friends entry1))
     (if (org-brain-filep entry1)
         ;; Entry1 = File
@@ -993,16 +1000,19 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
   (interactive)
   (org-brain-stop-wandering)
   (unless entry (setq entry (org-brain-choose-entry
-                             "Entry: "
+                             "Goto entry: "
                              (append (org-brain-files t)
                                      (org-brain-headline-entries))
                              nil t)))
+  (when org-brain-quit-after-goto
+    (org-brain-visualize-quit))
   (let ((marker (org-brain-entry-marker entry)))
     (apply (or goto-file-func #'pop-to-buffer-same-window)
            (list (marker-buffer marker)))
     (widen)
     (goto-char (marker-position marker))
-    (org-show-entry))
+    (when (org-at-heading-p)
+      (org-show-subtree)))
   entry)
 
 (define-obsolete-function-alias 'org-brain-open 'org-brain-goto "0.4")
@@ -1044,7 +1054,7 @@ If run interactively, get ENTRY from context.
 If ALL is nil, choose only between externally linked children."
   (interactive (list (org-brain-entry-at-pt)))
   (org-brain-goto (org-brain-choose-entry
-                   "Child: "
+                   "Goto child: "
                    (if all
                        (org-brain-children entry)
                      (org-brain--linked-property-entries
@@ -1058,7 +1068,7 @@ If run interactively, get ENTRY from context.
 If ALL is nil, choose only between externally linked parents."
   (interactive (list (org-brain-entry-at-pt)))
   (org-brain-goto (org-brain-choose-entry
-                   "Parent: "
+                   "Goto parent: "
                    (if all
                        (org-brain-parents entry)
                      (org-brain--linked-property-entries
@@ -1071,7 +1081,7 @@ If ALL is nil, choose only between externally linked parents."
 If run interactively, get ENTRY from context."
   (interactive (list (org-brain-entry-at-pt)))
   (org-brain-goto (org-brain-choose-entry
-                   "Friend: "
+                   "Goto friend: "
                    (org-brain--linked-property-entries
                     entry "BRAIN_FRIENDS")
                    nil t)))
@@ -1114,7 +1124,7 @@ If RECURSIVE is t, remove local children's relationships."
 Both arguments should be relative to `org-brain-path' and should
 not contain `org-brain-files-extension'."
   (interactive (let ((entry (org-brain-choose-entry
-                             "File entry: " (org-brain-files t) nil t)))
+                             "Rename file: " (org-brain-files t) nil t)))
                  (list entry (read-string "New filename: " entry))))
   (let ((newpath (org-brain-entry-path new-name))
         (oldpath (org-brain-entry-path file-entry)))
@@ -1144,8 +1154,8 @@ If run interactively, ask for the ENTRY.
 If NOCONFIRM is nil, ask if we really want to delete."
   (interactive
    (list (org-brain-choose-entry
-          "Entry: " (append (org-brain-files t)
-                            (org-brain-headline-entries))
+          "Delete entry: " (append (org-brain-files t)
+                                   (org-brain-headline-entries))
           nil t)
          nil))
   (let ((local-children (org-brain--local-children entry)))
@@ -1312,7 +1322,7 @@ If run interactively, get ENTRY from context."
   "Convert headline ENTRY to a file entry.
 Prompt for name of the new file.
 If interactive, also prompt for ENTRY."
-  (interactive (list (org-brain-choose-entry "Entry: "
+  (interactive (list (org-brain-choose-entry "Convert entry: "
                                              (org-brain-headline-entries)
                                              nil t)))
   (let* (level
@@ -1526,7 +1536,6 @@ cancelled manually with `org-brain-stop-wandering'."
   (org-brain-stop-wandering)
   (quit-window))
 
-
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
@@ -1561,18 +1570,19 @@ If ENTRY is omitted, try to get it from context or prompt for it."
                    '(nil)))
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
-                    (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                              (org-brain-headline-entries))))))
+                    (org-brain-choose-entry "Insert link in entry: "
+                                            (append (org-brain-files t)
+                                                    (org-brain-headline-entries))))))
   (cl-flet ((insert-resource-link
              ()
              (unless (and link (not prompt))
-               (setq link (read-string "Link: " link))
+               (setq link (read-string "Insert link: " link))
                (when (string-match org-bracket-link-regexp link)
                  (let ((linkdesc (match-string 3 link)))
                    (when (and (not description) linkdesc)
                      (setq description linkdesc))
                    (setq link (match-string 1 link))))
-               (setq description (read-string "Description: " description)))
+               (setq description (read-string "Link description: " description)))
              (newline-and-indent)
              (insert (format "- %s" (org-make-link-string link description)))
              (save-buffer)))
@@ -1920,35 +1930,45 @@ Return the position of ENTRY in the buffer."
     (setq org-brain-visualizing-mind-map (not org-brain-visualizing-mind-map))
     (org-brain-visualize org-brain--vis-entry)))
 
-(defun org-brain-visualize-add-grandchild ()
-  "Add another grandchild level to the visualized buffer."
+;;** Show/hide nested levels
+(defun org-brain-show-descendant-level ()
+  "Show one more level of descendant entries to the right in the mind-map visualization buffer."
   (interactive)
   (setq org-brain-visualizing-mind-map t)
   (cl-incf org-brain-mind-map-child-level)
   (org-brain--revert-if-visualizing))
 
-(defun org-brain-visualize-remove-grandchild ()
-  "Remove a grandchild level from the visualized buffer."
+(defun org-brain-hide-descendant-level ()
+  "Hide the rightmost level of descendant entries in the mind-map visualization buffer."
   (interactive)
   (setq org-brain-visualizing-mind-map t)
   (when (> org-brain-mind-map-child-level 1)
     (cl-decf org-brain-mind-map-child-level))
   (org-brain--revert-if-visualizing))
 
-(defun org-brain-visualize-add-grandparent ()
-  "Add another grandparent level to the visualized buffer."
+(defun org-brain-show-ancestor-level ()
+  "Show one more level of ancestor entries to the left in the mind-map visualization buffer."
   (interactive)
   (setq org-brain-visualizing-mind-map t)
   (cl-incf org-brain-mind-map-parent-level)
   (org-brain--revert-if-visualizing))
 
-(defun org-brain-visualize-remove-grandparent ()
-  "Remove a grandparent level from the visualized buffer."
+(defun org-brain-hide-ancestor-level ()
+  "Hide the leftmost level of ancestor entries in the mind-map visualization buffer."
   (interactive)
   (setq org-brain-visualizing-mind-map t)
   (when (> org-brain-mind-map-parent-level 1)
     (cl-decf org-brain-mind-map-parent-level))
   (org-brain--revert-if-visualizing))
+
+(define-obsolete-function-alias
+  'org-brain-visualize-add-grandchild 'org-brain-show-descendant-level "0.5")
+(define-obsolete-function-alias
+  'org-brain-visualize-remove-grandchild 'org-brain-hide-descendant-level "0.5")
+(define-obsolete-function-alias
+  'org-brain-visualize-add-grandparent 'org-brain-show-ancestor-level "0.5")
+(define-obsolete-function-alias
+  'org-brain-visualize-remove-grandparent 'org-brain-hide-ancestor-level "0.5")
 
 ;;* Brain link
 (defun org-brain-link-complete (&optional link-type)

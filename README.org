@@ -159,7 +159,7 @@ available in =org-brain-visualize=:
 | j or TAB   | =forward-button=                     | Goto next link                                               |
 | k or S-TAB | =backward-button=                    | Goto previous link                                           |
 | b          | =org-brain-visualize-back=           | Like the back button in a web browser.                       |
-| h or *     | =org-brain-new-child=                | Add a new child /headline/ to entry                          |
+| h or *     | =org-brain-add-child-headline=       | Add a new child /headline/ to entry                          |
 | c          | =org-brain-add-child=                | Add an existing entry, or a new /file/, as a child           |
 | C          | =org-brain-remove-child=             | Remove one the entry's child relations                       |
 | p          | =org-brain-add-parent=               | Add an existing entry, or a new /file/, as a parent          |
@@ -185,14 +185,14 @@ You can also use =org-store-link= inside of =org-brain-visualize= in order to
 store a link to the currently visualized =org-brain= entry.
 
 When using the mind map visualization (toggle by pressing =m=), you can use the
-following keybindings in order to add/remove grandparents/grandchildren:
+following keybindings in order to show or hide successive levels of hierarchy relative to the current entry.
 
-| Key | Command                                  | Description                   |
-|-----+------------------------------------------+-------------------------------|
-| +   | =org-brain-visualize-add-grandchild=     | Add another grandchild level  |
-| -   | =org-brain-visualize-remove-grandchild=  | Remove a grandchild level     |
-| z   | =org-brain-visualize-add-grandparent=    | Add another grandparent level |
-| Z   | =org-brain-visualize-remove-grandparent= | Remove a grandparent level    |
+| Key | Command                           | Description                                                              |
+|-----+-----------------------------------+--------------------------------------------------------------------------|
+| +   | =org-brain-show-descendant-level= | Show one more level of entries to the right (children of children, etc.) |
+| -   | =org-brain-hide-descendant-level= | Hide rightmost level of descendant entries                               |
+| z   | =org-brain-show-ancestor-level=   | Show one more level of entries to the left (parents of parents, etc.)    |
+| Z   | =org-brain-hide-ancestor-level=   | Hide leftmost level of ancestor entries                                  |
 
 ** Editing from =org-mode=
 
