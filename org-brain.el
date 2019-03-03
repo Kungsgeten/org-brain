@@ -1474,7 +1474,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
         (org-brain--vis-parents-siblings entry)
         ;; Insert entry title
         (let ((title (org-brain-title entry)))
-          (let ((half-title-length (/ (length title) 2)))
+          (let ((half-title-length (/ (string-width title) 2)))
             (if (>= half-title-length (current-column))
                 (delete-char (- (current-column)))
               (ignore-errors (delete-char (- half-title-length)))))
@@ -1742,7 +1742,7 @@ Helper function for `org-brain-visualize'."
           (mapc
            (lambda (child)
              (picture-forward-column col-start)
-             (org-brain--insert-wire (make-string (1+ (length parent-title)) ?\ ) "+-")
+             (org-brain--insert-wire (make-string (1+ (string-width parent-title)) ?\ ) "+-")
              (org-brain-insert-visualize-button child 'org-brain-sibling)
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
@@ -1751,13 +1751,13 @@ Helper function for `org-brain-visualize'."
           (forward-line (1- (length children-links)))
           (picture-forward-column col-start)
           (push (cons (picture-current-line)
-                      (+ (current-column) (/ (length parent-title) 2)))
+                      (+ (current-column) (/ (string-width parent-title) 2)))
                 parent-positions)
           (org-brain-insert-visualize-button (car parent) 'org-brain-parent)
           (setq max-width (max max-width (current-column)))
           (when children-links
             (org-brain--insert-wire "-")
-            (delete-char (+ 1 (length parent-title))))))
+            (delete-char (+ 1 (string-width parent-title))))))
       ;; Draw lines
       (when parent-positions
         (let ((maxline (line-number-at-pos (point-max))))
