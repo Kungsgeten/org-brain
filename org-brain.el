@@ -1813,7 +1813,7 @@ Helper function for `org-brain-visualize'."
   "Insert friends of ENTRY.
 Helper function for `org-brain-visualize'."
   (when-let ((friends (org-brain-friends entry)))
-    (org-brain--insert-wire " ←→ ")
+    (org-brain--insert-wire " <-> ")
     (dolist (friend (sort friends org-brain-visualize-sort-function))
       (let ((column (current-column)))
         (org-brain-insert-visualize-button friend 'org-brain-friend)
