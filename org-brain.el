@@ -1285,7 +1285,8 @@ If run interactively, get ENTRY from context and prompt for TITLE."
     ;; Headline entry
     (org-with-point-at (org-brain-entry-marker entry)
       (org-edit-headline title)
-      (save-buffer)))
+      (save-buffer)
+      (setf (nth 1 org-brain--vis-entry) title)))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
