@@ -21,16 +21,16 @@ view the network of links as a mind map, using =M-x org-brain-visualize=.
            |                                   |
            +-----------------+-----------------+
                              |
-                             ▽
-                      Game programming ←→ Computer games
+                             V
+                      Game programming <-> Computer games
 
   Game Maker  Unity
 
   --- Resources ---------------------------------
 
-  • https://en.wikipedia.org/wiki/Game_programming
-  • Passing Through Ghosts in Pac-Man
-  • In-House Engine Development: Technical Tips
+  - https://en.wikipedia.org/wiki/Game_programming
+  - Passing Through Ghosts in Pac-Man
+  - In-House Engine Development: Technical Tips
 
   --- Text --------------------------------------
 

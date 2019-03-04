@@ -1550,7 +1550,7 @@ cancelled manually with `org-brain-stop-wandering'."
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
-  (insert (make-string (or indent 0) ?\ ) "\n• ")
+  (insert (make-string (or indent 0) ?\ ) "\n- ")
   (run-hook-with-args 'org-brain-after-resource-button-functions (car resource))
   (insert-text-button
    (or (cdr resource) (car resource))
@@ -1793,7 +1793,7 @@ Helper function for `org-brain-visualize'."
             (picture-move-down 1)
             (org-brain--insert-wire "|")
             (picture-move-down 1))
-          (org-brain--insert-wire "▽"))))
+          (org-brain--insert-wire "V"))))
     (picture-move-down 1)))
 
 (defun org-brain--vis-children (entry)
