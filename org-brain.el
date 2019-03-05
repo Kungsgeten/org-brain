@@ -1500,6 +1500,12 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
                  (< (length org-brain--vis-history) 15))
         (push entry org-brain--vis-history)))))
 
+(defun org-brain-visualize-entry-at-pt ()
+  "Use `org-brain-visualize' on the `org-brain-entry-at-pt'.
+Useful if wanting to visualize the current `org-mode' entry."
+  (interactive)
+  (org-brain-visualize (org-brain-entry-at-pt)))
+
 ;;;###autoload
 (defun org-brain-visualize-random ()
   "Run `org-brain-visualize' on a random org-brain entry."
