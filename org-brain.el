@@ -415,6 +415,7 @@ Respect excluded entries."
 (defun org-brain-cache ()
   "Cache all org-brain files and headline entries."
   (interactive)
+  (message "org-brain: start to update cache ...")
   (let* ((dir (file-name-as-directory org-brain-cache-path))
          (file1 (concat dir "files.el"))
          (file2 (concat dir "headline-entries.el")))
@@ -435,7 +436,8 @@ Respect excluded entries."
         (setq org-brain-files (car result))
         (setq org-brain-relative-files
               (mapcar #'org-brain-path-entry-name (car result)))
-        (setq org-brain-headline-entries (cdr result))))
+        (setq org-brain-headline-entries (cdr result))
+        (message "org-brain: Cache updated.")))
     (unless org-brain-files
       (setq org-brain-files
             (when (file-exists-p file1)
@@ -1742,6 +1744,7 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "c" 'org-brain-add-child)
 (define-key org-brain-visualize-mode-map "C" 'org-brain-remove-child)
 (define-key org-brain-visualize-mode-map "*" 'org-brain-new-child)
+(define-key org-brain-visualize-mode-map "g" 'org-brain-cache)
 (define-key org-brain-visualize-mode-map "h" 'org-brain-new-child)
 (define-key org-brain-visualize-mode-map "n" 'org-brain-pin)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-set-title)
