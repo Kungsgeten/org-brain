@@ -438,7 +438,7 @@ Respect excluded entries."
         (setq org-brain-relative-files
               (mapcar #'org-brain-path-entry-name (car result)))
         (setq org-brain-headline-entries (cdr result))
-        (unless silent
+        (unless ,silent
           (message "org-brain: Cache updated."))))
     (unless org-brain-files
       (setq org-brain-files
