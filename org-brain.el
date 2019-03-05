@@ -445,7 +445,7 @@ Respect excluded entries."
         (let* ((files (directory-files-recursively
                        org-brain-path
                        org-brain-files-match))
-               (headlines (org-brain-headline-entries files)))
+               (headlines (org-brain-get-headline-entries files)))
           (org-brain-save-value-to-file files ,file1)
           (org-brain-save-value-to-file headlines ,file2)
           (cons files headlines)))
@@ -471,7 +471,7 @@ Respect excluded entries."
                 (insert-file-contents file2)
                 (read (current-buffer))))))))
 
-(defun org-brain-headline-entries (files)
+(defun org-brain-get-headline-entries (files)
   "Get all org-brain headline entries."
   (with-temp-buffer
     (delay-mode-hooks
