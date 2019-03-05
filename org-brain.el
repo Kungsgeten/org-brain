@@ -374,15 +374,14 @@ If CHECK-TITLE is non-nil, consider that ENTRY might be a file entry title."
         (setq org-brain-files result)
         (setq org-brain-relative-files
               (mapcar #'org-brain-path-entry-name result))))
-    (setq org-brain-files
-          (or org-brain-files
-              (when (file-exists-p file)
-                (with-temp-buffer
-                  (insert-file-contents file)
-                  (read (current-buffer))))))
-    (setq org-brain-relative-files
-          (or org-brain-relative-files
-              (mapcar #'org-brain-path-entry-name org-brain-files)))))
+    (unless org-brain-files
+      (setq org-brain-files
+            (when (file-exists-p file)
+              (with-temp-buffer
+                (insert-file-contents file)
+                (read (current-buffer)))))
+      (setq org-brain-relative-files
+            (mapcar #'org-brain-path-entry-name org-brain-files)))))
 
 (defun org-brain-replace-links-with-visible-parts (raw-str)
   "Get RAW-STR with its links replaced by their descriptions."
@@ -457,12 +456,12 @@ Respect excluded entries."
           entries))
      `(lambda (result)
         (setq org-brain-headline-entries result)))
-    (setq org-brain-headline-entries
-          (or org-brain-headline-entries
-              (when (file-exists-p file)
-                (with-temp-buffer
-                  (insert-file-contents file)
-                  (read (current-buffer))))))))
+    (unless org-brain-headline-entries
+      (setq org-brain-headline-entries
+            (when (file-exists-p file)
+              (with-temp-buffer
+                (insert-file-contents file)
+                (read (current-buffer))))))))
 
 (defun org-brain-headline-entries-1 ()
   "Get all org-brain headline entries."
@@ -1517,6 +1516,10 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
          (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
                        (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
      (org-brain-stop-wandering)
+     (unless org-brain-files
+       (org-brain-cache-files))
+     (unless org-brain-headline-entries
+       (org-brain-cache-headline-entries))
      (list
       (org-brain-choose-entry
        "Entry: "
