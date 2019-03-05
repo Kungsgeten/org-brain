@@ -59,6 +59,16 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-files-transparent nil
+  "The file entry matched will be ignored.
+but its headlines works as usual.
+
+This feaure is useful when a file include many
+irrelevant headline entries and let `'org-brain-visualize'
+run very slowly."
+  :group 'org-brain
+  :type '(string))
+
 (defcustom org-brain-ignored-resource-links '("fuzzy" "radio" "brain" "brain-child" "brain-parent" "brain-friend")
   "`org-link-types' which shouldn't be shown as resources in `org-brain-visualize'."
   :group 'org-brain
@@ -689,23 +699,32 @@ ignore `org-brain-exclude-children-tag' and
         (re-search-forward org-drawer-regexp nil t))
       (buffer-substring (point) (point-max)))))
 
+(defun org-brain-transparent (entries)
+  "Remove all transparent files."
+  (cl-remove-if
+   (lambda (x)
+     (when (and org-brain-files-transparent
+                (org-brain-filep x))
+       (string-match-p org-brain-files-transparent x)))
+   (delete-dups entries)))
+
 (defun org-brain-parents (entry)
   "Get parents of ENTRY.
 Often you want the siblings too, then use `org-brain-siblings' instead."
-  (delete-dups
+  (org-brain-transparent
    (append (org-brain--linked-property-entries entry "BRAIN_PARENTS")
            (org-brain--local-parent entry))))
 
 (defun org-brain-children (entry)
   "Get children of ENTRY."
-  (delete-dups
+  (org-brain-transparent
    (append (org-brain--linked-property-entries entry "BRAIN_CHILDREN")
            (org-brain--local-children entry))))
 
 (defun org-brain-siblings (entry)
   "Get siblings of ENTRY.
 Return an alist where key = parent, value = siblings from that parent."
-  (delete-dups
+  (org-brain-transparent
    (mapcar
     (lambda (parent)
       (cons parent (remove entry (org-brain-children parent))))
@@ -713,7 +732,8 @@ Return an alist where key = parent, value = siblings from that parent."
 
 (defun org-brain-friends (entry)
   "Get friends of ENTRY."
-  (delete-dups (org-brain--linked-property-entries entry "BRAIN_FRIENDS")))
+  (org-brain-transparent
+   (org-brain--linked-property-entries entry "BRAIN_FRIENDS")))
 
 (defun org-brain-resources (entry)
   "Get alist of links in ENTRY, excluding `org-brain-ignored-resource-links'.
