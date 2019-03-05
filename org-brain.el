@@ -1530,22 +1530,25 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
                         ((equal current-prefix-arg '(64)) 'root)
                         (t org-brain-visualize-default-choices)))
          (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
-                       (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
+                       (ignore-errors (org-brain-entry-at-pt)))))
      (org-brain-stop-wandering)
      (unless org-brain-files
        (org-brain-cache t))
      (list
-      (org-brain-choose-entry
-       "Entry: "
-       (cond ((equal choices 'all)
-              (append org-brain-relative-files org-brain-headline-entries))
-             ((equal choices 'files)
-              org-brain-relative-files)
-             ((equal choices 'root)
-              (make-directory org-brain-path t)
-              (mapcar #'org-brain-path-entry-name
-                      (directory-files org-brain-path t org-brain-files-match))))
-       nil nil def-choice))))
+      (if (and (listp def-choice)
+               (= (length def-choice) 3))
+          def-choice
+        (org-brain-choose-entry
+         "Entry: "
+         (cond ((equal choices 'all)
+                (append org-brain-relative-files org-brain-headline-entries))
+               ((equal choices 'files)
+                org-brain-relative-files)
+               ((equal choices 'root)
+                (make-directory org-brain-path t)
+                (mapcar #'org-brain-path-entry-name
+                        (directory-files org-brain-path t org-brain-files-match))))
+         nil nil def-choice)))))
   (unless wander (org-brain-stop-wandering))
   (with-current-buffer (get-buffer-create "*org-brain*")
     (read-only-mode 1)
