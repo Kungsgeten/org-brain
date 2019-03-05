@@ -266,7 +266,7 @@ Insert links using `org-insert-link'."
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
   (interactive)
-  (org-id-update-id-locations (org-brain-files)))
+  (org-id-update-id-locations org-brain-files))
 
 ;;;###autoload
 (defun org-brain-switch-brain (directory)
@@ -352,15 +352,37 @@ If CHECK-TITLE is non-nil, consider that ENTRY might be a file entry title."
     (expand-file-name (org-link-unescape (format "%s.%s" name org-brain-files-extension))
                       org-brain-path)))
 
-(defun org-brain-files (&optional relative)
-  "Get all org files (recursively) in `org-brain-path'.
-If RELATIVE is t, then return relative paths and remove file extension.
-Ignores \"dotfiles\"."
-  (make-directory org-brain-path t)
-  (if relative
-      (mapcar #'org-brain-path-entry-name (org-brain-files))
-    (directory-files-recursively
-     org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension))))
+(defvar org-brain-files nil)
+(defvar org-brain-relative-files nil)
+
+(defun org-brain-cache-files ()
+  "Cache all org files (recursively) in `org-brain-path'."
+  (let ((file (concat (file-name-as-directory org-brain-cache-path)
+                      "file-entries.el")))
+    (async-start
+     `(lambda ()
+        ,(async-inject-variables "^load-path$")
+        ,(async-inject-variables "^exec-path$")
+        ,(async-inject-variables "^org-brain-.*")
+        (require 'org-brain)
+        (make-directory org-brain-path t)
+        (let ((entries (directory-files-recursively
+                        org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension))))
+          (org-brain-save-value-to-file entries ,file)
+          entries))
+     `(lambda (result)
+        (setq org-brain-files result)
+        (setq org-brain-relative-files
+              (mapcar #'org-brain-path-entry-name result))))
+    (setq org-brain-files
+          (or org-brain-files
+              (when (file-exists-p file)
+                (with-temp-buffer
+                  (insert-file-contents file)
+                  (read (current-buffer))))))
+    (setq org-brain-relative-files
+          (or org-brain-relative-files
+              (mapcar #'org-brain-path-entry-name org-brain-files)))))
 
 (defun org-brain-replace-links-with-visible-parts (raw-str)
   "Get RAW-STR with its links replaced by their descriptions."
@@ -453,7 +475,7 @@ Respect excluded entries."
                  (mapcar (lambda (entry)
                            (and entry (cons (org-brain-path-entry-name file) entry)))
                          (org-map-entries #'org-brain--name-and-id-at-point org-brain-headline-entries-match)))
-               (org-brain-files))))))
+               org-brain-files)))))
 
 (defun org-brain-entry-from-id (id)
   "Get entry from ID."
@@ -740,7 +762,7 @@ Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
   (interactive (list (or (ignore-errors (org-brain-entry-at-pt))
                          (org-brain-choose-entry
                           "Resource from: "
-                          (append (org-brain-files t) (org-brain-headline-entries))))))
+                          (append org-brain-relative-files (org-brain-headline-entries))))))
   (org-open-link-from-string (org-brain--choose-resource entry)))
 
 (defun org-brain--local-parent (entry)
@@ -840,7 +862,8 @@ PROPERTY could for instance be BRAIN_CHILDREN."
       (org-entry-add-to-multivalued-property (org-brain-entry-marker child)
                                              "BRAIN_PARENTS"
                                              (org-brain-entry-identifier parent)))
-    (org-save-all-org-buffers)))
+    (org-save-all-org-buffers))
+  (org-brain-cache-files))
 
 (defun org-brain-remove-line-if-matching (regex)
   "Delete current line, if matching REGEX."
@@ -892,7 +915,7 @@ If chosen child entry doesn't exist, create it as a new file.
 Several children can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (child-entry (org-brain-choose-entries
-                        "Add child: " (append (org-brain-files t)
+                        "Add child: " (append org-brain-relative-files
                                               (org-brain-headline-entries))))
     (org-brain-add-relationship (org-brain-entry-at-pt) child-entry))
   (org-brain--revert-if-visualizing))
@@ -955,7 +978,7 @@ If chosen parent entry doesn't exist, create it as a new file.
 Several parents can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (parent-entry (org-brain-choose-entries
-                         "Add parent: " (append (org-brain-files t)
+                         "Add parent: " (append org-brain-relative-files
                                                 (org-brain-headline-entries))))
     (org-brain-add-relationship parent-entry (org-brain-entry-at-pt)))
   (org-brain--revert-if-visualizing))
@@ -1003,7 +1026,7 @@ If chosen friend entry doesn't exist, create it as a new file.
 Several friends can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (friend-entry (org-brain-choose-entries
-                         "Add friend: " (append (org-brain-files t)
+                         "Add friend: " (append org-brain-relative-files
                                                 (org-brain-headline-entries))))
     (org-brain--internal-add-friendship (org-brain-entry-at-pt) friend-entry))
   (org-brain--revert-if-visualizing))
@@ -1047,7 +1070,7 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
   (org-brain-stop-wandering)
   (unless entry (setq entry (org-brain-choose-entry
                              "Goto entry: "
-                             (append (org-brain-files t)
+                             (append org-brain-relative-files
                                      (org-brain-headline-entries))
                              nil t)))
   (when org-brain-quit-after-goto
@@ -1170,7 +1193,7 @@ If RECURSIVE is t, remove local children's relationships."
 Both arguments should be relative to `org-brain-path' and should
 not contain `org-brain-files-extension'."
   (interactive (let ((entry (org-brain-choose-entry
-                             "Rename file: " (org-brain-files t) nil t)))
+                             "Rename file: " org-brain-relative-files nil t)))
                  (list entry (read-string "New filename: " entry))))
   (let ((newpath (org-brain-entry-path new-name))
         (oldpath (org-brain-entry-path file-entry)))
@@ -1200,7 +1223,7 @@ If run interactively, ask for the ENTRY.
 If NOCONFIRM is nil, ask if we really want to delete."
   (interactive
    (list (org-brain-choose-entry
-          "Delete entry: " (append (org-brain-files t)
+          "Delete entry: " (append org-brain-relative-files
                                    (org-brain-headline-entries))
           nil t)
          nil))
@@ -1426,7 +1449,7 @@ If interactive, also prompt for ENTRY."
 (defun org-brain-agenda ()
   "Like `org-agenda', but only for `org-brain-files'."
   (interactive)
-  (let ((org-agenda-files (org-brain-files)))
+  (let ((org-agenda-files org-brain-files))
     (org-agenda)))
 
 ;;;###autoload
@@ -1440,7 +1463,7 @@ make a backup of your `org-brain-path' before running this
 function."
   (interactive)
   (when (y-or-n-p "This function is meant for old configurations.  Are you sure you want to scan for links? ")
-    (dolist (file (org-brain-files))
+    (dolist (file org-brain-files)
       (with-temp-buffer
         (insert-file-contents file)
         (org-element-map (org-element-parse-buffer) 'link
@@ -1496,9 +1519,9 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
       (org-brain-choose-entry
        "Entry: "
        (cond ((equal choices 'all)
-              (append (org-brain-files t) (org-brain-headline-entries)))
+              (append org-brain-relative-files (org-brain-headline-entries)))
              ((equal choices 'files)
-              (org-brain-files t))
+              org-brain-relative-files)
              ((equal choices 'root)
               (make-directory org-brain-path t)
               (mapcar #'org-brain-path-entry-name
@@ -1550,7 +1573,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
 (defun org-brain-visualize-random ()
   "Run `org-brain-visualize' on a random org-brain entry."
   (interactive)
-  (let ((entries (append (org-brain-files t)
+  (let ((entries (append org-brain-relative-files
                          (org-brain-headline-entries))))
     (org-brain-visualize (nth (random (length entries)) entries) nil nil t)))
 
@@ -1618,7 +1641,7 @@ If ENTRY is omitted, try to get it from context or prompt for it."
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
                     (org-brain-choose-entry "Insert link in entry: "
-                                            (append (org-brain-files t)
+                                            (append org-brain-relative-files
                                                     (org-brain-headline-entries))))))
   (cl-flet ((insert-resource-link
              ()
@@ -2023,7 +2046,7 @@ Return the position of ENTRY in the buffer."
 LINK-TYPE will be \"brain\" by default."
   (setq link-type (or link-type "brain"))
   (let ((entry (ignore-errors (org-brain-entry-at-pt)))
-        (choice (org-brain-choose-entry "Entry: " (append (org-brain-files t)
+        (choice (org-brain-choose-entry "Entry: " (append org-brain-relative-files
                                                           (org-brain-headline-entries)))))
     (cond ((string-equal link-type org-brain-child-link-name)
            (org-brain-add-relationship entry choice))
