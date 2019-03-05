@@ -69,8 +69,6 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(directory))
 
-(load org-brain-data-file t)
-
 (defcustom org-brain-cache-path "~/.emacs.d/org-brain/cache"
   "Where org-brain cache data is saved."
   :group 'org-brain
@@ -270,9 +268,23 @@ Insert links using `org-insert-link'."
   (setq org-brain-path directory)
   (setq org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path))
   (setq org-brain-pins nil)
-  (load org-brain-data-file t)
+  (org-brain-load-data)
   (org-brain-update-id-locations)
   (message "Switched org-brain to %s" directory))
+
+(defun org-brain-load-data ()
+  "Load `org-brain-data-file'."
+  (when (file-exists-p org-brain-data-file)
+    (let ((value (with-temp-buffer
+                   (insert-file-contents org-brain-data-file)
+                   (read (current-buffer)))))
+      (setq org-brain-pins
+            ;; Read old data-format
+            (if (eq (car value) 'setq)
+                (cadr (nth 2 value))
+              value)))))
+
+(org-brain-load-data)
 
 ;;* API
 
@@ -308,22 +320,6 @@ Insert links using `org-insert-link'."
         (and (member org-brain-exclude-children-tag tags)
              (not (member org-brain-exclude-children-tag
                           (org-get-tags-at nil t)))))))
-
-(defun org-brain-save-data ()
-  "Save data to `org-brain-data-file'."
-  ;; Code adapted from Magnar Sveen's multiple-cursors
-  (with-temp-file org-brain-data-file
-    (emacs-lisp-mode)
-    (dolist (data '(org-brain-pins))
-      (insert "(setq " (symbol-name data) "\n"
-              "      '(")
-      (newline-and-indent)
-      (mapc #'(lambda (value)
-                (insert (format "%S" value))
-                (newline-and-indent))
-            (symbol-value data))
-      (insert "))")
-      (newline))))
 
 (defun org-brain-path-entry-name (path)
   "Get PATH as an org-brain entry name."
@@ -1294,13 +1290,13 @@ If STATUS is omitted, toggle between pinned / not pinned."
          (if (member entry org-brain-pins)
              (error "Entry is already pinned")
            (push entry org-brain-pins)
-           (org-brain-save-data)
+           (org-brain-save-value-to-file org-brain-pins org-brain-data-file)
            (message "Pin added.")))
         ((< status 1)
          (if (member entry org-brain-pins)
              (progn
                (setq org-brain-pins (delete entry org-brain-pins))
-               (org-brain-save-data)
+               (org-brain-save-value-to-file org-brain-pins org-brain-data-file)
                (message "Pin removed."))
            (error "Entry isn't pinned"))))
   (org-brain--revert-if-visualizing))
