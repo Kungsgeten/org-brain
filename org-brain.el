@@ -421,7 +421,7 @@ Respect excluded entries."
      `(lambda ()
         ,(async-inject-variables "^load-path$")
         ,(async-inject-variables "^exec-path$")
-        ,(async-inject-variables "^org-brain-path")
+        ,(async-inject-variables "^org-brain-.*")
         (require 'org-brain)
         (let ((entries (org-brain-headline-entries-1)))
           (org-brain-save-value-to-file entries ,file)
