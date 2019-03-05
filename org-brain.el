@@ -54,6 +54,11 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-files-match (format "^[^.].*\\.%s$" org-brain-files-extension)
+  "Regexp used to match files in `org-brain-path'"
+  :group 'org-brain
+  :type '(string))
+
 (defcustom org-brain-ignored-resource-links '("fuzzy" "radio" "brain" "brain-child" "brain-parent" "brain-friend")
   "`org-link-types' which shouldn't be shown as resources in `org-brain-visualize'."
   :group 'org-brain
@@ -428,7 +433,8 @@ Respect excluded entries."
         (require 'org-brain)
         (make-directory org-brain-path t)
         (let* ((files (directory-files-recursively
-                       org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension)))
+                       org-brain-path
+                       org-brain-files-match))
                (headlines (org-brain-headline-entries files)))
           (org-brain-save-value-to-file files ,file1)
           (org-brain-save-value-to-file headlines ,file2)
@@ -1518,7 +1524,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
              ((equal choices 'root)
               (make-directory org-brain-path t)
               (mapcar #'org-brain-path-entry-name
-                      (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
+                      (directory-files org-brain-path t org-brain-files-match))))
        nil nil def-choice))))
   (unless wander (org-brain-stop-wandering))
   (with-current-buffer (get-buffer-create "*org-brain*")
