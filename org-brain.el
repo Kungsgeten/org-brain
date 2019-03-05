@@ -412,10 +412,11 @@ Respect excluded entries."
 (defvar org-brain-relative-files nil)
 (defvar org-brain-headline-entries nil)
 
-(defun org-brain-cache ()
+(defun org-brain-cache (&optional silent)
   "Cache all org-brain files and headline entries."
   (interactive)
-  (message "org-brain: start to update cache ...")
+  (unless silent
+    (message "org-brain: start to update cache ..."))
   (let* ((dir (file-name-as-directory org-brain-cache-path))
          (file1 (concat dir "files.el"))
          (file2 (concat dir "headline-entries.el")))
@@ -437,7 +438,8 @@ Respect excluded entries."
         (setq org-brain-relative-files
               (mapcar #'org-brain-path-entry-name (car result)))
         (setq org-brain-headline-entries (cdr result))
-        (message "org-brain: Cache updated.")))
+        (unless silent
+          (message "org-brain: Cache updated."))))
     (unless org-brain-files
       (setq org-brain-files
             (when (file-exists-p file1)
@@ -853,7 +855,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
                                              "BRAIN_PARENTS"
                                              (org-brain-entry-identifier parent)))
     (org-save-all-org-buffers))
-  (org-brain-cache))
+  (org-brain-cache t))
 
 (defun org-brain-remove-line-if-matching (regex)
   "Delete current line, if matching REGEX."
@@ -1506,7 +1508,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
                        (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
      (org-brain-stop-wandering)
      (unless org-brain-files
-       (org-brain-cache))
+       (org-brain-cache t))
      (list
       (org-brain-choose-entry
        "Entry: "
