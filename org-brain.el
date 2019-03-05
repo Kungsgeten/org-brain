@@ -174,6 +174,13 @@ Can for instance be used in combination with `all-the-icons'."
   :group 'org-brain
   :type 'hook)
 
+(defcustom org-brain-headline-entries-match nil
+  "a tags/property/todo match as it is used in the agenda tags view.
+Only headline entries that are matched by this query will be showed
+When MATCH is nil or t, all headlines will be showed by the iteration."
+  :group 'org-brain
+  :type '(string))
+
 (defcustom org-brain-exclude-text-tag "notext"
   "`org-mode' tag stopping `org-brain-visualize' from fetching entry text.
 Only applies to headline entries."
@@ -445,7 +452,7 @@ Respect excluded entries."
                  (insert-file-contents file nil nil nil 'replace)
                  (mapcar (lambda (entry)
                            (and entry (cons (org-brain-path-entry-name file) entry)))
-                         (org-map-entries #'org-brain--name-and-id-at-point)))
+                         (org-map-entries #'org-brain--name-and-id-at-point org-brain-headline-entries-match)))
                (org-brain-files))))))
 
 (defun org-brain-entry-from-id (id)
@@ -770,7 +777,7 @@ Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
          (setq children
                (org-map-entries
                 (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
-                t 'region-start-level
+                org-brain-headline-entries-match 'region-start-level
                 (lambda ()
                   (let ((id (org-entry-get nil "ID")))
                     (when (or (not id)
