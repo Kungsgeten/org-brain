@@ -854,8 +854,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
       (org-entry-add-to-multivalued-property (org-brain-entry-marker child)
                                              "BRAIN_PARENTS"
                                              (org-brain-entry-identifier parent)))
-    (org-save-all-org-buffers))
-  (org-brain-cache t))
+    (org-save-all-org-buffers)))
 
 (defun org-brain-remove-line-if-matching (regex)
   "Delete current line, if matching REGEX."
