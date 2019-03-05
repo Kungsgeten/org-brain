@@ -346,7 +346,7 @@ If CHECK-TITLE is non-nil, consider that ENTRY might be a file entry title."
                                              (cons (concat (file-name-directory x)
                                                            (org-brain-title x))
                                                    x))
-                                           (org-brain-files t)))))
+                                           org-brain-relative-files))))
                       entry)
                 (car entry))))
     (expand-file-name (org-link-unescape (format "%s.%s" name org-brain-files-extension))
