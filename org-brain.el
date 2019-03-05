@@ -352,37 +352,6 @@ If CHECK-TITLE is non-nil, consider that ENTRY might be a file entry title."
     (expand-file-name (org-link-unescape (format "%s.%s" name org-brain-files-extension))
                       org-brain-path)))
 
-(defvar org-brain-files nil)
-(defvar org-brain-relative-files nil)
-
-(defun org-brain-cache-files ()
-  "Cache all org files (recursively) in `org-brain-path'."
-  (let ((file (concat (file-name-as-directory org-brain-cache-path)
-                      "file-entries.el")))
-    (async-start
-     `(lambda ()
-        ,(async-inject-variables "^load-path$")
-        ,(async-inject-variables "^exec-path$")
-        ,(async-inject-variables "^org-brain-.*")
-        (require 'org-brain)
-        (make-directory org-brain-path t)
-        (let ((entries (directory-files-recursively
-                        org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension))))
-          (org-brain-save-value-to-file entries ,file)
-          entries))
-     `(lambda (result)
-        (setq org-brain-files result)
-        (setq org-brain-relative-files
-              (mapcar #'org-brain-path-entry-name result))))
-    (unless org-brain-files
-      (setq org-brain-files
-            (when (file-exists-p file)
-              (with-temp-buffer
-                (insert-file-contents file)
-                (read (current-buffer)))))
-      (setq org-brain-relative-files
-            (mapcar #'org-brain-path-entry-name org-brain-files)))))
-
 (defun org-brain-replace-links-with-visible-parts (raw-str)
   "Get RAW-STR with its links replaced by their descriptions."
   (let ((ret-str "")
@@ -439,31 +408,50 @@ Respect excluded entries."
       (let ((save-silently t))
         (write-file file)))))
 
+(defvar org-brain-files nil)
+(defvar org-brain-relative-files nil)
 (defvar org-brain-headline-entries nil)
 
-(defun org-brain-cache-headline-entries ()
-  "Cache all org-brain headline entries."
-  (let ((file (concat (file-name-as-directory org-brain-cache-path)
-                      "headline-entries.el")))
+(defun org-brain-cache ()
+  "Cache all org-brain files and headline entries."
+  (interactive)
+  (let* ((dir (file-name-as-directory org-brain-cache-path))
+         (file1 (concat dir "files.el"))
+         (file2 (concat dir "headline-entries.el")))
     (async-start
      `(lambda ()
         ,(async-inject-variables "^load-path$")
         ,(async-inject-variables "^exec-path$")
         ,(async-inject-variables "^org-brain-.*")
         (require 'org-brain)
-        (let ((entries (org-brain-headline-entries-1)))
-          (org-brain-save-value-to-file entries ,file)
-          entries))
+        (make-directory org-brain-path t)
+        (let* ((files (directory-files-recursively
+                       org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension)))
+               (headlines (org-brain-headline-entries files)))
+          (org-brain-save-value-to-file files ,file1)
+          (org-brain-save-value-to-file headlines ,file2)
+          (cons files headlines)))
      `(lambda (result)
-        (setq org-brain-headline-entries result)))
+        (setq org-brain-files (car result))
+        (setq org-brain-relative-files
+              (mapcar #'org-brain-path-entry-name (car result)))
+        (setq org-brain-headline-entries (cdr result))))
+    (unless org-brain-files
+      (setq org-brain-files
+            (when (file-exists-p file1)
+              (with-temp-buffer
+                (insert-file-contents file1)
+                (read (current-buffer)))))
+      (setq org-brain-relative-files
+            (mapcar #'org-brain-path-entry-name org-brain-files)))
     (unless org-brain-headline-entries
       (setq org-brain-headline-entries
-            (when (file-exists-p file)
+            (when (file-exists-p file2)
               (with-temp-buffer
-                (insert-file-contents file)
+                (insert-file-contents file2)
                 (read (current-buffer))))))))
 
-(defun org-brain-headline-entries-1 ()
+(defun org-brain-headline-entries (files)
   "Get all org-brain headline entries."
   (with-temp-buffer
     (delay-mode-hooks
@@ -475,7 +463,7 @@ Respect excluded entries."
                  (mapcar (lambda (entry)
                            (and entry (cons (org-brain-path-entry-name file) entry)))
                          (org-map-entries #'org-brain--name-and-id-at-point org-brain-headline-entries-match)))
-               org-brain-files)))))
+               files)))))
 
 (defun org-brain-entry-from-id (id)
   "Get entry from ID."
@@ -863,8 +851,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
                                              "BRAIN_PARENTS"
                                              (org-brain-entry-identifier parent)))
     (org-save-all-org-buffers))
-  (org-brain-cache-files)
-  (org-brain-cache-headline-entries))
+  (org-brain-cache))
 
 (defun org-brain-remove-line-if-matching (regex)
   "Delete current line, if matching REGEX."
@@ -1517,9 +1504,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
                        (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
      (org-brain-stop-wandering)
      (unless org-brain-files
-       (org-brain-cache-files))
-     (unless org-brain-headline-entries
-       (org-brain-cache-headline-entries))
+       (org-brain-cache))
      (list
       (org-brain-choose-entry
        "Entry: "
