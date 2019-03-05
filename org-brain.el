@@ -442,8 +442,8 @@ Respect excluded entries."
 
 (defvar org-brain-headline-entries nil)
 
-(defun org-brain-headline-entries ()
-  "Get all org-brain headline entries."
+(defun org-brain-cache-headline-entries ()
+  "Cache all org-brain headline entries."
   (let ((file (concat (file-name-as-directory org-brain-cache-path)
                       "headline-entries.el")))
     (async-start
@@ -457,11 +457,12 @@ Respect excluded entries."
           entries))
      `(lambda (result)
         (setq org-brain-headline-entries result)))
-    (or org-brain-headline-entries
-        (when (file-exists-p file)
-          (with-temp-buffer
-            (insert-file-contents file)
-            (read (current-buffer)))))))
+    (setq org-brain-headline-entries
+          (or org-brain-headline-entries
+              (when (file-exists-p file)
+                (with-temp-buffer
+                  (insert-file-contents file)
+                  (read (current-buffer))))))))
 
 (defun org-brain-headline-entries-1 ()
   "Get all org-brain headline entries."
@@ -762,7 +763,7 @@ Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
   (interactive (list (or (ignore-errors (org-brain-entry-at-pt))
                          (org-brain-choose-entry
                           "Resource from: "
-                          (append org-brain-relative-files (org-brain-headline-entries))))))
+                          (append org-brain-relative-files org-brain-headline-entries)))))
   (org-open-link-from-string (org-brain--choose-resource entry)))
 
 (defun org-brain--local-parent (entry)
@@ -863,7 +864,8 @@ PROPERTY could for instance be BRAIN_CHILDREN."
                                              "BRAIN_PARENTS"
                                              (org-brain-entry-identifier parent)))
     (org-save-all-org-buffers))
-  (org-brain-cache-files))
+  (org-brain-cache-files)
+  (org-brain-cache-headline-entries))
 
 (defun org-brain-remove-line-if-matching (regex)
   "Delete current line, if matching REGEX."
@@ -916,7 +918,7 @@ Several children can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (child-entry (org-brain-choose-entries
                         "Add child: " (append org-brain-relative-files
-                                              (org-brain-headline-entries))))
+                                              org-brain-headline-entries)))
     (org-brain-add-relationship (org-brain-entry-at-pt) child-entry))
   (org-brain--revert-if-visualizing))
 
@@ -979,7 +981,7 @@ Several parents can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (parent-entry (org-brain-choose-entries
                          "Add parent: " (append org-brain-relative-files
-                                                (org-brain-headline-entries))))
+                                                org-brain-headline-entries)))
     (org-brain-add-relationship parent-entry (org-brain-entry-at-pt)))
   (org-brain--revert-if-visualizing))
 
@@ -1027,7 +1029,7 @@ Several friends can be added, by using `org-brain-entry-separator'."
   (interactive)
   (dolist (friend-entry (org-brain-choose-entries
                          "Add friend: " (append org-brain-relative-files
-                                                (org-brain-headline-entries))))
+                                                org-brain-headline-entries)))
     (org-brain--internal-add-friendship (org-brain-entry-at-pt) friend-entry))
   (org-brain--revert-if-visualizing))
 
@@ -1071,7 +1073,7 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
   (unless entry (setq entry (org-brain-choose-entry
                              "Goto entry: "
                              (append org-brain-relative-files
-                                     (org-brain-headline-entries))
+                                     org-brain-headline-entries)
                              nil t)))
   (when org-brain-quit-after-goto
     (org-brain-visualize-quit))
@@ -1224,7 +1226,7 @@ If NOCONFIRM is nil, ask if we really want to delete."
   (interactive
    (list (org-brain-choose-entry
           "Delete entry: " (append org-brain-relative-files
-                                   (org-brain-headline-entries))
+                                   org-brain-headline-entries)
           nil t)
          nil))
   (let ((local-children (org-brain--local-children entry)))
@@ -1393,7 +1395,7 @@ If run interactively, get ENTRY from context."
 Prompt for name of the new file.
 If interactive, also prompt for ENTRY."
   (interactive (list (org-brain-choose-entry "Convert entry: "
-                                             (org-brain-headline-entries)
+                                             org-brain-headline-entries
                                              nil t)))
   (let* (level
          (title (org-brain-title entry))
@@ -1519,7 +1521,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
       (org-brain-choose-entry
        "Entry: "
        (cond ((equal choices 'all)
-              (append org-brain-relative-files (org-brain-headline-entries)))
+              (append org-brain-relative-files org-brain-headline-entries))
              ((equal choices 'files)
               org-brain-relative-files)
              ((equal choices 'root)
@@ -1574,7 +1576,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
   "Run `org-brain-visualize' on a random org-brain entry."
   (interactive)
   (let ((entries (append org-brain-relative-files
-                         (org-brain-headline-entries))))
+                         org-brain-headline-entries)))
     (org-brain-visualize (nth (random (length entries)) entries) nil nil t)))
 
 (defvar org-brain-wander-timer nil
@@ -1642,7 +1644,7 @@ If ENTRY is omitted, try to get it from context or prompt for it."
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
                     (org-brain-choose-entry "Insert link in entry: "
                                             (append org-brain-relative-files
-                                                    (org-brain-headline-entries))))))
+                                                    org-brain-headline-entries)))))
   (cl-flet ((insert-resource-link
              ()
              (unless (and link (not prompt))
@@ -2047,7 +2049,7 @@ LINK-TYPE will be \"brain\" by default."
   (setq link-type (or link-type "brain"))
   (let ((entry (ignore-errors (org-brain-entry-at-pt)))
         (choice (org-brain-choose-entry "Entry: " (append org-brain-relative-files
-                                                          (org-brain-headline-entries)))))
+                                                          org-brain-headline-entries))))
     (cond ((string-equal link-type org-brain-child-link-name)
            (org-brain-add-relationship entry choice))
           ((string-equal link-type org-brain-parent-link-name)
