@@ -438,8 +438,11 @@ Respect excluded entries."
     (async-start
      `(lambda ()
         ,(async-inject-variables "^load-path$")
-        ,(async-inject-variables "^exec-path$")
-        ,(async-inject-variables "^org-brain-.*")
+        ,(async-inject-variables "org-brain-path.*")
+        ,(async-inject-variables "org-brain-files-.*")
+        ,(async-inject-variables "org-brain-file-.*")
+        ,(async-inject-variables "org-brain-headline-entries-.*")
+        ,(async-inject-variables "org-brain-.*-tag")
         (require 'org-brain)
         (make-directory org-brain-path t)
         (let* ((files (directory-files-recursively
