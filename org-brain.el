@@ -558,6 +558,7 @@ Return the prompted entries in a list.
 Very similar to `org-brain-choose-entry', but can return several entries.
 
 For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
+  (unless org-brain-files (org-brain-cache t))
   (unless org-id-locations (org-id-locations-load))
   (let* ((targets (mapcar (lambda (x)
                             (cons (org-brain-entry-name x)
@@ -567,6 +568,8 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                           entries))
          (choices (completing-read prompt targets
                                    predicate require-match initial-input)))
+    ;; Run org-brain-cache again
+    (org-brain-cache t)
     (mapcar (lambda (title)
               (let ((id (or (cdr (assoc title targets))
                             title)))
@@ -1535,8 +1538,6 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
          (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
                        (ignore-errors (org-brain-entry-at-pt)))))
      (org-brain-stop-wandering)
-     (unless org-brain-files
-       (org-brain-cache t))
      (list
       (if (and (listp def-choice)
                (= (length def-choice) 3))
