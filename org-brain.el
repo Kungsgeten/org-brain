@@ -517,6 +517,19 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
                  (org-brain-entry-from-id id)
                (error "Current headline have no ID"))
            (org-brain-path-entry-name (buffer-file-name))))
+        ((eq major-mode 'org-agenda-mode)
+         (let (item id file-name)
+           (org-agenda-with-point-at-orig-entry
+            nil
+            (setq item (org-entry-get (point) "ITEM")
+                  id (org-entry-get (point) "ID")
+                  file-name (expand-file-name (buffer-file-name))))
+           (unless (string-prefix-p (expand-file-name org-brain-path)
+                                    file-name)
+             (error "Not in a headline from brain file"))
+           (if id
+               (org-brain-entry-from-id id)
+             (error "Current headline have no ID"))))
         ((eq major-mode 'org-brain-visualize-mode)
          org-brain--vis-entry)
         (t
