@@ -504,26 +504,32 @@ If ENTRY is file, then the identifier is the relative file name."
       (org-entry-protect-space entry)
     (nth 2 entry)))
 
-(defun org-brain-entry-at-pt ()
+(defun org-brain-entry-at-pt (&optional auto-create-id)
   "Get current org-brain entry.
-In `org-mode' this is the current headline, or the file.
-In `org-brain-visualize' just return `org-brain--vis-entry'."
+In `org-mode' and `org-agenda-mode' this is the current headline,
+or the file.  In `org-brain-visualize' just return
+`org-brain--vis-entry', if AUTO-CREATE-ID is non-nil, org headline id will
+be auto created when necessary in `org-mode' or `org-agenda-mode'."
   (cond ((eq major-mode 'org-mode)
          (unless (string-prefix-p (expand-file-name org-brain-path)
                                   (expand-file-name (buffer-file-name)))
            (error "Not in a brain file"))
          (if (ignore-errors (org-get-heading))
-             (if-let ((id (org-entry-get nil "ID")))
-                 (org-brain-entry-from-id id)
-               (error "Current headline have no ID"))
+             (progn
+               (when auto-create-id (org-id-get-create))
+               (if-let ((id (org-entry-get nil "ID")))
+                   (org-brain-entry-from-id id)
+                 (error "Current headline have no ID")))
            (org-brain-path-entry-name (buffer-file-name))))
         ((eq major-mode 'org-agenda-mode)
          (let (item id file-name)
            (org-agenda-with-point-at-orig-entry
             nil
-            (setq item (org-entry-get (point) "ITEM")
-                  id (org-entry-get (point) "ID")
-                  file-name (expand-file-name (buffer-file-name))))
+            (progn
+              (when auto-create-id (org-id-get-create))
+              (setq item (org-entry-get (point) "ITEM")
+                    id (org-entry-get (point) "ID")
+                    file-name (expand-file-name (buffer-file-name)))))
            (unless (string-prefix-p (expand-file-name org-brain-path)
                                     file-name)
              (error "Not in a headline from brain file"))
@@ -953,7 +959,7 @@ Several children can be added, by using `org-brain-entry-separator'."
   (dolist (child-entry (org-brain-choose-entries
                         "Add child: " (append org-brain-relative-files
                                               org-brain-headline-entries)))
-    (org-brain-add-relationship (org-brain-entry-at-pt) child-entry))
+    (org-brain-add-relationship (org-brain-entry-at-pt t) child-entry))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
@@ -961,7 +967,7 @@ Several children can be added, by using `org-brain-entry-separator'."
   "Create a new internal child headline to entry at point.
 Several children can be created, by using `org-brain-entry-separator'."
   (interactive)
-  (let ((entry (org-brain-entry-at-pt))
+  (let ((entry (org-brain-entry-at-pt t))
         (child-name-string (read-string "Add child headline: ")))
     (dolist (child-name (split-string child-name-string org-brain-entry-separator))
       (when (equal (length child-name) 0)
@@ -1016,7 +1022,7 @@ Several parents can be added, by using `org-brain-entry-separator'."
   (dolist (parent-entry (org-brain-choose-entries
                          "Add parent: " (append org-brain-relative-files
                                                 org-brain-headline-entries)))
-    (org-brain-add-relationship parent-entry (org-brain-entry-at-pt)))
+    (org-brain-add-relationship parent-entry (org-brain-entry-at-pt t)))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
@@ -1064,7 +1070,7 @@ Several friends can be added, by using `org-brain-entry-separator'."
   (dolist (friend-entry (org-brain-choose-entries
                          "Add friend: " (append org-brain-relative-files
                                                 org-brain-headline-entries)))
-    (org-brain--internal-add-friendship (org-brain-entry-at-pt) friend-entry))
+    (org-brain--internal-add-friendship (org-brain-entry-at-pt t) friend-entry))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
