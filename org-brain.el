@@ -516,7 +516,9 @@ be auto created when necessary in `org-mode' or `org-agenda-mode'."
            (error "Not in a brain file"))
          (if (ignore-errors (org-get-heading))
              (progn
-               (when auto-create-id (org-id-get-create))
+               (when (and auto-create-id
+                          (yes-or-no-p (format "Auto create ID for '%s'? " (org-get-heading))))
+                 (org-id-get-create))
                (if-let ((id (org-entry-get nil "ID")))
                    (org-brain-entry-from-id id)
                  (error "Current headline have no ID")))
@@ -526,9 +528,11 @@ be auto created when necessary in `org-mode' or `org-agenda-mode'."
            (org-agenda-with-point-at-orig-entry
             nil
             (progn
-              (when auto-create-id (org-id-get-create))
-              (setq item (org-entry-get (point) "ITEM")
-                    id (org-entry-get (point) "ID")
+              (setq item (org-entry-get (point) "ITEM"))
+              (when (and auto-create-id
+                         (yes-or-no-p (format "Auto create ID for '%s'? " item)))
+                (org-id-get-create))
+              (setq id (org-entry-get (point) "ID")
                     file-name (expand-file-name (buffer-file-name)))))
            (unless (string-prefix-p (expand-file-name org-brain-path)
                                     file-name)
