@@ -517,6 +517,7 @@ be auto created when necessary in `org-mode' or `org-agenda-mode'."
          (if (ignore-errors (org-get-heading))
              (progn
                (when (and auto-create-id
+                          (not (org-entry-get nil "ID"))
                           (yes-or-no-p (format "Auto create ID for '%s'? " (org-get-heading))))
                  (org-id-get-create))
                (if-let ((id (org-entry-get nil "ID")))
@@ -529,7 +530,9 @@ be auto created when necessary in `org-mode' or `org-agenda-mode'."
             nil
             (progn
               (setq item (org-entry-get (point) "ITEM"))
+              (setq id (org-entry-get (point) "ID"))
               (when (and auto-create-id
+                         (not id)
                          (yes-or-no-p (format "Auto create ID for '%s'? " item)))
                 (org-id-get-create))
               (setq id (org-entry-get (point) "ID")
