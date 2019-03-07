@@ -1333,6 +1333,63 @@ of ENTRY and insert there too."
     (dolist (child (org-brain--local-children entry))
       (org-brain-insert-relationships child t))))
 
+(defun org-dblock-write:brain (params)
+  "Org dynamic block support for org-brain.
+
+PARAMS is a property list of parameters:
+
+`:entry'
+
+    the org-brain entry, by default is the entry returned
+    by `org-brain-entry-at-pt'.
+
+`:parents'
+
+    The name of parents item, by default is: \"Parents\".
+
+`:Children'
+
+    The name of children item, by default is: \"Children\".
+
+`:Friends'
+
+    The name of friends item, by default is: \"Friends\"."
+  (let* ((entries (mapcar (lambda (x)
+                            (cons (org-brain-entry-name x)
+                                  (if (org-brain-filep x)
+                                      x
+                                    (nth 2 x))))
+                          (append org-brain-relative-files org-brain-headline-entries)))
+         (id (cdr (assoc (plist-get params :entry) entries 'string=)))
+         (entry (or (org-brain-entry-from-id id)
+                    id
+                    (org-brain-entry-at-pt)))
+         (parents (or (plist-get params :parents) "Parents"))
+         (children (or (plist-get params :children) "Children"))
+         (friends (or (plist-get params :friends) "Friends")))
+    (when entry
+      (cl-flet ((list-to-items
+                 (list)
+                 (when list
+                   `(unordered
+                     ,@(mapcar (lambda (x)
+                                 (list (org-make-link-string
+                                        (format "brain:%s" (org-brain-entry-identifier x))
+                                        (org-brain-title x))))
+                               list)))))
+        (save-excursion
+          (insert
+           (org-list-to-org
+            `(unordered
+              ,(remq nil `(,parents
+                           ,(list-to-items (org-brain-parents entry))))
+              ,(remq nil `(,children
+                           ,(list-to-items (org-brain--linked-property-entries
+                                            entry "BRAIN_CHILDREN"))))
+              ,(remq nil `(,friends
+                           ,(list-to-items (org-brain-friends entry)))))))
+          (widen))))))
+
 ;;;###autoload
 (defun org-brain-archive (entry)
   "Use `org-archive-subtree-default' on ENTRY.
