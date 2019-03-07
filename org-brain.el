@@ -1112,14 +1112,14 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
   (org-save-all-org-buffers))
 
 ;;;###autoload
-(defun org-brain-goto (&optional entry goto-file-func)
+(defun org-brain-goto (&optional entry goto-file-func prompt)
   "Goto buffer and position of org-brain ENTRY.
 If ENTRY isn't specified, ask for the ENTRY.
 Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the entry."
   (interactive)
   (org-brain-stop-wandering)
   (unless entry (setq entry (org-brain-choose-entry
-                             "Goto entry: "
+                             (or prompt "Goto entry: ")
                              (append org-brain-relative-files
                                      org-brain-headline-entries)
                              nil t)))
@@ -1172,13 +1172,15 @@ If run with `\\[universal-argument]', or SAME-WINDOW as t, use current window."
 If run interactively, get ENTRY from context.
 If ALL is nil, choose only between externally linked children."
   (interactive (list (org-brain-entry-at-pt)))
-  (org-brain-goto (org-brain-choose-entry
-                   "Goto child: "
-                   (if all
-                       (org-brain-children entry)
-                     (org-brain--linked-property-entries
-                      entry "BRAIN_CHILDREN"))
-                   nil t)))
+  (let ((entries (if all
+                     (org-brain-children entry)
+                   (org-brain--linked-property-entries
+                    entry "BRAIN_CHILDREN"))))
+    (org-brain-goto
+     (when entries
+       (org-brain-choose-entry
+        "Goto child: " entries nil t))
+     nil "No children is found, goto other entries: ")))
 
 ;;;###autoload
 (defun org-brain-goto-parent (entry &optional all)
@@ -1186,24 +1188,29 @@ If ALL is nil, choose only between externally linked children."
 If run interactively, get ENTRY from context.
 If ALL is nil, choose only between externally linked parents."
   (interactive (list (org-brain-entry-at-pt)))
-  (org-brain-goto (org-brain-choose-entry
-                   "Goto parent: "
-                   (if all
-                       (org-brain-parents entry)
-                     (org-brain--linked-property-entries
-                      entry "BRAIN_PARENTS"))
-                   nil t)))
+  (let ((entries (if all
+                     (org-brain-parents entry)
+                   (org-brain--linked-property-entries
+                    entry "BRAIN_PARENTS"))))
+    (org-brain-goto
+     (when entries
+       (org-brain-choose-entry
+        "Goto parent: " entries nil t))
+     nil "No parent is found, goto other entries: ")))
 
 ;;;###autoload
 (defun org-brain-goto-friend (entry)
   "Goto a friend of ENTRY.
 If run interactively, get ENTRY from context."
   (interactive (list (org-brain-entry-at-pt)))
-  (org-brain-goto (org-brain-choose-entry
-                   "Goto friend: "
-                   (org-brain--linked-property-entries
-                    entry "BRAIN_FRIENDS")
-                   nil t)))
+  (let ((entries
+         (org-brain--linked-property-entries
+          entry "BRAIN_FRIENDS")))
+    (org-brain-goto
+     (when entries
+       (org-brain-choose-entry
+        "Goto friend: " entries nil t))
+     nil "No friend is found, goto other entries: ")))
 
 ;;;###autoload
 (defun org-brain-refile (max-level)
