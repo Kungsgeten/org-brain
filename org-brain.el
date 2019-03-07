@@ -596,32 +596,33 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                                    predicate require-match initial-input)))
     ;; Run org-brain-cache again
     (org-brain-cache t)
-    (mapcar (lambda (title)
-              (let ((id (or (cdr (assoc title targets))
-                            title)))
-                (or
-                 ;; Headline entry exists, return it
-                 (org-brain-entry-from-id id)
-                 ;; File entry
-                 (progn
-                   (setq id (split-string id "::" t))
-                   (let* ((entry-path (org-brain-entry-path (car id) t))
-                          (entry-file (org-brain-path-entry-name entry-path)))
-                     (unless (file-exists-p entry-path)
-                       (make-directory (file-name-directory entry-path) t)
-                       (write-region "" nil entry-path))
-                     (if (equal (length id) 2)
-                         ;; Create new headline entry in file
-                         (with-current-buffer (find-file-noselect entry-path)
-                           (goto-char (point-max))
-                           (insert (concat "\n* " (cadr id)))
-                           (let ((new-id (org-id-get-create)))
-                             (run-hooks 'org-brain-new-entry-hook)
-                             (list entry-file (cadr id) new-id)))
-                       entry-file))))))
-            (if org-brain-entry-separator
-                (split-string choices org-brain-entry-separator)
-              (list choices)))))
+    (unless (equal choices "")
+      (mapcar (lambda (title)
+                (let ((id (or (cdr (assoc title targets))
+                              title)))
+                  (or
+                   ;; Headline entry exists, return it
+                   (org-brain-entry-from-id id)
+                   ;; File entry
+                   (progn
+                     (setq id (split-string id "::" t))
+                     (let* ((entry-path (org-brain-entry-path (car id) t))
+                            (entry-file (org-brain-path-entry-name entry-path)))
+                       (unless (file-exists-p entry-path)
+                         (make-directory (file-name-directory entry-path) t)
+                         (write-region "" nil entry-path))
+                       (if (equal (length id) 2)
+                           ;; Create new headline entry in file
+                           (with-current-buffer (find-file-noselect entry-path)
+                             (goto-char (point-max))
+                             (insert (concat "\n* " (cadr id)))
+                             (let ((new-id (org-id-get-create)))
+                               (run-hooks 'org-brain-new-entry-hook)
+                               (list entry-file (cadr id) new-id)))
+                         entry-file))))))
+              (if org-brain-entry-separator
+                  (split-string choices org-brain-entry-separator)
+                (list choices))))))
 
 (defun org-brain-choose-entry (prompt entries &optional predicate require-match initial-input)
   "PROMPT for an entry from ENTRIES and return it.
