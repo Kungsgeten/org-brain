@@ -435,6 +435,12 @@ Respect excluded entries."
   (let* ((dir (file-name-as-directory org-brain-cache-path))
          (file1 (concat dir "files.el"))
          (file2 (concat dir "headline-entries.el")))
+    (unless org-brain-headline-entries
+      (setq org-brain-headline-entries
+            (when (file-exists-p file2)
+              (with-temp-buffer
+                (insert-file-contents file2)
+                (read (current-buffer))))))
     (async-start
      `(lambda ()
         ,(async-inject-variables "^load-path$")
@@ -466,13 +472,7 @@ Respect excluded entries."
                 (insert-file-contents file1)
                 (read (current-buffer)))))
       (setq org-brain-relative-files
-            (mapcar #'org-brain-path-entry-name org-brain-files)))
-    (unless org-brain-headline-entries
-      (setq org-brain-headline-entries
-            (when (file-exists-p file2)
-              (with-temp-buffer
-                (insert-file-contents file2)
-                (read (current-buffer))))))))
+            (mapcar #'org-brain-path-entry-name org-brain-files)))))
 
 (defun org-brain-get-headline-entries (files)
   "Get all org-brain headline entries."
