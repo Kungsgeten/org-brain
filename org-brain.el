@@ -489,8 +489,27 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
          (choices (completing-read prompt targets
                                    predicate require-match initial-input)))
     (mapcar (lambda (title)
-              (let ((id (or (cdr (assoc title targets))
-                            title)))
+	      (let ((id
+		     ;; Consider all title matches within targets
+		     (let ((ids (remove-if-not (lambda (x) (equal (car x) title)) targets)))
+		       (if ids
+			   (if (= (length ids) 1)
+			       ;; Unique title: return corresponding ID
+			       (cdar ids)
+			     ;; Multiple identical titles: notify and ask user
+			     (let ((choices
+				    (mapcar (lambda (x) (cons (format "%s (ID: %s)"
+								      (car x)
+								      (cdr x))
+							      (cdr x)))
+					    ids)))
+			       (cdr (assoc (completing-read "Clarify ambiguity: "
+							    choices
+							    nil
+							    t)
+					   choices))))
+			 ;; title not in targets: will be created
+			 title))))
                 (or
                  ;; Headline entry exists, return it
                  (org-brain-entry-from-id id)
