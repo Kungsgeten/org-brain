@@ -1461,6 +1461,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
   (unless wander (org-brain-stop-wandering))
   (with-current-buffer (get-buffer-create "*org-brain*")
     (read-only-mode 1)
+    (setq-local default-directory (file-name-directory (org-brain-entry-path entry)))
     (unless (eq org-brain--vis-entry entry)
       (setq org-brain--vis-entry entry)
       (setq org-brain-mind-map-parent-level (default-value 'org-brain-mind-map-parent-level))
