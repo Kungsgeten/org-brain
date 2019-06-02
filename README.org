@@ -136,6 +136,8 @@ content typically being the text before the first headline in the file) and all
 headlines /with an ID property/ inside these files are considered as /headline/
 entries.
 
+By default subdirectories inside =org-brain-path= are scanned recursively for files, so all subdirectories and their files are considered part of the brain. You can choose to only have the root of =org-brain-path= be scanned for files, by setting =org-brain-scan-directories-recursively= to =nil=.
+
 If you have a headline entry, which you want to convert to a file entry, use
 =M-x org-brain-headline-to-file=. Unfortunately there is currently no function
 to convert a file entry into a headline entry.
@@ -226,6 +228,7 @@ entries.
 - =brain-parent:= :: Like =brain-child:= but makes the linked entry a parent of
      the current entry.
 - =brain-friend:= :: Like =brain-child:= but adds the linked entry as a friend.
+- =brainswitch= :: If you have multiple brains you may want a link which switches to a specific brain and one of its entries. The =brainswitch= link allows for this.
 
 The names of the relationship inserting links (=brain-child=, =brain-parent= and =brain-friend=) can be customized with the variables =org-brain-child-link-name=, =org-brain-parent-link-name=, and =org-brain-friend-link-name=. This customization should be done before loading =org-brain=. If you're using =use-package=, put the customization in the =:init= block.
 
@@ -314,7 +317,9 @@ At the moment there's no way to add/remove/change descriptions directly from the
 
 ** Having multiple brains
 
-You can have multiple brains simply by having more than one brain folder. In this way, each folder becomes a separate brain. You can switch between these using =M-x org-brain-switch-brain=.
+You can have multiple brains simply by having more than one brain folder. In this way, each folder becomes a separate brain. You can switch between these using =M-x org-brain-switch-brain=. You can also use =brainswitch:= links in =org-mode= to switch brains.
+
+If you run =org-brain-visualize= from inside an org-file in /the root/ of an org-brain directory, =org-brain= will automatically switch to this brain.
 
 ** Take note!
 

@@ -50,6 +50,11 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(directory))
 
+(defcustom org-brain-scan-directories-recursively t
+  "If subdirectories inside `org-brain-path' are considered part of the brain or not."
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-files-extension "org"
   "The extension for entry files in `org-brain-path'."
   :group 'org-brain
@@ -286,10 +291,18 @@ Insert links using `org-insert-link'."
   (interactive "D")
   (setq org-brain-path directory)
   (setq org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path))
+  (unless (file-exists-p org-brain-data-file)
+    (org-brain-save-data))
   (setq org-brain-pins nil)
   (load org-brain-data-file t)
   (org-brain-update-id-locations)
   (message "Switched org-brain to %s" directory))
+
+(defun org-brain-maybe-switch-brain ()
+  "Switch brain to `default-directory' if a file named \".org-brain-data.el\" exists there."
+  (when (and (not (file-equal-p default-directory org-brain-path))
+             (file-exists-p (expand-file-name ".org-brain-data.el" default-directory)))
+    (org-brain-switch-brain default-directory)))
 
 (defun org-brain-filep (entry)
   "Return t if the ENTRY is a (potential) brain file."
@@ -355,8 +368,11 @@ Ignores \"dotfiles\"."
   (make-directory org-brain-path t)
   (if relative
       (mapcar #'org-brain-path-entry-name (org-brain-files))
-    (directory-files-recursively
-     org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension))))
+    (if org-brain-scan-directories-recursively
+        (directory-files-recursively
+         org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension))
+      (directory-files
+       org-brain-path t (format "^[^.].*\\.%s$" org-brain-files-extension)))))
 
 (defun org-brain-replace-links-with-visible-parts (raw-str)
   "Get RAW-STR with its links replaced by their descriptions."
@@ -1445,29 +1461,32 @@ Unless NOHISTORY is non-nil, add the entry to `org-brain--vis-history'.
 Setting NOFOCUS to t implies also having NOHISTORY as t.
 Unless WANDER is t, `org-brain-stop-wandering' will be run."
   (interactive
-   (let ((choices (cond ((equal current-prefix-arg '(4)) 'all)
-                        ((equal current-prefix-arg '(16)) 'files)
-                        ((equal current-prefix-arg '(64)) 'root)
-                        (t org-brain-visualize-default-choices)))
-         (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
-                       (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
-     (org-brain-stop-wandering)
-     (list
-      (org-brain-choose-entry
-       "Entry: "
-       (cond ((equal choices 'all)
-              (append (org-brain-files t) (org-brain-headline-entries)))
-             ((equal choices 'files)
-              (org-brain-files t))
-             ((equal choices 'root)
-              (make-directory org-brain-path t)
-              (mapcar #'org-brain-path-entry-name
-                      (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
-       nil nil def-choice))))
+   (progn
+     (org-brain-maybe-switch-brain)
+     (let ((choices (cond ((equal current-prefix-arg '(4)) 'all)
+                          ((equal current-prefix-arg '(16)) 'files)
+                          ((equal current-prefix-arg '(64)) 'root)
+                          (t org-brain-visualize-default-choices)))
+           (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
+                         (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
+       (org-brain-stop-wandering)
+       (list
+        (org-brain-choose-entry
+         "Entry: "
+         (cond ((equal choices 'all)
+                (append (org-brain-files t) (org-brain-headline-entries)))
+               ((equal choices 'files)
+                (org-brain-files t))
+               ((equal choices 'root)
+                (make-directory org-brain-path t)
+                (mapcar #'org-brain-path-entry-name
+                        (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
+         nil nil def-choice)))))
   (unless wander (org-brain-stop-wandering))
   (with-current-buffer (get-buffer-create "*org-brain*")
     (read-only-mode 1)
     (setq-local default-directory (file-name-directory (org-brain-entry-path entry)))
+    (org-brain-maybe-switch-brain)
     (unless (eq org-brain--vis-entry entry)
       (setq org-brain--vis-entry entry)
       (setq org-brain-mind-map-parent-level (default-value 'org-brain-mind-map-parent-level))
@@ -2026,6 +2045,35 @@ LINK-TYPE will be \"brain\" by default."
 (org-link-set-parameters org-brain-friend-link-name
                          :complete (lambda () (org-brain-link-complete org-brain-friend-link-name))
                          :follow 'org-brain-goto)
+
+;; * Brain switch link
+
+(defun org-brain--switch-link-complete ()
+  "Create an org-link target string to an org-brain and one of its entries."
+  (let* ((org-brain-path (read-directory-name "Brain dir: " org-brain-path))
+         (entry (org-brain-choose-entry "Entry: " (append (org-brain-files)
+                                                          (org-brain-headline-entries)))))
+    (concat "brainswitch:" org-brain-path
+            "::"
+            (if (org-brain-filep entry)
+                entry
+              (nth 2 entry)))))
+
+(defun org-brain--switch-and-visualize (directory entry)
+  "Switch brain to DIRECTORY and visualize ENTRY.
+ENTRY should be a string; an id in the case of an headline entry."
+  (org-brain-switch-brain directory)
+  (org-brain-visualize (or (org-brain-entry-from-id entry) entry)))
+
+(defun org-brain--switch-link-follow (link)
+  "Follow function for brainswitch links."
+  (let ((link-parts (split-string link "::")))
+    (org-brain--switch-and-visualize (car link-parts)
+                                     (cadr link-parts))))
+
+(org-link-set-parameters "brainswitch"
+                         :complete 'org-brain--switch-link-complete
+                         :follow 'org-brain--switch-link-follow)
 
 (provide 'org-brain)
 ;;; org-brain.el ends here
