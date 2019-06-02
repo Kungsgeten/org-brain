@@ -1292,7 +1292,7 @@ If run interactively, get ENTRY from context and prompt for TITLE."
 ;;;###autoload
 (defun org-brain-set-tags (entry)
   "Modify the ENTRY tags.
-Use `org-set-tags' on headline ENTRY.
+Use `org-set-tags-command' on headline ENTRY.
 Instead sets #+FILETAGS on file ENTRY.
 If run interactively, get ENTRY from context."
   (interactive (list (org-brain-entry-at-pt)))
@@ -1314,7 +1314,7 @@ If run interactively, get ENTRY from context."
           (org-save-outline-visibility 'use-markers (org-mode-restart)))
         (save-buffer))
     (org-with-point-at (org-brain-entry-marker entry)
-      (org-set-tags)
+      (org-set-tags-command)
       (save-buffer)))
   (org-brain--revert-if-visualizing))
 
