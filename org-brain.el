@@ -1690,8 +1690,8 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "P" 'org-brain-remove-parent)
 (define-key org-brain-visualize-mode-map "c" 'org-brain-add-child)
 (define-key org-brain-visualize-mode-map "C" 'org-brain-remove-child)
-(define-key org-brain-visualize-mode-map "*" 'org-brain-new-child)
-(define-key org-brain-visualize-mode-map "h" 'org-brain-new-child)
+(define-key org-brain-visualize-mode-map "*" 'org-brain-add-child-headline)
+(define-key org-brain-visualize-mode-map "h" 'org-brain-add-child-headline)
 (define-key org-brain-visualize-mode-map "n" 'org-brain-pin)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-set-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
@@ -1715,10 +1715,10 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "w" 'org-brain-visualize-random)
 (define-key org-brain-visualize-mode-map "W" 'org-brain-visualize-wander)
 (define-key org-brain-visualize-mode-map "m" 'org-brain-visualize-mind-map)
-(define-key org-brain-visualize-mode-map "+" 'org-brain-visualize-add-grandchild)
-(define-key org-brain-visualize-mode-map "-" 'org-brain-visualize-remove-grandchild)
-(define-key org-brain-visualize-mode-map "z" 'org-brain-visualize-add-grandparent)
-(define-key org-brain-visualize-mode-map "Z" 'org-brain-visualize-remove-grandparent)
+(define-key org-brain-visualize-mode-map "+" 'org-brain-show-descendant-level)
+(define-key org-brain-visualize-mode-map "-" 'org-brain-hide-descendant-level)
+(define-key org-brain-visualize-mode-map "z" 'org-brain-show-ancestor-level)
+(define-key org-brain-visualize-mode-map "Z" 'org-brain-hide-ancestor-level
 
 ;;** Drawing helpers
 
