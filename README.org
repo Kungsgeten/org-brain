@@ -9,7 +9,7 @@ You can think of =org-brain= as a combination of a wiki and a mind map, where
 each wiki page / mind map node is an =org-mode= file which resides in your
 =org-brain-path=, or a headline with an ID property in one of those files. These
 are called /entries/. Entries can be linked together, and you can then
-view the network of links as a mind map, using =M-x org-brain-visualize=.
+view the network of links as a mind map, using =M-x org-brain-visualize=. Here's [[https://www.youtube.com/watch?v=3EGOwfWok5s&t=][a video introducing =org-brain=]].
 
 #+BEGIN_EXAMPLE
   PINNED:  Index
@@ -502,6 +502,30 @@ init-file.
     "Rifle files in `org-brain-path'."
     (interactive)
     (helm-org-rifle-directories (list org-brain-path)))
+#+END_SRC
+
+** [[https://github.com/weirdNox/org-noter][org-noter]]
+
+#+BEGIN_QUOTE
+Org-noter's purpose is to let you create notes that are kept in sync when you scroll through the [PDF etc] document
+#+END_QUOTE
+
+Thanks to [[https://github.com/rosetree][rosetree]] for providing this tip! After installing =org-noter=, add the following to your init-file:
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'org-noter-insert-heading-hook #'org-id-get-create)
+(defun org-brain-open-org-noter (entry)
+    "Open `org-noter' on the ENTRY.
+If run interactively, get ENTRY from context."
+    (interactive (list (org-brain-entry-at-pt)))
+    (org-with-point-at (org-brain-entry-marker entry)
+      (org-noter)))
+#+END_SRC
+
+=org-brain-open-org-noter= will run =org-noter= on the current entry. This lets you save your PDF notes in =org-brain=, so you can link to them from other entries etc. It can be a good idea to add this command to =org-brain-visualize=, like this:
+
+#+BEGIN_SRC emacs-lisp
+  (define-key org-brain-visualize-mode-map (kbd "\C-c n") 'org-brain-open-org-noter)
 #+END_SRC
 
 ** [[https://github.com/scallywag/org-board][org-board]]
