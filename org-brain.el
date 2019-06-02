@@ -1718,7 +1718,7 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "+" 'org-brain-show-descendant-level)
 (define-key org-brain-visualize-mode-map "-" 'org-brain-hide-descendant-level)
 (define-key org-brain-visualize-mode-map "z" 'org-brain-show-ancestor-level)
-(define-key org-brain-visualize-mode-map "Z" 'org-brain-hide-ancestor-level
+(define-key org-brain-visualize-mode-map "Z" 'org-brain-hide-ancestor-level)
 
 ;;** Drawing helpers
 
