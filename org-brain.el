@@ -510,7 +510,7 @@ This is a description.
                 (org-mode)
                 (mapcar (lambda (entry)
                           (cons (concat file-entry-name "::" (car entry))
-                                (cdr entry)))
+                                (cadr entry)))
                         (remove nil (org-map-entries
                                      #'org-brain--name-and-id-at-point))))))))
 
