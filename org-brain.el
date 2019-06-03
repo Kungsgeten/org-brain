@@ -289,14 +289,17 @@ Insert links using `org-insert-link'."
 (defun org-brain-switch-brain (directory)
   "Choose another DIRECTORY to be your `org-brain-path'."
   (interactive "D")
-  (setq org-brain-path directory)
-  (setq org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path))
-  (unless (file-exists-p org-brain-data-file)
-    (org-brain-save-data))
-  (setq org-brain-pins nil)
-  (load org-brain-data-file t)
-  (org-brain-update-id-locations)
-  (message "Switched org-brain to %s" directory))
+  (if (file-equal-p directory org-brain-path)
+      (message "Current brain already is %s, no switch" directory)
+    (progn
+      (setq org-brain-path directory)
+      (setq org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path))
+      (unless (file-exists-p org-brain-data-file)
+        (org-brain-save-data))
+      (setq org-brain-pins nil)
+      (load org-brain-data-file t)
+      (org-brain-update-id-locations)
+      (message "Switched org-brain to %s" directory))))
 
 (defun org-brain-maybe-switch-brain ()
   "Switch brain to `default-directory' if a file named \".org-brain-data.el\" exists there."
@@ -425,9 +428,11 @@ Respect excluded entries."
               (mapcan
                (lambda (file)
                  (insert-file-contents file nil nil nil 'replace)
-                 (mapcar (lambda (entry)
-                           (and entry (cons (org-brain-path-entry-name file) entry)))
-                         (org-map-entries #'org-brain--name-and-id-at-point)))
+                 (let ((file-entry (org-brain-path-entry-name file)))
+                   (mapcar (lambda (entry)
+                             (cons file-entry entry))
+                           (remove nil (org-map-entries
+                                        #'org-brain--name-and-id-at-point)))))
                (org-brain-files))))))
 
 (defun org-brain-entry-from-id (id)
@@ -494,19 +499,38 @@ This is a description.
         (org-element-interpret-data (org-element-contents s-block))))
     nil t t))
 
+(defun org-brain--file-targets (file)
+  "Return alist of (name . entry-id) for all entries (including the file) in FILE."
+  (let* ((file-relative (org-brain-path-entry-name file))
+         (file-entry-name (org-brain-entry-name file-relative)))
+    (append (list (cons file-entry-name file-relative))
+            (with-temp-buffer
+              (insert-file-contents file)
+              (delay-mode-hooks
+                (org-mode)
+                (mapcar (lambda (entry)
+                          (cons (concat file-entry-name "::" (car entry))
+                                (cdr entry)))
+                        (remove nil (org-map-entries
+                                     #'org-brain--name-and-id-at-point))))))))
+
 (defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
+ENTRIES can be a list, or 'all which lists all headline and file entries.
 Return the prompted entries in a list.
 Very similar to `org-brain-choose-entry', but can return several entries.
 
 For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
   (unless org-id-locations (org-id-locations-load))
-  (let* ((targets (mapcar (lambda (x)
-                            (cons (org-brain-entry-name x)
-                                  (if (org-brain-filep x)
-                                      x
-                                    (nth 2 x))))
-                          entries))
+  (let* ((targets (if (eq entries 'all)
+                      (mapcan #'org-brain--file-targets
+                              (org-brain-files))
+                    (mapcar (lambda (x)
+                              (cons (org-brain-entry-name x)
+                                    (if (org-brain-filep x)
+                                        x
+                                      (nth 2 x))))
+                            entries)))
          (choices (completing-read prompt targets
                                    predicate require-match initial-input)))
     (mapcar (lambda (title)
@@ -538,6 +562,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
 
 (defun org-brain-choose-entry (prompt entries &optional predicate require-match initial-input)
   "PROMPT for an entry from ENTRIES and return it.
+ENTRIES can be 'all, which lists all headline and file entries.
 For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
   (let ((org-brain-entry-separator nil))
     (car (org-brain-choose-entries prompt entries predicate require-match initial-input))))
@@ -713,9 +738,7 @@ The car is the raw-link and the cdr is the description."
   "Choose and open a resource from ENTRY.
 Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
   (interactive (list (or (ignore-errors (org-brain-entry-at-pt))
-                         (org-brain-choose-entry
-                          "Resource from: "
-                          (append (org-brain-files t) (org-brain-headline-entries))))))
+                         (org-brain-choose-entry "Resource from: " 'all))))
   (org-open-link-from-string (org-brain--choose-resource entry)))
 
 (defun org-brain--local-parent (entry)
@@ -866,9 +889,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
 If chosen child entry doesn't exist, create it as a new file.
 Several children can be added, by using `org-brain-entry-separator'."
   (interactive)
-  (dolist (child-entry (org-brain-choose-entries
-                        "Add child: " (append (org-brain-files t)
-                                              (org-brain-headline-entries))))
+  (dolist (child-entry (org-brain-choose-entries "Add child: " 'all))
     (org-brain-add-relationship (org-brain-entry-at-pt) child-entry))
   (org-brain--revert-if-visualizing))
 
@@ -929,9 +950,7 @@ Several children can be created, by using `org-brain-entry-separator'."
 If chosen parent entry doesn't exist, create it as a new file.
 Several parents can be added, by using `org-brain-entry-separator'."
   (interactive)
-  (dolist (parent-entry (org-brain-choose-entries
-                         "Add parent: " (append (org-brain-files t)
-                                                (org-brain-headline-entries))))
+  (dolist (parent-entry (org-brain-choose-entries "Add parent: " 'all))
     (org-brain-add-relationship parent-entry (org-brain-entry-at-pt)))
   (org-brain--revert-if-visualizing))
 
@@ -977,9 +996,7 @@ If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around."
 If chosen friend entry doesn't exist, create it as a new file.
 Several friends can be added, by using `org-brain-entry-separator'."
   (interactive)
-  (dolist (friend-entry (org-brain-choose-entries
-                         "Add friend: " (append (org-brain-files t)
-                                                (org-brain-headline-entries))))
+  (dolist (friend-entry (org-brain-choose-entries "Add friend: " 'all))
     (org-brain--internal-add-friendship (org-brain-entry-at-pt) friend-entry))
   (org-brain--revert-if-visualizing))
 
@@ -1020,11 +1037,7 @@ If ENTRY isn't specified, ask for the ENTRY.
 Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the entry."
   (interactive)
   (org-brain-stop-wandering)
-  (unless entry (setq entry (org-brain-choose-entry
-                             "Goto entry: "
-                             (append (org-brain-files t)
-                                     (org-brain-headline-entries))
-                             nil t)))
+  (unless entry (setq entry (org-brain-choose-entry "Goto entry: " 'all nil t)))
   (when org-brain-quit-after-goto
     (org-brain-visualize-quit))
   (let ((marker (org-brain-entry-marker entry)))
@@ -1174,10 +1187,7 @@ not contain `org-brain-files-extension'."
 If run interactively, ask for the ENTRY.
 If NOCONFIRM is nil, ask if we really want to delete."
   (interactive
-   (list (org-brain-choose-entry
-          "Delete entry: " (append (org-brain-files t)
-                                   (org-brain-headline-entries))
-          nil t)
+   (list (org-brain-choose-entry "Delete entry: " 'all nil t)
          nil))
   (let ((local-children (org-brain--local-children entry)))
     (when (or noconfirm
@@ -1474,7 +1484,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
         (org-brain-choose-entry
          "Entry: "
          (cond ((equal choices 'all)
-                (append (org-brain-files t) (org-brain-headline-entries)))
+                'all)
                ((equal choices 'files)
                 (org-brain-files t))
                ((equal choices 'root)
@@ -1604,9 +1614,7 @@ If ENTRY is omitted, try to get it from context or prompt for it."
                    '(nil)))
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
-                    (org-brain-choose-entry "Insert link in entry: "
-                                            (append (org-brain-files t)
-                                                    (org-brain-headline-entries))))))
+                    (org-brain-choose-entry "Insert link in entry: " 'all))))
   (cl-flet ((insert-resource-link
              ()
              (unless (and link (not prompt))
@@ -2011,8 +2019,7 @@ Return the position of ENTRY in the buffer."
 LINK-TYPE will be \"brain\" by default."
   (setq link-type (or link-type "brain"))
   (let ((entry (ignore-errors (org-brain-entry-at-pt)))
-        (choice (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                          (org-brain-headline-entries)))))
+        (choice (org-brain-choose-entry "Entry: " 'all)))
     (cond ((string-equal link-type org-brain-child-link-name)
            (org-brain-add-relationship entry choice))
           ((string-equal link-type org-brain-parent-link-name)
@@ -2051,7 +2058,7 @@ LINK-TYPE will be \"brain\" by default."
 (defun org-brain--switch-link-complete ()
   "Create an org-link target string to an org-brain and one of its entries."
   (let* ((org-brain-path (read-directory-name "Brain dir: " org-brain-path))
-         (entry (org-brain-choose-entry "Entry: " (append (org-brain-files)
+         (entry (org-brain-choose-entry "Entry: " (append (org-brain-files t)
                                                           (org-brain-headline-entries)))))
     (concat "brainswitch:" org-brain-path
             "::"
