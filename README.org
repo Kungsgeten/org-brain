@@ -183,8 +183,14 @@ available in =org-brain-visualize=:
 | w          | =org-brain-visualize-random=         | Visualize one of your entries at random.                     |
 | W          | =org-brain-visualize-wander=         | Visualize at random, in a set interval. =W= again to cancel. |
 
-You can also use =org-store-link= inside of =org-brain-visualize= in order to
-store a link to the currently visualized =org-brain= entry.
+If the /universal argument/ =C-u= is used when running
+=org-brain-visualize-random= or =org-brain-visualize-wander=, the randomized
+targets are restricted to descendants (children, grandchildren,
+grand-grandchildren etc) of the currently visualized entry. Use for instance
+=C-u W= to wander among the descendants.
+
+You may use =org-store-link= inside of =org-brain-visualize= in order to store a
+link to the currently visualized =org-brain= entry.
 
 When using the mind map visualization (toggle by pressing =m=), you can use the
 following keybindings in order to show or hide successive levels of hierarchy relative to the current entry.

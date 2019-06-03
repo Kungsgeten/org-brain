@@ -682,6 +682,19 @@ Often you want the siblings too, then use `org-brain-siblings' instead."
    (append (org-brain--linked-property-entries entry "BRAIN_CHILDREN")
            (org-brain--local-children entry))))
 
+(defun org-brain-descendants (entry)
+  "Get all entries which descend from ENTRY.
+In other words get all the children, grand children, grand-grand children, etc.
+The ENTRY itself is also included in the returned list."
+  (let ((checked nil))
+    (cl-labels ((collect-descendants
+                 (e)
+                 (unless (member e checked)
+                   (push e checked)
+                   (mapc #'collect-descendants (org-brain-children e)))))
+      (collect-descendants entry)
+      checked)))
+
 (defun org-brain-siblings (entry)
   "Get siblings of ENTRY.
 Return an alist where key = parent, value = siblings from that parent."
@@ -1544,11 +1557,17 @@ Useful if wanting to visualize the current `org-mode' entry."
   (org-brain-visualize (org-brain-entry-at-pt)))
 
 ;;;###autoload
-(defun org-brain-visualize-random ()
-  "Run `org-brain-visualize' on a random org-brain entry."
-  (interactive)
-  (let ((entries (append (org-brain-files t)
-                         (org-brain-headline-entries))))
+(defun org-brain-visualize-random (&optional restrict-to)
+  "Run `org-brain-visualize' on a random org-brain entry.
+If RESTRICT-TO is given, then only choose among those entries.
+
+If called interactively with `\\[universal-argument]' then
+restrict to descendants of the visualized entry."
+  (interactive (when (equal current-prefix-arg '(4))
+                 (list (org-brain-descendants org-brain--vis-entry))))
+  (let ((entries (or restrict-to
+                     (append (org-brain-files t)
+                             (org-brain-headline-entries)))))
     (org-brain-visualize (nth (random (length entries)) entries) nil nil t)))
 
 (defvar org-brain-wander-timer nil
@@ -1556,23 +1575,27 @@ Useful if wanting to visualize the current `org-mode' entry."
 
 Can be (de)activated by `org-brain-visualize-wander'.")
 
-(defun org-brain-visualize-wander ()
-  "Run `org-brain-visualize-random' every `org-brain-wander-interval'.
-
-Will be cancelled by many org-brain commands, but can also be
-cancelled manually with `org-brain-stop-wandering'."
-  (interactive)
-  (if (member org-brain-wander-timer timer-list)
-      (progn
-        (cancel-timer org-brain-wander-timer)
-        (message "Wandering stopped."))
-    (setq org-brain-wander-timer (run-at-time nil org-brain-wander-interval #'org-brain-visualize-random))
-    (message "Wandering started.")))
-
 (defun org-brain-stop-wandering ()
   "Cancels `org-brain-wander-timer', if it is active."
   (when (member org-brain-wander-timer timer-list)
-    (cancel-timer org-brain-wander-timer)))
+    (cancel-timer org-brain-wander-timer)
+    t))
+
+(defun org-brain-visualize-wander (&optional restrict-to)
+  "Run `org-brain-visualize-random' every `org-brain-wander-interval'.
+If RESTRICT-TO is given, then only wander among those entries.
+
+If called interactively with `\\[universal-argument]' then
+restrict to descendants of the visualized entry starting the wandering session.
+
+Wandering is cancelled by many org-brain commands, but can also be
+cancelled manually with `org-brain-stop-wandering'."
+  (interactive (when (equal current-prefix-arg '(4))
+                 (list (org-brain-descendants org-brain--vis-entry))))
+  (if (org-brain-stop-wandering)
+      (message "Wandering stopped.")
+    (setq org-brain-wander-timer (run-at-time nil org-brain-wander-interval #'org-brain-visualize-random restrict-to))
+    (message "Wandering started.")))
 
 (defun org-brain-visualize-quit ()
   "Like `quit-window', but also stops `org-brain-visualize-wander'."
