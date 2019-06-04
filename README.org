@@ -351,6 +351,12 @@ modify this drawer manually.
 
 If you feel that =org-brain= is slow while indexing your entries (for instance when running =M-x org-brain-visualize=) you can customize =org-brain-file-entries-use-title=, and set it to =nil=. This will display file names when indexing, instead of the file entry's title, which is faster.
 
+* Helm and Ivy
+
+If you use [[https://github.com/emacs-helm/helm][Helm]] or [[https://oremacs.com/swiper/][Ivy]] you can use the commands =helm-brain= or =counsel-brain= respectively. These allow for visualizing entries, and adding parents/children/friends to the entry at point. They also allow selecting multiple entries.
+
+These commands do not have any keybindings by default.
+
 * Backwards compability breaking changes in 0.4
 
 /This is only relevant if you've been using org-brain before version 0.4/

@@ -2105,5 +2105,109 @@ ENTRY should be a string; an id in the case of an headline entry."
                          :complete 'org-brain--switch-link-complete
                          :follow 'org-brain--switch-link-follow)
 
+;; * Helm integration
+
+(with-eval-after-load "helm"
+  (defun helm-brain--add-children (_c)
+    (dolist (candidate (helm-marked-candidates))
+      (org-brain-add-relationship
+       (org-brain-entry-at-pt) (or (org-brain-entry-from-id candidate) candidate)))
+    (org-brain--revert-if-visualizing))
+
+  (defun helm-brain--add-parents (_c)
+    (dolist (candidate (helm-marked-candidates))
+      (org-brain-add-relationship
+       (or (org-brain-entry-from-id candidate) candidate) (org-brain-entry-at-pt)))
+    (org-brain--revert-if-visualizing))
+
+  (defun helm-brain--add-friends (_c)
+    (dolist (candidate (helm-marked-candidates))
+      (org-brain--internal-add-friendship
+       (org-brain-entry-at-pt) (or (org-brain-entry-from-id candidate) candidate)))
+    (org-brain--revert-if-visualizing))
+
+  (defun helm-brain--delete-entries (_c)
+    (dolist (candidate (helm-marked-candidates))
+      (org-brain-delete-entry (or (org-brain-entry-from-id candidate) candidate))))
+
+  (defun helm-brain--archive (_c)
+    (dolist (candidate (helm-marked-candidates))
+      (org-brain-archive (or (org-brain-entry-from-id candidate) candidate))))
+
+  (defvar helm-brain--actions
+    (helm-make-actions
+     "Visualize" (lambda (x)
+                   (org-brain-visualize (or (org-brain-entry-from-id x) x)))
+     "Add children" 'helm-brain--add-children
+     "Add parents" 'helm-brain--add-parents
+     "Add friends" 'helm-brain--add-friends
+     "Delete" 'helm-brain--delete-entries
+     "Archive" 'helm-brain--archive))
+
+  (defun helm-brain--source ()
+    (helm-build-sync-source "Brain"
+                            :candidates (mapcan #'org-brain--file-targets
+                                                (org-brain-files))
+                            :action 'helm-brain--actions))
+
+  (defun helm-brain ()
+    "Use `helm' to choose among your org-brain entries.
+Provides actions for visualizing, adding/removing relations, etc.
+Supports selecting multiple entries at once."
+    (interactive)
+    (helm :sources (helm-brain--source))))
+
+;; * Ivy integration
+
+(with-eval-after-load "ivy"
+  (defun counsel-brain ()
+    "Use Ivy to choose among your org-brain entries.
+Provides actions for visualizing, adding/removing relations, etc."
+    (interactive)
+    (let ((targets (mapcan #'org-brain--file-targets
+                           (org-brain-files))))
+      (ivy-read "Org-brain: "
+                targets
+                :require-match t
+                :action (lambda (x)
+                          (org-brain-visualize (or (org-brain-entry-from-id (cdr x))
+                                                   (cdr x))))
+                :preselect (ignore-errors
+                             (org-brain-entry-name
+                              (org-brain-entry-at-pt)))
+                :caller 'counsel-brain)))
+
+  (defun counsel-brain--add-child (child)
+    (org-brain-add-relationship (org-brain-entry-at-pt)
+                                (or (org-brain-entry-from-id (cdr child))
+                                    (cdr child)))
+    (org-brain--revert-if-visualizing))
+
+  (defun counsel-brain--add-parent (parent)
+    (org-brain-add-relationship (or (org-brain-entry-from-id (cdr parent))
+                                    (cdr parent))
+                                (org-brain-entry-at-pt))
+    (org-brain--revert-if-visualizing))
+
+  (defun counsel-brain--add-friend (friend)
+    (org-brain--internal-add-friendship (org-brain-entry-at-pt)
+                                        (or (org-brain-entry-from-id (cdr friend))
+                                            (cdr friend)))
+    (org-brain--revert-if-visualizing))
+
+  (defun counsel-brain--delete (x)
+    (org-brain-delete-entry (or (org-brain-entry-from-id (cdr x)) (cdr x))))
+
+  (defun counsel-brain--archive (x)
+    (org-brain-archive (or (org-brain-entry-from-id (cdr x)) (cdr x))))
+
+  (ivy-set-actions
+   'counsel-brain
+   '(("c" counsel-brain--add-child "add as child")
+     ("p" counsel-brain--add-parent "add as parent")
+     ("f" counsel-brain--add-friend "add as friend")
+     ("d" counsel-brain--delete "delete")
+     ("a" counsel-brain--archive "archive"))))
+
 (provide 'org-brain)
 ;;; org-brain.el ends here
