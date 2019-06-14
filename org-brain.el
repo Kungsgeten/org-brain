@@ -897,87 +897,90 @@ PROPERTY could for instance be BRAIN_CHILDREN."
 ;; * Buffer commands
 
 ;;;###autoload
-(defun org-brain-add-child ()
-  "Add external child to entry at point.
-If chosen child entry doesn't exist, create it as a new file.
+(defun org-brain-add-child (entry children)
+  "Add external CHILDREN (a list of entries) to ENTRY.
+If called interactively use `org-brain-entry-at-pt' and let user choose entry.
+If chosen CHILD entry doesn't exist, create it as a new file.
 Several children can be added, by using `org-brain-entry-separator'."
-  (interactive)
-  (dolist (child-entry (org-brain-choose-entries "Add child: " 'all))
-    (org-brain-add-relationship (org-brain-entry-at-pt) child-entry))
+  (interactive (list (org-brain-entry-at-pt)
+                     (org-brain-choose-entries "Add child: " 'all)))
+  (dolist (child-entry children)
+    (org-brain-add-relationship entry child-entry))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
-(defun org-brain-add-child-headline ()
-  "Create a new internal child headline to entry at point.
-Several children can be created, by using `org-brain-entry-separator'."
-  (interactive)
-  (let ((entry (org-brain-entry-at-pt))
-        (child-name-string (read-string "Add child headline: ")))
-    (dolist (child-name (split-string child-name-string org-brain-entry-separator))
-      (when (equal (length child-name) 0)
-        (error "Child name must be at least 1 character"))
-      (if (org-brain-filep entry)
-          ;; File entry
-          (with-current-buffer (find-file-noselect (org-brain-entry-path entry))
-            (goto-char (point-min))
-            (if (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
-                (progn
-                  (beginning-of-line)
-                  (open-line 1))
-              (goto-char (point-max)))
-            (insert (concat "* " child-name))
-            (org-id-get-create)
-            (run-hooks 'org-brain-new-entry-hook)
-            (save-buffer))
-        ;; Headline entry
-        (org-with-point-at (org-brain-entry-marker entry)
-          (if (org-goto-first-child)
-              (open-line 1)
-            (org-end-of-subtree t))
-          (org-insert-heading nil t)
-          (org-do-demote)
-          (insert child-name)
+(defun org-brain-add-child-headline (entry child-names)
+  "Create new internal child headline(s) to ENTRY named CHILD-NAMES.
+Several children can be created, by using `org-brain-entry-separator'.
+If called interactively use `org-brain-entry-at-pt' and prompt for children."
+  (interactive (list (org-brain-entry-at-pt)
+                     (read-string "Add child headline: ")))
+  (dolist (child-name (split-string child-names org-brain-entry-separator))
+    (when (equal (length child-name) 0)
+      (error "Child name must be at least 1 character"))
+    (if (org-brain-filep entry)
+        ;; File entry
+        (with-current-buffer (find-file-noselect (org-brain-entry-path entry))
+          (goto-char (point-min))
+          (if (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
+              (progn
+                (beginning-of-line)
+                (open-line 1))
+            (goto-char (point-max)))
+          (insert (concat "* " child-name))
           (org-id-get-create)
           (run-hooks 'org-brain-new-entry-hook)
-          (save-buffer)))))
+          (save-buffer))
+      ;; Headline entry
+      (org-with-point-at (org-brain-entry-marker entry)
+        (if (org-goto-first-child)
+            (open-line 1)
+          (org-end-of-subtree t))
+        (org-insert-heading nil t)
+        (org-do-demote)
+        (insert child-name)
+        (org-id-get-create)
+        (run-hooks 'org-brain-new-entry-hook)
+        (save-buffer))))
   (org-brain--revert-if-visualizing))
 
 (define-obsolete-function-alias 'org-brain-new-child 'org-brain-add-child-headline "0.5")
 
 ;;;###autoload
-(defun org-brain-remove-child ()
-  "Remove child from entry at point."
-  (interactive)
-  (let* ((entry (org-brain-entry-at-pt))
-         (child (org-brain-choose-entry "Remove child: "
-                                        (org-brain-children entry)
-                                        nil t)))
-    (if (member child (org-brain--local-children entry))
-        (org-brain-delete-entry child)
-      (org-brain-remove-relationship entry child)))
+(defun org-brain-remove-child (entry child)
+  "Remove CHILD from ENTRY.
+If called interactively use `org-brain-entry-at-point' and prompt for CHILD."
+  (interactive (let ((e (org-brain-entry-at-pt)))
+                 (list e (org-brain-choose-entry "Remove child: "
+                                                 (org-brain-children e)
+                                                 nil t))))
+  (if (member child (org-brain--local-children entry))
+      (org-brain-delete-entry child)
+    (org-brain-remove-relationship entry child))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
-(defun org-brain-add-parent ()
-  "Add external parent to entry at point.
+(defun org-brain-add-parent (entry parents)
+  "Add external PARENTS (a list of entries) to ENTRY.
+If called interactively use `org-brain-entry-at-pt' and prompt for PARENT.
 If chosen parent entry doesn't exist, create it as a new file.
 Several parents can be added, by using `org-brain-entry-separator'."
-  (interactive)
-  (dolist (parent-entry (org-brain-choose-entries "Add parent: " 'all))
-    (org-brain-add-relationship parent-entry (org-brain-entry-at-pt)))
+  (interactive (list (org-brain-entry-at-pt)
+                     (org-brain-choose-entries "Add parent: " 'all)))
+  (dolist (parent parents)
+    (org-brain-add-relationship parent entry))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
-(defun org-brain-remove-parent ()
-  "Remove external parent from entry at point."
-  (interactive)
-  (let ((entry (org-brain-entry-at-pt)))
-    (org-brain-remove-relationship
-     (org-brain-choose-entry "Remove parent: "
-                             (org-brain--linked-property-entries
-                              entry "BRAIN_PARENTS")
-                             nil t)
-     entry))
+(defun org-brain-remove-parent (entry parent)
+  "Remove external PARENT from ENTRY.
+If called interactively use `org-brain-entry-at-pt' and prompt for PARENT."
+  (interactive (let ((e (org-brain-entry-at-pt)))
+                 (list e (org-brain-choose-entry "Remove parent: "
+        	                                 (org-brain--linked-property-entries
+                                                  e "BRAIN_PARENTS")
+	                                         nil t))))
+  (org-brain-remove-relationship parent entry)
   (org-brain--revert-if-visualizing))
 
 (defun org-brain--internal-add-friendship (entry1 entry2 &optional oneway)
@@ -1004,13 +1007,15 @@ If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around."
   (org-save-all-org-buffers))
 
 ;;;###autoload
-(defun org-brain-add-friendship ()
-  "Add a new friend to entry at point.
+(defun org-brain-add-friendship (entry friends)
+  "Add a new FRIENDS (a list of entries) to ENTRY.
+If called interactively use `org-brain-entry-at-pt' and prompt for FRIENDS.
 If chosen friend entry doesn't exist, create it as a new file.
 Several friends can be added, by using `org-brain-entry-separator'."
-  (interactive)
-  (dolist (friend-entry (org-brain-choose-entries "Add friend: " 'all))
-    (org-brain--internal-add-friendship (org-brain-entry-at-pt) friend-entry))
+  (interactive (list (org-brain-entry-at-pt)
+                     (org-brain-choose-entries "Add friend: " 'all)))
+  (dolist (friend-entry friends)
+    (org-brain--internal-add-friendship entry friend-entry))
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
