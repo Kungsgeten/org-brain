@@ -336,14 +336,10 @@ Insert links using `org-insert-link'."
 
 (define-obsolete-function-alias 'org-brain-path-entry-name 'org-brain-relative-path 0.7)
 
-(defun org-brain-entry-path (entry &optional check-title)
-  "Get path of org-brain ENTRY.
-If CHECK-TITLE is non-nil, consider that ENTRY might be a file entry title."
-  (let ((name (if (org-brain-filep entry)
-                  entry
-                (car entry))))
-    (expand-file-name (org-link-unescape (format "%s.%s" name org-brain-files-extension))
-                      org-brain-path)))
+(defun org-brain-entry-path (entry)
+  "Get path of org-brain ENTRY."
+  (expand-file-name (org-link-unescape (format "%s.%s" (car entry) org-brain-files-extension))
+                    org-brain-path))
 
 (defun org-brain-files (&optional relative)
   "Get all org files (recursively) in `org-brain-path'.
@@ -519,7 +515,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                  ;; File entry
                  (progn
                    (setq id (split-string id "::" t))
-                   (let* ((entry-path (org-brain-entry-path (car id) t))
+                   (let* ((entry-path (org-brain-entry-path (car id)))
                           (entry-file (org-brain-relative-path entry-path)))
                      (unless (file-exists-p entry-path)
                        (make-directory (file-name-directory entry-path) t)
