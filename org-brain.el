@@ -393,8 +393,7 @@ Respect excluded entries."
     (when-let ((id (org-entry-get (point) "ID")))
       (list (org-brain-headline-at (point)) id))))
 
-;; TODO: Should be renamaed "org-brain-entries" or similar
-(defun org-brain-headline-entries ()
+(defun org-brain-entries ()
   "Get all org-brain headline entries."
   (with-temp-buffer
     (delay-mode-hooks
@@ -409,6 +408,8 @@ Respect excluded entries."
                            (remove nil (org-map-entries
                                         #'org-brain--name-and-id-at-point)))))
                (org-brain-files))))))
+
+(define-obsolete-function-alias 'org-brain-headline-entries 'org-brain-entries 0.7)
 
 (defun org-brain-entry-from-id (id)
   "Get entry from ID."
@@ -1209,7 +1210,7 @@ restrict to descendants of the visualized entry."
                  (list (org-brain-descendants org-brain--vis-entry))))
   (let ((entries (or restrict-to
                      (append (org-brain-files t)
-                             (org-brain-headline-entries)))))
+                             (org-brain-entries)))))
     (org-brain-visualize (nth (random (length entries)) entries) nil nil t)))
 
 (defvar org-brain-wander-timer nil
@@ -1707,7 +1708,7 @@ LINK-TYPE will be \"brain\" by default."
   "Create an org-link target string to an org-brain and one of its entries."
   (let* ((org-brain-path (read-directory-name "Brain dir: " org-brain-path))
          (entry (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                          (org-brain-headline-entries)))))
+                                                          (org-brain-entries)))))
     (concat "brainswitch:" org-brain-path "::" (nth 2 entry))))
 
 (defun org-brain--switch-and-visualize (directory entry)
