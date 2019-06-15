@@ -394,7 +394,7 @@ Respect excluded entries."
       (list (org-brain-headline-at (point)) id))))
 
 (defun org-brain-entries ()
-  "Get all org-brain headline entries."
+  "Get all org-brain entries."
   (with-temp-buffer
     (delay-mode-hooks
       (org-mode)
@@ -476,7 +476,6 @@ This is a description.
                 (remove nil (org-map-entries
                              #'org-brain--name-and-id-at-point)))))))
 
-;; TODO: Most (nth 2 x) should be replaced by org-brain-entry-identifier
 (defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
 ENTRIES can be a list of specific entries to choose from, or 'all.
@@ -490,7 +489,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                               (org-brain-files))
                     (mapcar (lambda (x)
                               (cons (org-brain-entry-name x)
-                                    (nth 2 x)))
+                                    (org-brain-entry-identifier x)))
                             entries)))
          (choices (completing-read prompt targets
                                    predicate require-match initial-input)))
@@ -538,7 +537,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
 
 (defun org-brain-entry-marker (entry)
   "Get marker to ENTRY."
-  (or (org-id-find (nth 2 entry) t)
+  (or (org-id-find (org-brain-entry-identifier entry) t)
       (org-brain--missing-id-error entry)))
 
 (defun org-brain-title (entry &optional capped)
@@ -662,10 +661,10 @@ Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
 
 (defun org-brain--local-parent (entry)
   "Get file local parent of ENTRY, as a list."
-  (list (org-with-point-at (org-brain-entry-marker entry)
-          (when (and (org-up-heading-safe)
-                     (org-entry-get nil "ID"))
-            (org-brain-entry-from-id (org-entry-get nil "ID"))))))
+  (org-with-point-at (org-brain-entry-marker entry)
+    (when-let ((parent (and (org-up-heading-safe)
+                            (org-brain-entry-from-id (org-id-get-create)))))
+      (list parent))))
 
 (defun org-brain--local-children (entry)
   "Get local children (sub-headings) of ENTRY."
@@ -1318,7 +1317,7 @@ If ENTRY is omitted, try to get it from context or prompt for it."
   (let* ((entry-path (org-brain-entry-path org-brain--vis-entry))
          (existing-buffer (find-buffer-visiting entry-path)))
     (with-current-buffer (find-file entry-path)
-      (goto-char (cdr (org-id-find (nth 2 org-brain--vis-entry))))
+      (goto-char (cdr (org-id-find (org-brain-entry-identifier org-brain--vis-entry))))
       (call-interactively #'org-attach)
       (save-buffer)
       (if existing-buffer
@@ -1675,7 +1674,7 @@ LINK-TYPE will be \"brain\" by default."
            (org-brain-add-relationship choice entry))
           ((string-equal link-type org-brain-friend-link-name)
            (org-brain--internal-add-friendship entry choice)))
-    (concat link-type ":" (nth 2 choice))))
+    (concat link-type ":" (org-brain-entry-identifier choice))))
 
 (defun org-brain-link-store ()
   "Store a brain: type link from an `org-brain-visualize-mode' buffer."
@@ -1707,9 +1706,8 @@ LINK-TYPE will be \"brain\" by default."
 (defun org-brain--switch-link-complete ()
   "Create an org-link target string to an org-brain and one of its entries."
   (let* ((org-brain-path (read-directory-name "Brain dir: " org-brain-path))
-         (entry (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                          (org-brain-entries)))))
-    (concat "brainswitch:" org-brain-path "::" (nth 2 entry))))
+         (entry (org-brain-choose-entry "Entry: " (org-brain-entries) nil t)))
+    (format "brainswitch:%s::%s" org-brain-path (org-brain-entry-identifier entry))))
 
 (defun org-brain--switch-and-visualize (directory entry)
   "Switch brain to DIRECTORY and visualize ENTRY.
