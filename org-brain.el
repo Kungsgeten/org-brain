@@ -249,10 +249,8 @@ Insert links using `org-insert-link'."
 
 ;; * API
 
-;; An entry is either a string or a list of three strings.
-;; If a string, then the entry is a file.
-;; If a list, then the entry is a headline:
-;; ("file entry" "headline title" "ID")
+;; An entry is a list of three strings.
+;; ("file (relative and without extension)" "headline title" "ID")
 
 (defvar org-brain--vis-entry nil
   "The last entry argument to `org-brain-visualize'.")
@@ -390,7 +388,7 @@ visibility rendering/formatting in-buffer."
   "Get name and id of headline entry at point.
 Respect excluded entries."
   (unless (org-brain-entry-at-point-excludedp)
-    (when-let ((id (org-entry-get (point) "ID")))
+    (when-let ((id (org-id-get nil)))
       (list (org-brain-headline-at (point)) id))))
 
 (defun org-brain-entries ()
@@ -432,7 +430,9 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
                                   (expand-file-name (buffer-file-name)))
            (error "Not in a brain file"))
          (if (ignore-errors (org-get-heading))
-             (org-id-get-create)
+             (progn
+               (org-id-get-create)
+               (save-buffer))
            (error "Not in an org headline")))
         ((eq major-mode 'org-brain-visualize-mode)
          org-brain--vis-entry)
@@ -515,6 +515,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                            (insert (concat "\n* " (cadr id)))
                            (let ((new-id (org-id-get-create)))
                              (run-hooks 'org-brain-new-entry-hook)
+                             (save-buffer)
                              (list entry-file (cadr id) new-id))))
                      (user-error "New entries must be written like <file>::<headline>"))))))
             (if org-brain-entry-separator
@@ -677,10 +678,10 @@ Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
        (org-goto-first-child)
        (setq children
              (org-map-entries
-              (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
+              (lambda () (org-brain-entry-from-id (org-id-get nil)))
               t 'region-start-level
               (lambda ()
-                (let ((id (org-entry-get nil "ID")))
+                (let ((id (org-id-get nil)))
                   (when (or (not id)
                             (org-brain-id-exclude-taggedp id))
                     (save-excursion
