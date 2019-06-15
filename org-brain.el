@@ -102,12 +102,7 @@ on how this is implemented."
   :group 'org-brain
   :type '(boolean))
 
-(defcustom org-brain-file-entries-use-title t
-  "If file entries should show their title, when choosing entries from a list.
-This can potentially be slow.  If set to nil, the relative
-filenames will be shown instead, which is faster."
-  :group 'org-brain
-  :type '(boolean))
+(make-obsolete-variable 'org-brain-file-entries-use-title "org-brain-file-entries-use-title is deprecated" 0.7)
 
 (defcustom org-brain-visualize-text-hook nil
   "Hook runs after inserting `org-brain-text' in `org-brain-visualize'.
@@ -341,16 +336,7 @@ Insert links using `org-insert-link'."
   "Get path of org-brain ENTRY.
 If CHECK-TITLE is non-nil, consider that ENTRY might be a file entry title."
   (let ((name (if (org-brain-filep entry)
-                  (or (and check-title
-                           org-brain-file-entries-use-title
-                           (cdr
-                            (assoc entry
-                                   (mapcar (lambda (x)
-                                             (cons (concat (file-name-directory x)
-                                                           (org-brain-title x))
-                                                   x))
-                                           (org-brain-files t)))))
-                      entry)
+                  entry
                 (car entry))))
     (expand-file-name (org-link-unescape (format "%s.%s" name org-brain-files-extension))
                       org-brain-path)))
@@ -462,13 +448,9 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
 
 (defun org-brain-entry-name (entry)
   "Get name string of ENTRY."
-  (if org-brain-file-entries-use-title
-      (if (org-brain-filep entry)
-          (concat (file-name-directory entry) (org-brain-title entry))
-        (concat (org-brain-entry-name (car entry)) "::" (cadr entry)))
-    (if (org-brain-filep entry)
-        entry
-      (concat (car entry) "::" (cadr entry)))))
+  (if (org-brain-filep entry)
+      entry
+    (concat (car entry) "::" (cadr entry))))
 
 (defun org-brain-entry-data (entry)
   "Run `org-element-parse-buffer' on ENTRY text.
