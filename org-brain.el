@@ -293,6 +293,7 @@ Insert links using `org-insert-link'."
              (file-exists-p (expand-file-name ".org-brain-data.el" default-directory)))
     (org-brain-switch-brain default-directory)))
 
+;; TODO: Remove this
 (defun org-brain-filep (entry)
   "Return t if the ENTRY is a (potential) brain file."
   (stringp entry))
@@ -302,6 +303,7 @@ Insert links using `org-insert-link'."
   (org-with-point-at (org-id-find id t)
     (org-brain-entry-at-point-excludedp)))
 
+;; FIXME: org-get-tags-at should be changed
 (defun org-brain-entry-at-point-excludedp ()
   "Return t if the entry at point is tagged as being excluded from org-brain."
   (let ((tags (org-get-tags-at)))
@@ -326,11 +328,13 @@ Insert links using `org-insert-link'."
       (insert "))")
       (newline))))
 
-(defun org-brain-path-entry-name (path)
+(defun org-brain-relative-path (path)
   "Get PATH as an org-brain entry name."
   (string-remove-suffix (concat "." org-brain-files-extension)
                         (file-relative-name (expand-file-name path)
                                             (expand-file-name org-brain-path))))
+
+(define-obsolete-function-alias 'org-brain-path-entry-name 'org-brain-relative-path 0.7)
 
 (defun org-brain-entry-path (entry &optional check-title)
   "Get path of org-brain ENTRY.
@@ -347,7 +351,7 @@ If RELATIVE is t, then return relative paths and remove file extension.
 Ignores \"dotfiles\"."
   (make-directory org-brain-path t)
   (if relative
-      (mapcar #'org-brain-path-entry-name (org-brain-files))
+      (mapcar #'org-brain-relative-path (org-brain-files))
     (if org-brain-scan-directories-recursively
         (directory-files-recursively
          org-brain-path (format "^[^.].*\\.%s$" org-brain-files-extension))
@@ -405,7 +409,7 @@ Respect excluded entries."
               (mapcan
                (lambda (file)
                  (insert-file-contents file nil nil nil 'replace)
-                 (let ((file-entry (org-brain-path-entry-name file)))
+                 (let ((file-entry (org-brain-relative-path file)))
                    (mapcar (lambda (entry)
                              (cons file-entry entry))
                            (remove nil (org-map-entries
@@ -416,7 +420,7 @@ Respect excluded entries."
   "Get entry from ID."
   (unless org-id-locations (org-id-locations-load))
   (when-let ((path (gethash id org-id-locations)))
-    (list (org-brain-path-entry-name path)
+    (list (org-brain-relative-path path)
           (org-brain-headline-at (org-id-find id t))
           id)))
 
@@ -440,7 +444,7 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
              (if-let ((id (org-entry-get nil "ID")))
                  (org-brain-entry-from-id id)
                (error "Current headline have no ID"))
-           (org-brain-path-entry-name (buffer-file-name))))
+           (org-brain-relative-path (buffer-file-name))))
         ((eq major-mode 'org-brain-visualize-mode)
          org-brain--vis-entry)
         (t
@@ -474,7 +478,7 @@ This is a description.
 
 (defun org-brain--file-targets (file)
   "Return alist of (name . entry-id) for all entries (including the file) in FILE."
-  (let* ((file-relative (org-brain-path-entry-name file))
+  (let* ((file-relative (org-brain-relative-path file))
          (file-entry-name (org-brain-entry-name file-relative)))
     (append (list (cons file-entry-name file-relative))
             (with-temp-buffer
@@ -516,7 +520,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                  (progn
                    (setq id (split-string id "::" t))
                    (let* ((entry-path (org-brain-entry-path (car id) t))
-                          (entry-file (org-brain-path-entry-name entry-path)))
+                          (entry-file (org-brain-relative-path entry-path)))
                      (unless (file-exists-p entry-path)
                        (make-directory (file-name-directory entry-path) t)
                        (write-region "" nil entry-path))
@@ -1423,7 +1427,7 @@ function."
           (lambda (link)
             (when (string-equal (org-element-property :type link) "brain")
               (org-brain-add-relationship
-               (org-brain-path-entry-name file)
+               (org-brain-relative-path file)
                (car (split-string (org-element-property :path link) "::"))))))))))
 
 ;; * Sorting
