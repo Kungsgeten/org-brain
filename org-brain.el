@@ -1,13 +1,13 @@
 ;;; org-brain.el --- Org-mode concept mapping         -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017--2018  Erik Sjöstrand
+;; Copyright (C) 2017--2019  Erik Sjöstrand
 ;; MIT License
 
 ;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25") (org "9"))
-;; Version: 0.5
+;; Version: 0.7
 
 ;;; Commentary:
 
@@ -77,16 +77,7 @@ will be considered org-brain entries."
 
 (load org-brain-data-file t)
 
-(defcustom org-brain-visualize-default-choices 'all
-  "Which entries to choose from when using `org-brain-visualize'.
-If 'all, choose from all file and headline entries.
-If 'files, only choose from file entries.
-If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
-  :group 'org-brain
-  :type '(choice
-          (const :tag "All entries" all)
-          (const :tag "Only file entries" files)
-          (const :tag "Only root file entries" root)))
+(make-obsolete-variable 'org-brain-visualize-default-choices "org-brain-visualize-default-choices is deprecated" 0.7)
 
 (defcustom org-brain-show-resources t
   "Should entry resources be shown in `org-brain-visualize'?"
@@ -1474,15 +1465,7 @@ If you don't want to sort the relationships, set this to `ignore'.")
   "View a concept map with ENTRY at the center.
 
 When run interactively, prompt for ENTRY and suggest
-`org-brain-entry-at-pt'.  By default, the choices presented is
-determined by `org-brain-visualize-default-choices': 'all will
-show all entries, 'files will only show file entries and 'root
-will only show files in the root of `org-brain-path'.
-
-You can override `org-brain-visualize-default-choices':
-  `\\[universal-argument]' will use 'all.
-  `\\[universal-argument] \\[universal-argument]' will use 'files.
-  `\\[universal-argument] \\[universal-argument] \\[universal-argument]' will use 'root.
+`org-brain-entry-at-pt'.
 
 Unless NOFOCUS is non-nil, the `org-brain-visualize' buffer will gain focus.
 Unless NOHISTORY is non-nil, add the entry to `org-brain--vis-history'.
@@ -1491,25 +1474,10 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
   (interactive
    (progn
      (org-brain-maybe-switch-brain)
-     (let ((choices (cond ((equal current-prefix-arg '(4)) 'all)
-                          ((equal current-prefix-arg '(16)) 'files)
-                          ((equal current-prefix-arg '(64)) 'root)
-                          (t org-brain-visualize-default-choices)))
-           (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
+     (let ((def-choice (unless (eq major-mode 'org-brain-visualize-mode)
                          (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
        (org-brain-stop-wandering)
-       (list
-        (org-brain-choose-entry
-         "Entry: "
-         (cond ((equal choices 'all)
-                'all)
-               ((equal choices 'files)
-                (org-brain-files t))
-               ((equal choices 'root)
-                (make-directory org-brain-path t)
-                (mapcar #'org-brain-path-entry-name
-                        (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
-         nil nil def-choice)))))
+       (list (org-brain-choose-entry "Entry: " 'all nil nil def-choice)))))
   (unless wander (org-brain-stop-wandering))
   (with-current-buffer (get-buffer-create "*org-brain*")
     (read-only-mode 1)
