@@ -594,6 +594,25 @@ Often you want the siblings too, then use `org-brain-siblings' instead."
    (append (org-brain--linked-property-entries entry "BRAIN_CHILDREN")
            (org-brain--local-children entry))))
 
+(defun org-brain-root-entries (relative-file &optional exclude)
+  "Get entries (a list) at the root of RELATIVE-FILE.
+RELATIVE-FILE is a file relative to `org-brain-path', but without the extension.
+The car of the entries is the name of RELATIVE-FILE.
+
+EXCLUDE can be an entry which is removed from the list."
+  (remove
+   exclude
+   (append
+    (list (format "%s.%s" relative-file org-brain-files-extension))
+    (with-temp-buffer
+      (ignore-errors (insert-file-contents (org-brain-entry-path (list relative-file))))
+      (org-element-map (org-element-parse-buffer 'headline) 'headline
+        (lambda (headline)
+          (when-let ((id (org-element-property :ID headline)))
+            (unless (org-brain-id-exclude-taggedp id)
+              (org-brain-entry-from-id id))))
+        nil nil 'headline)))))
+
 (defun org-brain-descendants (entry)
   "Get all entries which descend from ENTRY.
 In other words get all the children, grand children, grand-grand children, etc.
@@ -1426,8 +1445,8 @@ Helper function for `org-brain-visualize'."
 (defun org-brain--vis-parents-siblings (entry)
   "Insert parents and siblings of ENTRY.
 Helper function for `org-brain-visualize'."
-  (when-let ((siblings (org-brain-siblings entry)))
-    (let ((parent-positions nil)
+  (let ((siblings (org-brain-siblings entry)))
+    (let ((parent-positions)
           (max-width 0))
       (dolist (parent (sort siblings (lambda (x y)
                                        (funcall org-brain-visualize-sort-function
@@ -1451,6 +1470,33 @@ Helper function for `org-brain-visualize'."
                       (+ (current-column) (/ (string-width parent-title) 2)))
                 parent-positions)
           (org-brain-insert-visualize-button (car parent) 'org-brain-parent)
+          (setq max-width (max max-width (current-column)))
+          (when children-links
+            (org-brain--insert-wire "-")
+            (delete-char (+ 1 (string-width parent-title))))))
+      ;; TODO: Refactor this, lot of copying here
+      ;; File root siblings
+      (when (= 0 (length (org-brain--local-parent entry)))
+        (let* ((parent (org-brain-root-entries (car entry) entry))
+               (children-links (cdr parent))
+               (col-start (+ 3 max-width))
+               (parent-title (car parent)))
+          (org-goto-line 4)
+          (mapc
+           (lambda (child)
+             (picture-forward-column col-start)
+             (org-brain--insert-wire (make-string (1+ (string-width parent-title)) ?\ ) "+-")
+             (org-brain-insert-visualize-button child 'org-brain-sibling)
+             (setq max-width (max max-width (current-column)))
+             (newline (forward-line 1)))
+           (sort children-links org-brain-visualize-sort-function))
+          (org-goto-line 4)
+          (forward-line (1- (length children-links)))
+          (picture-forward-column col-start)
+          (push (cons (picture-current-line)
+                      (+ (current-column) (/ (string-width parent-title) 2)))
+                parent-positions)
+          (insert parent-title)
           (setq max-width (max max-width (current-column)))
           (when children-links
             (org-brain--insert-wire "-")
@@ -1757,27 +1803,29 @@ ENTRY should be a string; an id in the case of an headline entry."
           (setq prompt org-brain--rg-prompt)
           (goto-char (point-min))
           (while (not (eobp))
-            (looking-at line-regex)
-            (let* ((file (match-string 1))
-                   (line-number (string-to-number (match-string 2)))
-                   (headline (match-string 3))
-                   (level (length (match-string 4)))
-                   (tags (when (string-match tag-regex headline)
-                           (split-string (match-string 0 headline) ":" t))))
-              (unless (and skip-til-next (> level skip-til-next))
-                (when tags
-                  (setq headline (string-trim (replace-regexp-in-string
-                                               tag-regex "" headline))))
-                (setq skip-til-next nil)
-                (if (member org-brain-exclude-tree-tag tags)
-                    (setq skip-til-next level)
-                  (when (member org-brain-exclude-children-tag tags)
-                    (setq skip-til-next level))
-                  (push (list
-                         (format "%s::%s" (org-brain-relative-path file) headline)
-                         file line-number headline)
-                        targets)))
-              (forward-line 1)))
+            (if (looking-at line-regex)
+                (let* ((file (match-string 1))
+                       (line-number (string-to-number (match-string 2)))
+                       (headline (match-string 3))
+                       (level (length (match-string 4)))
+                       (tags (when (string-match tag-regex headline)
+                               (split-string (match-string 0 headline) ":" t))))
+                  (unless (and skip-til-next (> level skip-til-next))
+                    (when tags
+                      (setq headline (string-trim (replace-regexp-in-string
+                                                   tag-regex "" headline))))
+                    (setq skip-til-next nil)
+                    (if (member org-brain-exclude-tree-tag tags)
+                        (setq skip-til-next level)
+                      (when (member org-brain-exclude-children-tag tags)
+                        (setq skip-til-next level))
+                      (push (list
+                             (format "%s::%s" (org-brain-relative-path file) headline)
+                             file line-number headline)
+                            targets)))
+                  (forward-line 1))
+              (erase-buffer)
+              (user-error "Ripgrep failed to match a line, please try again")))
           (erase-buffer))
         (setq targets (nreverse targets))
         (let* ((input (completing-read prompt targets))
