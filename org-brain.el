@@ -780,6 +780,7 @@ If called interactively use `org-brain-entry-at-pt' and prompt for children."
     (when (equal (length child-name) 0)
       (error "Child name must be at least 1 character"))
     (org-with-point-at (org-brain-entry-marker entry)
+      (org-show-all)
       (if (org-goto-first-child)
           (open-line 1)
         (org-end-of-subtree t))
@@ -1124,6 +1125,7 @@ Use `org-set-tags-command' on ENTRY.
 If run interactively, get ENTRY from context."
   (interactive (list (org-brain-entry-at-pt)))
   (org-with-point-at (org-brain-entry-marker entry)
+    (org-show-all)
     (org-set-tags-command)
     (save-buffer))
   (org-brain--revert-if-visualizing))
@@ -1307,6 +1309,7 @@ If ENTRY is omitted, try to get it from context or prompt for it."
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
                     (org-brain-choose-entry "Insert link in entry: " 'all))))
   (org-with-point-at (org-brain-entry-marker entry)
+    (org-show-all)
     (goto-char (cdr (org-get-property-block)))
     (forward-line 1)
     ;; Goto place where resource should be inserted
