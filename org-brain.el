@@ -476,6 +476,29 @@ This is a description.
                 (remove nil (org-map-entries
                              #'org-brain--name-and-id-at-point)))))))
 
+(defun org-brain--create-entry-from-string (str)
+  "Create and entry from STR.
+STR should be formatted as <file>::<headline>.
+The entry is created as a level one entry at the end of the file."
+  (progn
+    (setq str (split-string str "::" t))
+    (if (equal (length str) 2)
+        (let* ((entry-path (org-brain-entry-path str))
+               (entry-file (org-brain-relative-path entry-path)))
+          (when (equal (cadr str) 0)
+            (error "Child name must be at least 1 character"))
+          (unless (file-exists-p entry-path)
+            (make-directory (file-name-directory entry-path) t)
+            (write-region "" nil entry-path))
+          (with-current-buffer (find-file-noselect entry-path)
+            (goto-char (point-max))
+            (insert (concat "\n* " (cadr str)))
+            (let ((new-id (org-id-get-create)))
+              (run-hooks 'org-brain-new-entry-hook)
+              (save-buffer)
+              (list entry-file (cadr str) new-id))))
+      (user-error "New entries must be written like <file>::<headline>"))))
+
 (defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
 ENTRIES can be a list of specific entries to choose from, or 'all.
@@ -496,28 +519,8 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
     (mapcar (lambda (title)
               (let ((id (or (cdr (assoc title targets))
                             title)))
-                (or
-                 ;; Headline entry exists, return it
-                 (org-brain-entry-from-id id)
-                 ;; File entry
-                 (progn
-                   (setq id (split-string id "::" t))
-                   (if (equal (length id) 2)
-                       (let* ((entry-path (org-brain-entry-path (car id)))
-                              (entry-file (org-brain-relative-path entry-path)))
-                         (when (equal (cadr id) 0)
-                           (error "Child name must be at least 1 character"))
-                         (unless (file-exists-p entry-path)
-                           (make-directory (file-name-directory entry-path) t)
-                           (write-region "" nil entry-path))
-                         (with-current-buffer (find-file-noselect entry-path)
-                           (goto-char (point-max))
-                           (insert (concat "\n* " (cadr id)))
-                           (let ((new-id (org-id-get-create)))
-                             (run-hooks 'org-brain-new-entry-hook)
-                             (save-buffer)
-                             (list entry-file (cadr id) new-id))))
-                     (user-error "New entries must be written like <file>::<headline>"))))))
+                (or (org-brain-entry-from-id id)
+                    (org-brain--create-entry-from-string id))))
             (if org-brain-entry-separator
                 (split-string choices org-brain-entry-separator)
               (list choices)))))
@@ -742,6 +745,7 @@ If chosen CHILD entry doesn't exist, create it as a new file.
 Several children can be added, by using `org-brain-entry-separator'."
   (interactive (list (org-brain-entry-at-pt)
                      (org-brain-choose-entries "Add child: " 'all)))
+  (unless (listp (car children)) (setq children (list children)))
   (dolist (child-entry children)
     (org-brain-add-relationship entry child-entry))
   (org-brain--revert-if-visualizing))
@@ -791,6 +795,7 @@ If chosen parent entry doesn't exist, create it as a new file.
 Several parents can be added, by using `org-brain-entry-separator'."
   (interactive (list (org-brain-entry-at-pt)
                      (org-brain-choose-entries "Add parent: " 'all)))
+  (unless (listp (car parents)) (setq parents (list parents)))
   (dolist (parent parents)
     (org-brain-add-relationship parent entry))
   (org-brain--revert-if-visualizing))
@@ -821,12 +826,13 @@ If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around."
 
 ;;;###autoload
 (defun org-brain-add-friendship (entry friends)
-  "Add a new FRIENDS (a list of entries) to ENTRY.
+  "Add new FRIENDS (a list of entries) to ENTRY.
 If called interactively use `org-brain-entry-at-pt' and prompt for FRIENDS.
 If chosen friend entry doesn't exist, create it as a new file.
 Several friends can be added, by using `org-brain-entry-separator'."
   (interactive (list (org-brain-entry-at-pt)
                      (org-brain-choose-entries "Add friend: " 'all)))
+  (unless (listp (car friends)) (setq friends (list friends)))
   (dolist (friend-entry friends)
     (org-brain--internal-add-friendship entry friend-entry))
   (org-brain--revert-if-visualizing))
@@ -1725,6 +1731,125 @@ ENTRY should be a string; an id in the case of an headline entry."
 (org-link-set-parameters "brainswitch"
                          :complete 'org-brain--switch-link-complete
                          :follow 'org-brain--switch-link-follow)
+
+;; * Choosing entries with ripgrep
+
+(defvar org-brain--rg-func nil)
+(make-variable-buffer-local 'org-brain--rg-func)
+(defvar org-brain--rg-args nil)
+(make-variable-buffer-local 'org-brain--rg-args)
+(defvar org-brain--rg-prompt)
+(make-variable-buffer-local 'org-brain--rg-prompt)
+
+(defun org-brain--process-sentinel (process output)
+  "Sentinel used by `org-brain-rg'."
+  (let ((buffer (process-buffer process))
+        (finished-p (string= output "finished\n"))
+        (tag-regex "\\(:[[:alnum:]_@#%:]+:\\)")
+        (line-regex "\\(.+\\):\\([0-9]+\\):\\(\\(\\*+\\).+\\)")
+        (ivy-sort-functions-alist nil)
+        (skip-til-next) (targets) (func) (args) (prompt))
+    (when (and (buffer-live-p buffer) finished-p)
+      (with-local-quit
+        (with-current-buffer buffer
+          (setq func org-brain--rg-func)
+          (setq args org-brain--rg-args)
+          (setq prompt org-brain--rg-prompt)
+          (goto-char (point-min))
+          (while (not (eobp))
+            (looking-at line-regex)
+            (let* ((file (match-string 1))
+                   (line-number (string-to-number (match-string 2)))
+                   (headline (match-string 3))
+                   (level (length (match-string 4)))
+                   (tags (when (string-match tag-regex headline)
+                           (split-string (match-string 0 headline) ":" t))))
+              (unless (and skip-til-next (> level skip-til-next))
+                (when tags
+                  (setq headline (string-trim (replace-regexp-in-string
+                                               tag-regex "" headline))))
+                (setq skip-til-next nil)
+                (if (member org-brain-exclude-tree-tag tags)
+                    (setq skip-til-next level)
+                  (when (member org-brain-exclude-children-tag tags)
+                    (setq skip-til-next level))
+                  (push (list
+                         (format "%s::%s" (org-brain-relative-path file) headline)
+                         file line-number headline)
+                        targets)))
+              (forward-line 1)))
+          (erase-buffer))
+        (setq targets (nreverse targets))
+        (let* ((input (completing-read prompt targets))
+               (choice (assoc input targets))
+               (entry))
+          (if choice
+              (with-current-buffer (find-file-noselect (nth 1 choice))
+                (goto-char (point-min))
+                (forward-line (nth 2 choice))
+                (setq entry (list (org-brain-relative-path (nth 1 choice))
+                                  (string-trim-left (nth 3 choice) "[* ]+")
+                                  (org-id-get-create)))
+                (save-buffer))
+            (setq entry (org-brain--create-entry-from-string input)))
+          (apply func (append args (list entry))))))))
+
+(defun org-brain-rg (prompt func &rest args)
+  "Call FUNC with ARGS and PROMPT user for an entry chosen with ripgrep.
+FUNC is called with the entry as the first argument, and then ARGS."
+  (let ((process (start-process-shell-command
+                  "org-brain-rg-test"
+                  (get-buffer-create "*org-brain-rg*")
+                  (format "rg --glob %s --no-heading --color never --line-number --path-separator / %s %s"
+                          (shell-quote-argument (concat "*." org-brain-files-extension))
+                          (shell-quote-argument "^\\*+\s+.+")
+                          org-brain-path))))
+    (with-current-buffer (process-buffer process)
+      (setq org-brain--rg-func func)
+      (setq org-brain--rg-args args)
+      (setq org-brain--rg-prompt prompt))
+    (set-process-sentinel process #'org-brain--process-sentinel)))
+
+(defun org-brain-rg-visualize ()
+  "Choose and visualize an entry using `org-brain-rg'."
+  (interactive)
+  (org-brain-rg "Visualize: " #'org-brain-visualize))
+
+(defun org-brain-rg-add-child ()
+  "Choose a child using `org-brain-rg', it is added to `org-brain-entry-at-pt'."
+  (interactive)
+  (org-brain-rg "Add child: " #'org-brain-add-child (org-brain-entry-at-pt)))
+
+(defun org-brain-rg-add-parent ()
+  "Choose a parent using `org-brain-rg', it is added to `org-brain-entry-at-pt'."
+  (interactive)
+  (org-brain-rg "Add parent: " #'org-brain-add-parent (org-brain-entry-at-pt)))
+
+(defun org-brain-rg-add-friendship ()
+  "Choose a friend using `org-brain-rg', it is added to `org-brain-entry-at-pt'."
+  (interactive)
+  (org-brain-rg "Add friend: " #'org-brain-add-friendship (org-brain-entry-at-pt)))
+
+(defun org-brain-rg-delete-entry ()
+  "Choose an entry using `org-brain-rg' and delete it."
+  (interactive)
+  (org-brain-rg "Delete: " #'org-brain-delete-entry))
+
+(defun org-brain-rg-goto ()
+  "Choose an entry using `org-brain-rg' and open it in `org-mode'."
+  (interactive)
+  (org-brain-rg "Goto: " #'org-brain-goto))
+
+;;;###autoload
+(defun org-brain-setup-rg-bindings ()
+  "Use ripgrep in `org-brain-visualize-mode' where applicable."
+  (interactive)
+  (define-key org-brain-visualize-mode-map "p" 'org-brain-rg-add-parent)
+  (define-key org-brain-visualize-mode-map "c" 'org-brain-rg-add-child)
+  (define-key org-brain-visualize-mode-map "O" 'org-brain-rg-goto)
+  (define-key org-brain-visualize-mode-map "v" 'org-brain-rg-visualize)
+  (define-key org-brain-visualize-mode-map "f" 'org-brain-rg-add-friendship)
+  (define-key org-brain-visualize-mode-map "d" 'org-brain-rg-delete-entry))
 
 ;; * Helm integration
 
