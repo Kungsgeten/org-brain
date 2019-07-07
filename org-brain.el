@@ -172,6 +172,11 @@ Only applies to headline entries."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-exclude-siblings-tag "nosiblings"
+  "`org-mode' tag which stops prevents the siblings of children of this node from being displayed."
+  :group 'org-brain
+  :type '(string))
+
 (defcustom org-brain-wander-interval 3
   "Seconds between randomized entries, when using `org-brain-visualize-wander'."
   :group 'org-brain
@@ -1805,9 +1810,14 @@ Helper function for `org-brain-visualize'."
       (dolist (parent (sort siblings (lambda (x y)
                                        (funcall org-brain-visualize-sort-function
                                                 (car x) (car y)))))
-        (let ((children-links (cdr parent))
-              (col-start (+ 3 max-width))
-              (parent-title (org-brain-title (car parent))))
+        (let* ((parent-tags (org-with-point-at
+                                (org-brain-entry-marker (car parent))
+                              (org-get-tags nil t)))
+               (children-links (if (member org-brain-exclude-siblings-tag parent-tags)
+                                   nil
+                                 (cdr parent)))
+               (col-start (+ 3 max-width))
+               (parent-title (org-brain-title (car parent))))
           (org-goto-line 4)
           (mapc
            (lambda (child)
@@ -1976,10 +1986,16 @@ Return the position of ENTRY in the buffer."
                                                        (funcall org-brain-visualize-sort-function
                                                                 (car x) (car y)))))
       (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
-      (dolist (sibling (sort (cdr parent) org-brain-visualize-sort-function))
-        (insert (org-brain-map-create-indentation indent))
-        (org-brain-insert-visualize-button sibling 'org-brain-sibling)
-        (insert "\n")))
+      (let* ((parent-tags (org-with-point-at
+                              (org-brain-entry-marker (car parent))
+                            (org-get-tags nil t)))
+             (children-links (if (member org-brain-exclude-siblings-tag parent-tags)
+                                 nil
+                               (cdr parent))))
+        (dolist (sibling (sort children-links org-brain-visualize-sort-function))
+          (insert (org-brain-map-create-indentation indent))
+          (org-brain-insert-visualize-button sibling 'org-brain-sibling)
+          (insert "\n"))))
     (insert (org-brain-map-create-indentation indent))
     (setq entry-pos (point))
     (insert (propertize (org-brain-title entry)
