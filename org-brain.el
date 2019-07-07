@@ -97,6 +97,11 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-show-history t
+  "Should the navigation history be shown in `org-brain-visualize'?"
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-quit-after-goto nil
   "Should the *org-brain* buffer window close itself after executing a goto command?"
   :group 'org-brain
@@ -1648,6 +1653,12 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
       (delete-region (point-min) (point-max))
       (org-brain--vis-pinned)
       (org-brain--vis-selected)
+      (when (not nohistory)
+        (setq org-brain--vis-history
+              (seq-filter (lambda (elt) (not (equal elt entry))) org-brain--vis-history))
+        (setq org-brain--vis-history (seq-take org-brain--vis-history 15))
+        (push entry org-brain--vis-history))
+      (when org-brain-show-history (org-brain--vis-history))
       (if org-brain-visualizing-mind-map
           (setq entry-pos (org-brain-mind-map org-brain--vis-entry org-brain-mind-map-parent-level org-brain-mind-map-child-level))
         (insert "\n\n")
@@ -1673,11 +1684,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
         (org-brain-visualize-mode))
       (goto-char entry-pos))
     (unless nofocus
-      (pop-to-buffer "*org-brain*")
-      (when (and (not nohistory)
-                 (not (equal entry (car org-brain--vis-history)))
-                 (< (length org-brain--vis-history) 15))
-        (push entry org-brain--vis-history)))))
+      (pop-to-buffer "*org-brain*"))))
 
 ;;;###autoload
 (defun org-brain-visualize-entry-at-pt ()
@@ -1733,11 +1740,15 @@ cancelled manually with `org-brain-stop-wandering'."
   (org-brain-stop-wandering)
   (quit-window))
 
+(defun org-brain-title-as-button (entry)
+  "The title of ENTRY when displayed as a button"
+   (org-brain-title entry (or (not org-brain-visualizing-mind-map)
+                              org-brain-cap-mind-map-titles)))
+
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
-   (org-brain-title entry (or (not org-brain-visualizing-mind-map)
-                              org-brain-cap-mind-map-titles))
+   (org-brain-title-as-button entry)
    'action (lambda (_x) (org-brain-visualize entry))
    'id (org-brain-entry-identifier entry)
    'follow-link t
@@ -1937,6 +1948,31 @@ Helper function for `org-brain-visualize'."
       (org-brain-insert-visualize-button selection 'org-brain-selected))
     (insert "\n")))
 
+(defun org-brain--hist-entries-to-draw (max-width hist width to-draw)
+  "Determines the entries in HIST that can fit on a line of MAX-WIDTH.
+Returns those entries in reversed order.
+WIDTH and TO-DRAW are state parameters.
+WIDTH represents the width of the line comprising the elements in TO-DRAW.
+Assumes elements will be drawn with a two-character padding between them.
+Helper function for `org-brain--vis-history'."
+  (if (null hist)
+      to-draw
+    (let* ((entry-title-width (string-width (org-brain-title-as-button (car hist))))
+           (new-line-width (+ width 2 entry-title-width)))
+      (if (and (<= max-width new-line-width)
+               (not (null to-draw)))  ; Always display at least one entry
+          to-draw
+        (org-brain--hist-entries-to-draw max-width (cdr hist) new-line-width (cons (car hist) to-draw))))))
+
+(defun org-brain--vis-history ()
+  "Show as many of the most recently visited entries as fit on one line.
+Helper function for `org-brain-visualize'."
+  (insert "HISTORY:")
+  (dolist (entry (org-brain--hist-entries-to-draw (window-width) org-brain--vis-history (string-width "HISTORY:") nil))
+    (insert "  ")
+    (org-brain-insert-visualize-button entry 'org-brain-pinned))
+  (insert "\n"))
+
 (defun org-brain--insert-wire (&rest strings)
   "Helper function for drawing fontified wires in the org-brain visualization buffer."
   (insert (propertize (apply 'concat strings) 'face 'org-brain-wires)))
@@ -1953,7 +1989,7 @@ Helper function for `org-brain-visualize'."
         (let ((children-links (cdr parent))
               (col-start (+ 3 max-width))
               (parent-title (org-brain-title (car parent))))
-          (org-goto-line 4)
+          (org-goto-line 5)
           (mapc
            (lambda (child)
              (picture-forward-column col-start)
@@ -1962,7 +1998,7 @@ Helper function for `org-brain-visualize'."
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
            (sort children-links org-brain-visualize-sort-function))
-          (org-goto-line 4)
+          (org-goto-line 5)
           (forward-line (1- (length children-links)))
           (picture-forward-column col-start)
           (push (cons (picture-current-line)
