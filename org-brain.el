@@ -1615,11 +1615,15 @@ cancelled manually with `org-brain-stop-wandering'."
   (org-brain-stop-wandering)
   (quit-window))
 
+(defun org-brain-title-as-button (entry)
+  "The title of ENTRY when displayed as a button"
+   (org-brain-title entry (or (not org-brain-visualizing-mind-map)
+                              org-brain-cap-mind-map-titles)))
+
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
-   (org-brain-title entry (or (not org-brain-visualizing-mind-map)
-                              org-brain-cap-mind-map-titles))
+   (org-brain-title-as-button entry)
    'action (lambda (_x) (org-brain-visualize entry))
    'follow-link t
    'help-echo (org-brain-description entry)
@@ -1799,11 +1803,27 @@ Helper function for `org-brain-visualize'."
     (org-brain-insert-visualize-button pin 'org-brain-pinned))
   (insert "\n"))
 
+(defun org-brain--hist-entries-to-draw (max-width hist width to-draw)
+  "Determines the entries in HIST that can fit on a line of MAX-WIDTH.
+Returns those entries in reversed order.
+WIDTH and TO-DRAW are state parameters.
+WIDTH represents the width of the line comprising the elements in TO-DRAW.
+Assumes elements will be drawn with a two-character padding between them.
+Helper function for `org-brain--vis-history'."
+  (if (null hist)
+      to-draw
+    (let* ((entry-title-width (string-width (org-brain-title-as-button (car hist))))
+           (new-line-width (+ width 2 entry-title-width)))
+      (if (and (<= max-width new-line-width)
+               (not (null to-draw)))  ; Always display at least one entry
+          to-draw
+        (org-brain--hist-entries-to-draw max-width (cdr hist) new-line-width (cons (car hist) to-draw))))))
+
 (defun org-brain--vis-history ()
-  "Insert the 5 most recently visited entries
+  "Show as many of the most recently visited entries as fit on one line.
 Helper function for `org-brain-visualize'."
   (insert "HISTORY:")
-  (dolist (entry (reverse (seq-take org-brain--vis-history 5)))
+  (dolist (entry (org-brain--hist-entries-to-draw (window-width) org-brain--vis-history (string-width "HISTORY:") nil))
     (insert "  ")
     (org-brain-insert-visualize-button entry 'org-brain-pinned))
   (insert "\n"))
