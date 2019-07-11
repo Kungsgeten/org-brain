@@ -318,11 +318,11 @@ Insert links using `org-insert-link'."
 
 (defun org-brain-entry-at-point-excludedp ()
   "Return t if the entry at point is tagged as being excluded from org-brain."
-  (let ((tags (org-get-tags-at)))
+  (let ((tags (org-get-tags)))
     (or (member org-brain-exclude-tree-tag tags)
         (and (member org-brain-exclude-children-tag tags)
              (not (member org-brain-exclude-children-tag
-                          (org-get-tags-at nil t)))))))
+                          (org-get-tags nil t)))))))
 
 (defun org-brain-save-data ()
   "Save data to `org-brain-data-file'."
@@ -647,7 +647,7 @@ ignore `org-brain-exclude-children-tag' and
                  (point))))
           ;; Headline entry
           (org-with-point-at (org-brain-entry-marker entry)
-            (let ((tags (org-get-tags-at nil t)))
+            (let ((tags (org-get-tags nil t)))
               (unless (and (member org-brain-exclude-text-tag tags)
                            (not all-data))
                 (unless all-data
@@ -726,7 +726,7 @@ The car is the raw-link and the cdr is the description."
         links
       ;; Headline entry
       (org-with-point-at (org-brain-entry-marker entry)
-        (unless (member org-brain-exclude-resouces-tag (org-get-tags-at nil t))
+        (unless (member org-brain-exclude-resouces-tag (org-get-tags nil t))
           (append links
                   ;; Attachments
                   (when-let ((attach-dir (org-attach-dir)))
@@ -1084,7 +1084,7 @@ If ENTRY isn't specified, ask for the ENTRY."
   (if (org-brain-filep (org-brain-goto entry))
       (or (outline-next-heading)
           (goto-char (point-max)))
-    (let ((tags (org-get-tags-at nil t)))
+    (let ((tags (org-get-tags nil t)))
       (or (and (not (member org-brain-exclude-children-tag tags))
                (not (member org-brain-show-children-tag tags))
                (org-goto-first-child))
