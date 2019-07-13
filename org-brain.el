@@ -226,11 +226,28 @@ Insert links using `org-insert-link'."
   :group 'org-brain
   :type '(string))
 
+(defun org-brain-file-face-attrs (face)
+  "Return a plist of the attributes of the file face that corresponds to FACE.
+Utility function for calculating the file-face attributes to pass to defface."
+  (labels ((alist->plist (alist)
+                         "Convert an ALIST to a plist."
+                         (pcase alist
+                           ('nil nil)
+                           (`((,h1 . ,h2) . ,tail) `(,h1 . (,h2 . ,(alist->plist tail)))))))
+    (append (alist->plist (face-all-attributes 'org-brain-file-face-template (selected-frame))) `(:inherit ,face))))
+
 ;; ** Faces
+(defface org-brain-file-face-template
+  '((t . (:slant italic)))
+  "Attributes of this face are applied to file-entry faces.")
 
 (defface org-brain-title
   '((t . (:inherit 'org-level-1)))
   "Face for the currently selected entry.")
+
+(defface org-brain-title-file
+  `((t . ,(org-brain-file-face-attrs 'org-brain-title)))
+  "face for the currently selected entry, if it is a file entry.")
 
 (defface org-brain-wires
   `((t . (:inherit 'font-lock-comment-face :italic nil)))
@@ -238,28 +255,51 @@ Insert links using `org-insert-link'."
 
 (defface org-brain-button
   '((t . (:inherit button)))
-  "Face for buttons in the org-brain visualize buffer.")
+  "Face for header-entry buttons in the org-brain visualize buffer.")
+
+(defface org-brain-button-file
+  `((t . ,(org-brain-file-face-attrs 'org-brain-button)))
+  "Face for file-entry buttons in the org-brain visualize buffer.")
 
 (defface org-brain-parent
   '((t . (:inherit (font-lock-builtin-face org-brain-button))))
-  "Face for the entries' parent nodes.")
+  "Face for the entries' header-entry parent nodes.")
+
+(defface org-brain-parent-file
+  `((t . ,(org-brain-file-face-attrs 'org-brain-parent)))
+  "Face for the entries' file-entry parent nodes.")
 
 (defface org-brain-child
   '((t . (:inherit org-brain-button)))
-  "Face for the entries' child nodes.")
+  "Face for the entries' header-entry child nodes.")
+
+(defface org-brain-child-file
+  `((t . ,(org-brain-file-face-attrs 'org-brain-child)))
+  "Face for the entries' file-entry child nodes.")
 
 (defface org-brain-sibling
   '((t . (:inherit org-brain-child)))
-  "Face for the entries' sibling nodes.")
+  "Face for the entries' header-entry sibling nodes.")
+
+(defface org-brain-sibling-file
+  `((t . ,(org-brain-file-face-attrs 'org-brain-sibling)))
+  "Face for the entries' file-entry sibling nodes.")
 
 (defface org-brain-friend
   '((t . (:inherit org-brain-button)))
-  "Face for the entries' friend nodes.")
+  "Face for the entries' header-entry friend nodes.")
+
+(defface org-brain-friend-file
+  `((t . ,(org-brain-file-face-attrs 'org-brain-friend)))
+  "Face for the entries' file-entry friend nodes.")
 
 (defface org-brain-pinned
   '((t . (:inherit org-brain-button)))
-  "Face for pinned entries.")
+  "Face for pinned header entries.")
 
+(defface org-brain-pinned-file
+  `((t . ,(org-brain-file-face-attrs 'org-brain-pinned)))
+  "Face for pinned file entries.")
 
 ;; * API
 
@@ -1535,7 +1575,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
               (ignore-errors (delete-char (- half-title-length)))))
           (setq entry-pos (point))
           (insert (propertize title
-                              'face 'org-brain-title
+                              'face (org-brain-display-face entry 'org-brain-title)
                               'aa2u-text t))
           (org-brain--vis-friends entry)
           (org-brain--vis-children entry)))
@@ -1608,6 +1648,15 @@ cancelled manually with `org-brain-stop-wandering'."
   (org-brain-stop-wandering)
   (quit-window))
 
+(defun org-brain-display-face (entry &optional face)
+  "Return the final display face for ENTRY.
+If FACE is specified, and ENTRY is a file entry,
+return the file-entry face that corresponds to FACE.
+Otherwise return FACE."
+  (let* ((face-string (symbol-name (or face 'org-face-button)))
+         (display-face-string (concat face-string (if (org-brain-filep entry) "-file" ""))))
+    (intern display-face-string)))
+
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
@@ -1617,7 +1666,7 @@ cancelled manually with `org-brain-stop-wandering'."
    'follow-link t
    'help-echo (org-brain-description entry)
    'aa2u-text t
-   'face (or face 'org-brain-button)))
+   'face (org-brain-display-face entry face)))
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
