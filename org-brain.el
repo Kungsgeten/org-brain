@@ -1188,8 +1188,9 @@ not contain `org-brain-files-extension'."
         (org-brain--remove-relationships file-entry)
         (org-save-all-org-buffers)
         (make-directory (file-name-directory newpath) t)
-        (with-temp-file newpath (insert-file-contents oldpath))
-        (org-brain-delete-entry file-entry t)
+        (if (vc-backend oldpath)
+            (vc-rename-file oldpath newpath)
+          (rename-file oldpath newpath))
         (org-brain-update-id-locations)
         (dolist (child children)
           (org-brain-add-relationship new-name child))
@@ -1197,6 +1198,9 @@ not contain `org-brain-files-extension'."
           (org-brain-add-relationship parent new-name))
         (dolist (friend friends)
           (org-brain--internal-add-friendship new-name friend))
+        (when (equal file-entry org-brain--vis-entry)
+          (setq org-brain--vis-entry new-name))
+        (org-brain--revert-if-visualizing)
         (message "Renamed %s to %s" file-entry new-name)))))
 
 ;;;###autoload
