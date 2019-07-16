@@ -1647,6 +1647,9 @@ If ENTRY is omitted, try to get it from context or prompt for it."
              ()
              (unless (and link (not prompt))
                (setq link (read-string "Insert link: " link))
+               (unless org-keep-stored-link-after-insertion
+                 (setq org-stored-links (delq (assoc link org-stored-links)
+                                              org-stored-links)))
                (when (string-match org-bracket-link-regexp link)
                  (let ((linkdesc (match-string 3 link)))
                    (when (and (not description) linkdesc)
