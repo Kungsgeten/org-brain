@@ -1229,6 +1229,7 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
     (widen)
     (goto-char (marker-position marker))
     (when (org-at-heading-p)
+      (org-show-entry)
       (org-show-subtree)))
   entry)
 
