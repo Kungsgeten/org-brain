@@ -198,6 +198,11 @@ Only applies to headline entries."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-no-sort-children-tag "nosort"
+  "`org-mode' tag which makes the children of the headline entry appear in file order rather than sorted."
+  :group 'org-brain
+  :type '(string))
+
 (defcustom org-brain-wander-interval 3
   "Seconds between randomized entries, when using `org-brain-visualize-wander'."
   :group 'org-brain
@@ -734,17 +739,13 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METHOD 
                   (org-element-property :value kw)))))
     (error "Only file entries have keywords")))
 
-(defun org-brain--file-tags (file-entry)
-  "Get tags of FILE-ENTRY."
-  (ignore-errors
-    (split-string
-     (cdr (assoc "FILETAGS" (org-brain-keywords file-entry))) ":" t)))
-
 (defun org-brain-get-tags (entry &optional inherit)
   "Return the tags at ENTRY. Only use local tags unless INHERIT is non-nil.
 Works for both file and headline entries."
   (if (org-brain-filep entry)
-      (org-brain--file-tags entry)
+      (ignore-errors
+        (split-string
+         (cdr (assoc "FILETAGS" (org-brain-keywords entry))) ":" t))
     (org-with-point-at
         (org-brain-entry-marker entry)
       (org-get-tags nil (not inherit)))))
@@ -797,7 +798,7 @@ Only get the body text, unless ALL-DATA is t."
                          (end-of-line)
                          (point)))
                      (point-min)))
-               (if (let ((filetags (org-brain--file-tags entry)))
+               (if (let ((filetags (org-brain-get-tags entry)))
                      (or (member org-brain-show-children-tag filetags)
                          (member org-brain-exclude-children-tag filetags)))
                    (point-max)
@@ -2298,7 +2299,9 @@ Helper function for `org-brain-visualize'."
                 'org-brain-sibling))
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
-           (sort children-links org-brain-visualize-sort-function))
+           (if (member org-brain-no-sort-children-tag parent-tags)
+               children-links
+             (sort children-links org-brain-visualize-sort-function)))
           (org-goto-line base-line)
           (forward-line (1- sibling-middle))
           (picture-forward-column col-start)
@@ -2355,21 +2358,24 @@ Helper function for `org-brain-visualize'."
 (defun org-brain--vis-children (entry)
   "Insert children of ENTRY.
 Helper function for `org-brain-visualize'."
-  (when-let ((children (org-brain-children entry))
-             (fill-col (if (member org-brain-each-child-on-own-line-tag
-                                   (org-brain-get-tags entry))
-                           0
-                         (eval org-brain-child-linebreak-sexp))))
-    (insert "\n\n")
-    (dolist (child (sort children org-brain-visualize-sort-function))
-      (let ((child-title (org-brain-title child))
-            (face (if (member entry (org-brain--local-parent child))
-                      'org-brain-local-child
-                    'org-brain-child)))
-        (when (> (+ (current-column) (length child-title)) fill-col)
-          (insert "\n"))
-        (org-brain-insert-visualize-button child face)
-        (insert "  ")))))
+  (let ((tags (org-brain-get-tags entry t)))
+    (when-let ((children (org-brain-children entry))
+               (fill-col (if (member org-brain-each-child-on-own-line-tag
+                                     (org-brain-get-tags entry))
+                             0
+                           (eval org-brain-child-linebreak-sexp))))
+      (insert "\n\n")
+      (dolist (child (if (member org-brain-no-sort-children-tag tags)
+                         children
+                       (sort children org-brain-visualize-sort-function)))
+        (let ((child-title (org-brain-title child))
+              (face (if (member entry (org-brain--local-parent child))
+                        'org-brain-local-child
+                      'org-brain-child)))
+          (when (> (+ (current-column) (length child-title)) fill-col)
+            (insert "\n"))
+          (org-brain-insert-visualize-button child face)
+          (insert "  "))))))
 
 (defun org-brain--vis-friends (entry)
   "Insert friends of ENTRY.
