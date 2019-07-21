@@ -1261,11 +1261,11 @@ If ENTRY isn't specified, ask for the ENTRY."
   (org-brain-goto entry #'pop-to-buffer))
 
 ;;;###autoload
-(defun org-brain-goto-end (&optional entry)
+(defun org-brain-goto-end (&optional entry same-window)
   "Like `org-brain-goto', but visits the end of ENTRY.
 If ENTRY isn't specified, ask for the ENTRY."
   (interactive)
-  (if (org-brain-filep (org-brain-goto entry))
+  (if (org-brain-filep (org-brain-goto entry (if same-window nil #'pop-to-buffer)))
       (or (outline-next-heading)
           (goto-char (point-max)))
     (let ((tags (org-get-tags nil t)))
