@@ -1356,7 +1356,7 @@ If STATUS is omitted, toggle between selected / not selected."
 
 ;;;###autoload
 (defun org-brain-clear-selected ()
-  "Clear the selected list"
+  "Clear the selected list."
   (interactive)
   (setq org-brain-selected nil)
   (org-brain--revert-if-visualizing))
@@ -1374,7 +1374,7 @@ When ENTRY is in the selected list, it is ignored."
     (ignore-errors (org-brain-add-child entry (list child)))))
 
 (defun org-brain-remove-selected-children (entry)
-  "Remove selected entries from the list of ENTRY's children
+  "Remove selected entries from the list of ENTRY's children.
 If run interactively, get ENTRY from context.
 
 Ignores selected entries that are not children of ENTRY."
@@ -1395,7 +1395,7 @@ When ENTRY is in the selected list, it is ignored."
     (ignore-errors (org-brain-add-parent entry (list parent)))))
 
 (defun org-brain-remove-selected-parents (entry)
-  "Remove selected entries from the list of ENTRY's parents
+  "Remove selected entries from the list of ENTRY's parents.
 If run interactively, get ENTRY from context.
 
 Ignores selected entries that are not parents of ENTRY."
@@ -1409,14 +1409,14 @@ If run interactively, get ENTRY from context.
 
 When ENTRY is in the selected list, it is ignored."
   (interactive (list (org-brain-entry-at-pt)))
-  ;; org-brain-add-parent takes a list of friends,
+  ;; org-brain-add-friendship takes a list of friends,
   ;; but we call it one at a time
   ;; so that errors don't interrupt the bulk operation.
   (dolist (friend org-brain-selected)
     (ignore-errors (org-brain-add-friendship entry (list friend)))))
 
 (defun org-brain-remove-selected-friendships (entry)
-    "Remove selected entries from the list of ENTRY's friends
+  "Remove selected entries from the list of ENTRY's friends.
 If run interactively, get ENTRY from context.
 
 Ignores selected entries that are not friends of ENTRY."
