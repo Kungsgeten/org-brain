@@ -877,6 +877,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
         (re-search-forward (concat " " (org-brain-entry-identifier child)))
         (replace-match "")
         (org-brain-remove-line-if-matching "^#\\+BRAIN_CHILDREN:[[:space:]]*$")
+        (org-brain-remove-line-if-matching "^[[:space:]]*$")
         (save-buffer))
     ;; Parent = Headline
     (org-entry-remove-from-multivalued-property (org-brain-entry-marker parent)
@@ -891,6 +892,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
         (re-search-forward (concat " " (org-brain-entry-identifier parent)))
         (replace-match "")
         (org-brain-remove-line-if-matching "^#\\+BRAIN_PARENTS:[[:space:]]*$")
+        (org-brain-remove-line-if-matching "^[[:space:]]*$")
         (save-buffer))
     ;; Child = Headline
     (org-entry-remove-from-multivalued-property (org-brain-entry-marker child)
@@ -1042,6 +1044,7 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
           (re-search-forward (concat " " (org-brain-entry-identifier entry2)))
           (replace-match "")
           (org-brain-remove-line-if-matching "^#\\+BRAIN_FRIENDS:[[:space:]]*$")
+          (org-brain-remove-line-if-matching "^[[:space:]]*$")
           (save-buffer))
       ;; Entry2 = Headline
       (org-entry-remove-from-multivalued-property (org-brain-entry-marker entry1)
@@ -1130,6 +1133,14 @@ If ALL is nil, choose only between externally linked parents."
                      (org-brain--linked-property-entries
                       entry "BRAIN_PARENTS"))
                    nil t)))
+
+;;;###autoload
+(defun org-brain-visualize-parent (entry)
+  "Visualize the first parent of ENTRY.
+This allows the user to quickly jump up the hierarchy."
+  (interactive (list (org-brain-entry-at-pt)))
+  (when-let ((parent (car (org-brain-parents entry))))
+    (org-brain-visualize parent)))
 
 ;;;###autoload
 (defun org-brain-goto-friend (entry)
@@ -1880,6 +1891,7 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "t" 'org-brain-set-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
 (define-key org-brain-visualize-mode-map "k" 'backward-button)
+(define-key org-brain-visualize-mode-map "u" 'org-brain-visualize-parent)
 (define-key org-brain-visualize-mode-map [?\t] 'forward-button)
 (define-key org-brain-visualize-mode-map [backtab] 'backward-button)
 (define-key org-brain-visualize-mode-map "o" 'org-brain-goto-current)
