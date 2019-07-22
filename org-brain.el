@@ -1,13 +1,13 @@
 ;;; org-brain.el --- Org-mode concept mapping         -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017--2018  Erik Sjöstrand
+;; Copyright (C) 2017--2019  Erik Sjöstrand
 ;; MIT License
 
 ;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25") (org "9"))
-;; Version: 0.5
+;; Version: 0.6
 
 ;;; Commentary:
 
@@ -65,10 +65,9 @@ will be considered org-brain entries."
   :group 'org-brain
   :type '(repeat string))
 
-(defcustom org-brain-suggest-stored-link-as-resource t
-  "If `org-brain-add-resource' should suggest the last link saved with `org-store-link'."
-  :group 'org-brain
-  :type '(boolean))
+(make-obsolete-variable 'org-brain-suggest-stored-link-as-resource
+                        "org-brain-suggest-stored-link-as-resource isn't needed because of `org-insert-link-global'."
+                        "0.6")
 
 (defcustom org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path)
   "Where org-brain data is saved."
@@ -1748,31 +1747,34 @@ cancelled manually with `org-brain-stop-wandering'."
    'follow-link t
    'aa2u-text t))
 
-(defun org-brain-add-resource (link &optional description prompt entry)
-  "Insert LINK with DESCRIPTION in an entry.
-If PROMPT is non nil, use `org-insert-link' even if not being run interactively.
-If ENTRY is omitted, try to get it from context or prompt for it."
-  (interactive (or (and org-brain-suggest-stored-link-as-resource
-                        (when-let ((last-stored-link (car org-stored-links)))
-                          (list (substring-no-properties (car last-stored-link))
-                                (cadr last-stored-link)
-                                t)))
-                   '(nil)))
+(defun org-brain-add-resource (&optional link description prompt entry)
+  "Insert LINK with DESCRIPTION in ENTRY.
+If ENTRY is nil, try to get it from context or prompt for it.
+If LINK is nil then use `org-insert-link-global'. Otherwise:
+If PROMPT is non nil, let user edit the resource even if run non-interactively."
+  (interactive)
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
                     (org-brain-choose-entry "Insert link in entry: " 'all))))
   (cl-flet ((insert-resource-link
              ()
-             (unless (and link (not prompt))
-               (setq link (read-string "Insert link: " link))
-               (when (string-match org-bracket-link-regexp link)
-                 (let ((linkdesc (match-string 3 link)))
-                   (when (and (not description) linkdesc)
-                     (setq description linkdesc))
-                   (setq link (match-string 1 link))))
-               (setq description (read-string "Link description: " description)))
-             (newline-and-indent)
-             (insert (format "- %s" (org-make-link-string link description)))
+             (if link
+                 (progn
+                   (when prompt
+                     (setq link (read-string "Insert link: " link))
+                     (when (string-match org-bracket-link-regexp link)
+                       (let ((linkdesc (match-string 3 link)))
+                         (when (and (not description) linkdesc)
+                           (setq description linkdesc))
+                         (setq link (match-string 1 link))))
+                     (setq description (read-string "Link description: " description)))
+                   (newline-and-indent)
+                   (insert "- " (org-make-link-string link description)))
+               (when-let ((l (with-temp-buffer
+                               (org-insert-link-global)
+                               (buffer-string))))
+                 (newline-and-indent)
+                 (insert "- " l)))
              (save-buffer)))
     (if (org-brain-filep entry)
         ;; File entry
