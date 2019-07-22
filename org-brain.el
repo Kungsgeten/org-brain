@@ -1136,11 +1136,13 @@ If ALL is nil, choose only between externally linked parents."
 
 ;;;###autoload
 (defun org-brain-visualize-parent (entry)
-  "Visualize the first parent of ENTRY.
+  "Visualize a parent of ENTRY, preferring local parents.
 This allows the user to quickly jump up the hierarchy."
   (interactive (list (org-brain-entry-at-pt)))
-  (when-let ((parent (car (org-brain-parents entry))))
-    (org-brain-visualize parent)))
+  (if-let ((parent (car (or (org-brain--local-parent entry)
+                            (org-brain-parents entry)))))
+      (org-brain-visualize parent)
+    (error "This entry has no parent")))
 
 ;;;###autoload
 (defun org-brain-goto-friend (entry)
