@@ -1135,6 +1135,14 @@ If ALL is nil, choose only between externally linked parents."
                    nil t)))
 
 ;;;###autoload
+(defun org-brain-visualize-parent (entry)
+  "Visualize the first parent of ENTRY.
+This allows the user to quickly jump up the hierarchy."
+  (interactive (list (org-brain-entry-at-pt)))
+  (when-let ((parent (car (org-brain-parents entry))))
+    (org-brain-visualize parent)))
+
+;;;###autoload
 (defun org-brain-goto-friend (entry)
   "Goto a friend of ENTRY.
 If run interactively, get ENTRY from context."
@@ -1883,6 +1891,7 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "t" 'org-brain-set-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
 (define-key org-brain-visualize-mode-map "k" 'backward-button)
+(define-key org-brain-visualize-mode-map "u" 'org-brain-visualize-parent)
 (define-key org-brain-visualize-mode-map [?\t] 'forward-button)
 (define-key org-brain-visualize-mode-map [backtab] 'backward-button)
 (define-key org-brain-visualize-mode-map "o" 'org-brain-goto-current)
