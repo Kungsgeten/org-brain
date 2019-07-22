@@ -40,7 +40,7 @@
   :prefix "org-brain-"
   :group 'org)
 
-;; * Custom vars
+;;;; Custom vars
 
 (defcustom org-brain-path (expand-file-name "brain" org-directory)
   "The root directory of your org-brain.
@@ -225,7 +225,7 @@ Insert links using `org-insert-link'."
   :group 'org-brain
   :type '(string))
 
-;; ** Faces
+;;;;; Faces
 
 (defface org-brain-title
   '((t . (:inherit 'org-level-1)))
@@ -263,7 +263,7 @@ Insert links using `org-insert-link'."
   '((t . (:inherit org-brain-button)))
   "Face for selected entries.")
 
-;; * API
+;;;; API
 
 ;; An entry is either a string or a list of three strings.
 ;; If a string, then the entry is a file.
@@ -898,7 +898,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
                                                 (org-brain-entry-identifier parent)))
   (org-save-all-org-buffers))
 
-;; * Buffer commands
+;;;; Buffer commands
 
 ;;;###autoload
 (defun org-brain-add-child (entry children)
@@ -1566,7 +1566,7 @@ function."
                (org-brain-path-entry-name file)
                (car (split-string (org-element-property :path link) "::"))))))))))
 
-;; * Sorting
+;;;; Sorting
 
 (defun org-brain-title< (entry1 entry2)
   "Return non-nil if title of ENTRY1 is less than ENTRY2 in lexicographic order.
@@ -1580,7 +1580,7 @@ The function returns t if the first entry is smaller than the second.
 
 If you don't want to sort the relationships, set this to `ignore'.")
 
-;; * Visualize
+;;;; Visualize
 
 ;;;###autoload
 (defun org-brain-visualize (entry &optional nofocus nohistory wander)
@@ -1865,7 +1865,7 @@ See `org-brain-add-resource'."
   (add-function :before-until (local 'eldoc-documentation-function)
                 #'org-brain-visualize-eldoc-function))
 
-;; ** Keybindings
+;;;;; Keybindings
 
 (define-key org-brain-visualize-mode-map "p" 'org-brain-add-parent)
 (define-key org-brain-visualize-mode-map "P" 'org-brain-remove-parent)
@@ -1904,7 +1904,7 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "z" 'org-brain-show-ancestor-level)
 (define-key org-brain-visualize-mode-map "Z" 'org-brain-hide-ancestor-level)
 
-;; ** Drawing helpers
+;;;;; Drawing helpers
 
 (defun org-brain--vis-pinned ()
   "Insert pinned entries.
@@ -2052,7 +2052,7 @@ Helper function for `org-brain-visualize'."
           (run-hooks 'org-brain-after-visualize-hook)))
     (run-hooks 'org-brain-after-visualize-hook)))
 
-;; * Mind-map
+;;;;; Mind-map
 
 (defun org-brain-map-create-indentation (level)
   "Return a string of spaces, length determined by indentation LEVEL."
@@ -2133,7 +2133,7 @@ Return the position of ENTRY in the buffer."
     (setq org-brain-visualizing-mind-map (not org-brain-visualizing-mind-map))
     (org-brain-visualize org-brain--vis-entry)))
 
-;; ** Show/hide nested levels
+;;;;; Show/hide nested levels
 (defun org-brain-show-descendant-level ()
   "Show one more level of descendant entries to the right in the mind-map visualization buffer."
   (interactive)
@@ -2173,7 +2173,7 @@ Return the position of ENTRY in the buffer."
 (define-obsolete-function-alias
   'org-brain-visualize-remove-grandparent 'org-brain-hide-ancestor-level "0.5")
 
-;; * Brain link
+;;;; Brain link
 
 (defun org-brain-link-complete (&optional link-type)
   "Create an org-link target string to a file in `org-brain-path'.
@@ -2214,7 +2214,7 @@ LINK-TYPE will be \"brain\" by default."
                          :complete (lambda () (org-brain-link-complete org-brain-friend-link-name))
                          :follow 'org-brain-goto)
 
-;; * Brain switch link
+;;;; Brain switch link
 
 (defun org-brain--switch-link-complete ()
   "Create an org-link target string to an org-brain and one of its entries."
@@ -2243,7 +2243,7 @@ ENTRY should be a string; an id in the case of an headline entry."
                          :complete 'org-brain--switch-link-complete
                          :follow 'org-brain--switch-link-follow)
 
-;; * Helm integration
+;;;; Helm integration
 
 (with-eval-after-load "helm"
   (defun helm-brain--add-children (_c)
@@ -2295,7 +2295,7 @@ Supports selecting multiple entries at once."
     (interactive)
     (helm :sources (helm-brain--source))))
 
-;; * Ivy integration
+;;;; Ivy integration
 
 (with-eval-after-load "ivy"
   (defun counsel-brain ()
