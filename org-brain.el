@@ -2306,6 +2306,14 @@ ENTRY should be a string; an id in the case of an headline entry."
     (dolist (candidate (helm-marked-candidates))
       (org-brain-archive (or (org-brain-entry-from-id candidate) candidate))))
 
+  (defun helm-brain--select (_c)
+    (dolist (candidate (helm-marked-candidates))
+      (org-brain-select (or (org-brain-entry-from-id candidate) candidate) 1)))
+
+  (defun helm-brain--unselect (_c)
+    (dolist (candidate (helm-marked-candidates))
+      (org-brain-select (or (org-brain-entry-from-id candidate) candidate) -1)))
+
   (defvar helm-brain--actions
     (helm-make-actions
      "Visualize" (lambda (x)
@@ -2314,7 +2322,9 @@ ENTRY should be a string; an id in the case of an headline entry."
      "Add parents" 'helm-brain--add-parents
      "Add friends" 'helm-brain--add-friends
      "Delete" 'helm-brain--delete-entries
-     "Archive" 'helm-brain--archive))
+     "Archive" 'helm-brain--archive
+     "Select" 'helm-brain--select
+     "Unselect" 'helm-brain--unselect))
 
   (defun helm-brain--source ()
     (helm-build-sync-source "Brain"
@@ -2373,13 +2383,21 @@ Provides actions for visualizing, adding/removing relations, etc."
   (defun counsel-brain--archive (x)
     (org-brain-archive (or (org-brain-entry-from-id (cdr x)) (cdr x))))
 
+  (defun counsel-brain--select (x)
+    (org-brain-select (or (org-brain-entry-from-id (cdr x)) (cdr x)) 1))
+
+  (defun counsel-brain--unselect (x)
+    (org-brain-select (or (org-brain-entry-from-id (cdr x)) (cdr x)) -1))
+
   (ivy-set-actions
    'counsel-brain
    '(("c" counsel-brain--add-child "add as child")
      ("p" counsel-brain--add-parent "add as parent")
      ("f" counsel-brain--add-friend "add as friend")
      ("d" counsel-brain--delete "delete")
-     ("a" counsel-brain--archive "archive"))))
+     ("a" counsel-brain--archive "archive")
+     ("s" counsel-brain--select "select")
+     ("S" counsel-brain--unselect "unselect"))))
 
 (provide 'org-brain)
 ;;; org-brain.el ends here
