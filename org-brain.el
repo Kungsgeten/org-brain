@@ -1365,7 +1365,16 @@ If STATUS is omitted, toggle between selected / not selected."
               (id (button-get button 'id))
               (entry (or (org-brain-entry-from-id id)
                          (org-entry-restore-space id))))
-    (org-brain-select entry)))
+    (org-brain-select entry)
+    ;; Return t to confirm that a button has been selected
+    t))
+
+(defun org-brain-select-dwim (arg)
+  "Use `org-brain-select-button' or `org-brain-select' depending on context.
+If run with `\\[universal-argument\\]' (ARG is non nil) then always use `org-brain-select'."
+  (interactive "P")
+  (when (or arg (not (org-brain-select-button)))
+    (org-brain-select (org-brain-entry-at-pt))))
 
 ;;;###autoload
 (defun org-brain-clear-selected ()
@@ -1887,9 +1896,6 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "*" 'org-brain-add-child-headline)
 (define-key org-brain-visualize-mode-map "h" 'org-brain-add-child-headline)
 (define-key org-brain-visualize-mode-map "n" 'org-brain-pin)
-(define-key org-brain-visualize-mode-map ";" 'org-brain-select)
-(define-key org-brain-visualize-mode-map "." 'org-brain-select-button)
-(define-key org-brain-visualize-mode-map ":" 'org-brain-clear-selected)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-set-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
 (define-key org-brain-visualize-mode-map "k" 'backward-button)
@@ -1917,6 +1923,20 @@ See `org-brain-add-resource'."
 (define-key org-brain-visualize-mode-map "-" 'org-brain-hide-descendant-level)
 (define-key org-brain-visualize-mode-map "z" 'org-brain-show-ancestor-level)
 (define-key org-brain-visualize-mode-map "Z" 'org-brain-hide-ancestor-level)
+
+(define-prefix-command 'org-brain-select-map)
+(define-key org-brain-select-map "s" 'org-brain-clear-selected)
+(define-key org-brain-select-map "c" 'org-brain-add-selected-children)
+(define-key org-brain-select-map "C" 'org-brain-remove-selected-children)
+(define-key org-brain-select-map "p" 'org-brain-add-selected-parents)
+(define-key org-brain-select-map "P" 'org-brain-remove-selected-parents)
+(define-key org-brain-select-map "f" 'org-brain-add-selected-friendships)
+(define-key org-brain-select-map "F" 'org-brain-remove-selected-friendships)
+(define-key org-brain-select-map "s" 'org-brain-clear-selected)
+(define-key org-brain-select-map "S" 'org-brain-clear-selected)
+
+(define-key org-brain-visualize-mode-map "s" 'org-brain-select-dwim)
+(define-key org-brain-visualize-mode-map "S" 'org-brain-select-map)
 
 ;;;;; Drawing helpers
 
