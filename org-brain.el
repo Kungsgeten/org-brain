@@ -866,7 +866,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
   "Delete current line, if matching REGEX."
   (when (string-match regex (buffer-substring (line-beginning-position)
                                               (line-end-position)))
-    (kill-whole-line)))
+    (ignore-errors (kill-whole-line))))
 
 (defun org-brain-remove-relationship (parent child)
   "Remove external relationship between PARENT and CHILD."
