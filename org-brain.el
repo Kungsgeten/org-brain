@@ -1869,9 +1869,9 @@ See `org-brain-add-resource'."
 (defun org-brain-visualize-back ()
   "Go back to the previously visualized entry."
   (interactive)
-  (pop org-brain--vis-history)
-  (if org-brain--vis-history
-      (org-brain-visualize (car org-brain--vis-history) nil t)
+  (if (cadr org-brain--vis-history)
+      (progn (pop org-brain--vis-history)
+             (org-brain-visualize (car org-brain--vis-history) nil t))
     (error "No further history")))
 
 (defun org-brain-visualize-revert (_ignore-auto _noconfirm)
