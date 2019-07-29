@@ -597,11 +597,15 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                   (org-element-property :value kw)))))
     (error "Only file entries have keywords")))
 
-(defun org-brain--file-tags (file-entry)
-  "Get tags of FILE-ENTRY."
-  (ignore-errors
-    (split-string
-     (cdr (assoc "FILETAGS" (org-brain-keywords file-entry))) ":" t)))
+(defun org-brain-get-tags (entry &optional local)
+  "Return the tags at ENTRY. Do not report inherited tags if LOCAL is non-nil."
+  (if (org-brain-filep entry)
+      (ignore-errors
+        (split-string
+         (cdr (assoc "FILETAGS" (org-brain-keywords entry))) ":" t))
+    (org-with-point-at
+        (org-brain-entry-marker entry)
+      (org-get-tags nil local))))
 
 (defun org-brain--missing-id-error (entry)
   "Error message to be shown if id of ENTRY isn't found by `org-id-find'."
@@ -643,7 +647,7 @@ ignore `org-brain-exclude-children-tag' and
             (with-temp-buffer
               (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
               (if (and (not all-data)
-                       (let ((filetags (org-brain--file-tags entry)))
+                       (let ((filetags (org-brain-get-tags entry)))
                          (or (member org-brain-show-children-tag filetags)
                              (member org-brain-exclude-children-tag filetags))))
                   ;; Get entire buffer
@@ -2040,11 +2044,7 @@ Helper function for `org-brain-visualize'."
       (dolist (parent (sort siblings (lambda (x y)
                                        (funcall org-brain-visualize-sort-function
                                                 (car x) (car y)))))
-        (let* ((parent-tags (if (org-brain-filep (car parent))
-                                (org-brain--file-tags (car parent))
-                              (org-with-point-at
-                                  (org-brain-entry-marker (car parent))
-                                (org-get-tags nil t))))
+        (let* ((parent-tags (org-brain-get-tags (car parent) t))
                (children-links (unless (member org-brain-exclude-siblings-tag parent-tags)
                                  (cdr parent)))
                (col-start (+ 3 max-width))
@@ -2217,11 +2217,7 @@ Return the position of ENTRY in the buffer."
                                                        (funcall org-brain-visualize-sort-function
                                                                 (car x) (car y)))))
       (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
-      (let* ((parent-tags (if (org-brain-filep (car parent))
-                              (org-brain--file-tags (car parent))
-                            (org-with-point-at
-                                (org-brain-entry-marker (car parent))
-                              (org-get-tags nil t))) )
+      (let* ((parent-tags (org-brain-get-tags (car parent) t))
              (children-links (unless (member org-brain-exclude-siblings-tag parent-tags)
                                (cdr parent))))
         (dolist (sibling (sort children-links org-brain-visualize-sort-function))
