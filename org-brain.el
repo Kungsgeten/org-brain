@@ -6,7 +6,7 @@
 ;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
-;; Package-Requires: ((emacs "25") (org "9"))
+;; Package-Requires: ((emacs "25") (org "9.2"))
 ;; Version: 0.6
 
 ;;; Commentary:
@@ -176,6 +176,11 @@ Only applies to headline entries."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-exclude-siblings-tag "nosiblings"
+  "`org-mode' tag which stops prevents the siblings of children of this node from being displayed."
+  :group 'org-brain
+  :type '(string))
+
 (defcustom org-brain-wander-interval 3
   "Seconds between randomized entries, when using `org-brain-visualize-wander'."
   :group 'org-brain
@@ -327,11 +332,11 @@ Insert links using `org-insert-link'."
 
 (defun org-brain-entry-at-point-excludedp ()
   "Return t if the entry at point is tagged as being excluded from org-brain."
-  (let ((tags (org-get-tags-at)))
+  (let ((tags (org-get-tags)))
     (or (member org-brain-exclude-tree-tag tags)
         (and (member org-brain-exclude-children-tag tags)
              (not (member org-brain-exclude-children-tag
-                          (org-get-tags-at nil t)))))))
+                          (org-get-tags nil t)))))))
 
 (defun org-brain-save-data ()
   "Save data to `org-brain-data-file'."
@@ -656,7 +661,7 @@ ignore `org-brain-exclude-children-tag' and
                  (point))))
           ;; Headline entry
           (org-with-point-at (org-brain-entry-marker entry)
-            (let ((tags (org-get-tags-at nil t)))
+            (let ((tags (org-get-tags nil t)))
               (unless (and (member org-brain-exclude-text-tag tags)
                            (not all-data))
                 (unless all-data
@@ -735,7 +740,7 @@ The car is the raw-link and the cdr is the description."
         links
       ;; Headline entry
       (org-with-point-at (org-brain-entry-marker entry)
-        (unless (member org-brain-exclude-resouces-tag (org-get-tags-at nil t))
+        (unless (member org-brain-exclude-resouces-tag (org-get-tags nil t))
           (append links
                   ;; Attachments
                   (when-let ((attach-dir (org-attach-dir)))
@@ -1096,7 +1101,7 @@ If ENTRY isn't specified, ask for the ENTRY."
   (if (org-brain-filep (org-brain-goto entry))
       (or (outline-next-heading)
           (goto-char (point-max)))
-    (let ((tags (org-get-tags-at nil t)))
+    (let ((tags (org-get-tags nil t)))
       (or (and (not (member org-brain-exclude-children-tag tags))
                (not (member org-brain-show-children-tag tags))
                (org-goto-first-child))
@@ -1203,24 +1208,42 @@ not contain `org-brain-files-extension'."
                  (list entry (read-string "New filename: " entry))))
   (let ((newpath (org-brain-entry-path new-name))
         (oldpath (org-brain-entry-path file-entry)))
-    (if (file-exists-p newpath)
-        (error "There's already a file %s" newpath)
-      (let ((children (org-brain--linked-property-entries file-entry "BRAIN_CHILDREN"))
-            (parents (org-brain--linked-property-entries file-entry "BRAIN_PARENTS"))
-            (friends (org-brain-friends file-entry)))
-        (org-brain--remove-relationships file-entry)
-        (org-save-all-org-buffers)
-        (make-directory (file-name-directory newpath) t)
-        (with-temp-file newpath (insert-file-contents oldpath))
-        (org-brain-delete-entry file-entry t)
-        (org-brain-update-id-locations)
-        (dolist (child children)
-          (org-brain-add-relationship new-name child))
-        (dolist (parent parents)
-          (org-brain-add-relationship parent new-name))
-        (dolist (friend friends)
-          (org-brain--internal-add-friendship new-name friend))
-        (message "Renamed %s to %s" file-entry new-name)))))
+    (when (file-exists-p newpath)
+      (error "There's already a file %s" newpath))
+    (when (member newpath (mapcar #'buffer-file-name (buffer-list)))
+      (error "There's an active buffer associated with file %s" newpath))
+    (let ((children (org-brain--linked-property-entries file-entry "BRAIN_CHILDREN"))
+          (parents (org-brain--linked-property-entries file-entry "BRAIN_PARENTS"))
+          (friends (org-brain-friends file-entry))
+          (is-pinned (member file-entry org-brain-pins))
+          (is-selected (member file-entry org-brain-selected)))
+      (org-brain--remove-relationships file-entry)
+      (org-save-all-org-buffers)
+      (make-directory (file-name-directory newpath) t)
+      (if (vc-backend oldpath)
+          (vc-rename-file oldpath newpath)
+        (rename-file oldpath newpath))
+      (org-brain-update-id-locations)
+      (when is-pinned (org-brain-pin new-name 1))
+      (when is-selected (org-brain-select new-name 1))
+      (cl-flet ((replace-entry (e) (if (org-brain-filep e)
+                                       (if (equal e file-entry) new-name e)
+                                     (if (equal (car e) file-entry)
+                                         (cons new-name (cdr e)) e))))
+        (setq org-brain-pins (mapcar #'replace-entry org-brain-pins))
+        (setq org-brain-selected (mapcar #'replace-entry org-brain-selected))
+        (setq org-brain--vis-history (mapcar #'replace-entry org-brain--vis-history))
+        (setq org-brain--vis-entry (replace-entry org-brain--vis-entry)))
+      (dolist (child children)
+        (org-brain-add-relationship new-name child))
+      (dolist (parent parents)
+        (org-brain-add-relationship parent new-name))
+      (dolist (friend friends)
+        (org-brain--internal-add-friendship new-name friend))
+      (when (equal file-entry org-brain--vis-entry)
+        (setq org-brain--vis-entry new-name))
+      (org-brain--revert-if-visualizing)
+      (message "Renamed %s to %s" file-entry new-name))))
 
 ;;;###autoload
 (defun org-brain-delete-entry (entry &optional noconfirm)
@@ -2008,9 +2031,14 @@ Helper function for `org-brain-visualize'."
       (dolist (parent (sort siblings (lambda (x y)
                                        (funcall org-brain-visualize-sort-function
                                                 (car x) (car y)))))
-        (let ((children-links (cdr parent))
-              (col-start (+ 3 max-width))
-              (parent-title (org-brain-title (car parent))))
+        (let* ((parent-tags (org-with-point-at
+                                (org-brain-entry-marker (car parent))
+                              (org-get-tags nil t)))
+               (children-links (if (member org-brain-exclude-siblings-tag parent-tags)
+                                   nil
+                                 (cdr parent)))
+               (col-start (+ 3 max-width))
+               (parent-title (org-brain-title (car parent))))
           (org-goto-line 5)
           (mapc
            (lambda (child)
@@ -2179,10 +2207,16 @@ Return the position of ENTRY in the buffer."
                                                        (funcall org-brain-visualize-sort-function
                                                                 (car x) (car y)))))
       (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
-      (dolist (sibling (sort (cdr parent) org-brain-visualize-sort-function))
-        (insert (org-brain-map-create-indentation indent))
-        (org-brain-insert-visualize-button sibling 'org-brain-sibling)
-        (insert "\n")))
+      (let* ((parent-tags (org-with-point-at
+                              (org-brain-entry-marker (car parent))
+                            (org-get-tags nil t)))
+             (children-links (if (member org-brain-exclude-siblings-tag parent-tags)
+                                 nil
+                               (cdr parent))))
+        (dolist (sibling (sort children-links org-brain-visualize-sort-function))
+          (insert (org-brain-map-create-indentation indent))
+          (org-brain-insert-visualize-button sibling 'org-brain-sibling)
+          (insert "\n"))))
     (insert (org-brain-map-create-indentation indent))
     (setq entry-pos (point))
     (insert (propertize (org-brain-title entry)
