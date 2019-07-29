@@ -317,6 +317,7 @@ is visualized:
      setting this tag the entry get the entire subtree as text. You can change
      the tag name by modifying =org-brain-show-children-tag=. Works on file
      entries.
+- =:nosiblings:= :: You may have an entry with lots of children, and when you visualize one of these children you might not want to see the siblings from this parent. A good example would be if you have an =index= entry or similar. By tagging the parent with =nosiblings= the parent's children will not show siblings from that parent. You can change the tag name by modifying =org-brain-exclude-siblings-tag=.
 
 ** Entry descriptions
 
