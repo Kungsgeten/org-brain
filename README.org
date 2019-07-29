@@ -336,6 +336,8 @@ You may add a /description/ to an entry, which should be a short summary of what
     ...
 #+END_SRC
 
+Since this feature makes visualizing quite a bit slower, it is disabled by default. To activate it set the variable =org-brain-show-descriptions= to =t=.
+
 At the moment there's no way to add/remove/change descriptions directly from the =org-brain-visualize= interface, sorry!
 
 ** Having multiple brains

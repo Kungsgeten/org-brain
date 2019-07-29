@@ -102,6 +102,11 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-show-descriptions nil
+  "Should descriptions of buttons be shown in `org-brain-visualize'?"
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-quit-after-goto nil
   "Should the *org-brain* buffer window close itself after executing a goto command?"
   :group 'org-brain
@@ -1677,6 +1682,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
          nil nil def-choice)))))
   (unless wander (org-brain-stop-wandering))
   (with-current-buffer (get-buffer-create "*org-brain*")
+    (setq-local indent-tabs-mode nil)
     (read-only-mode 1)
     (setq-local default-directory (file-name-directory (org-brain-entry-path entry)))
     (org-brain-maybe-switch-brain)
@@ -1788,7 +1794,7 @@ cancelled manually with `org-brain-stop-wandering'."
    'action (lambda (_x) (org-brain-visualize entry))
    'id (org-brain-entry-identifier entry)
    'follow-link t
-   'help-echo (org-brain-description entry)
+   'help-echo (when org-brain-show-descriptions (org-brain-description entry))
    'aa2u-text t
    'face (if (member entry org-brain-selected)
              'org-brain-selected
@@ -1920,8 +1926,9 @@ See `org-brain-add-resource'."
   "Major mode for `org-brain-visualize'.
 \\{org-brain-visualize-mode-map}"
   (setq-local revert-buffer-function #'org-brain-visualize-revert)
-  (add-function :before-until (local 'eldoc-documentation-function)
-                #'org-brain-visualize-eldoc-function))
+  (when org-brain-show-descriptions
+    (add-function :before-until (local 'eldoc-documentation-function)
+                  #'org-brain-visualize-eldoc-function)))
 
 ;;;;; Keybindings
 
