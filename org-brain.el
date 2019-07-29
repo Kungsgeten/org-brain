@@ -177,7 +177,7 @@ Only applies to headline entries."
   :type '(string))
 
 (defcustom org-brain-exclude-siblings-tag "nosiblings"
-  "`org-mode' tag which stops prevents the siblings of children of this node from being displayed."
+  "`org-mode' tag which prevents the siblings of children of this node from being displayed."
   :group 'org-brain
   :type '(string))
 
@@ -305,15 +305,15 @@ Insert links using `org-insert-link'."
   (interactive "D")
   (if (file-equal-p directory org-brain-path)
       (message "Current brain already is %s, no switch" directory)
-    (progn
-      (setq org-brain-path directory)
-      (setq org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path))
-      (unless (file-exists-p org-brain-data-file)
-        (org-brain-save-data))
-      (setq org-brain-pins nil)
-      (load org-brain-data-file t)
-      (org-brain-update-id-locations)
-      (message "Switched org-brain to %s" directory))))
+    (setq org-brain-path directory)
+    (setq org-brain-data-file (expand-file-name ".org-brain-data.el" org-brain-path))
+    (unless (file-exists-p org-brain-data-file)
+      (org-brain-save-data))
+    (setq org-brain-pins nil)
+    (setq org-brain--vis-history nil)
+    (load org-brain-data-file t)
+    (org-brain-update-id-locations)
+    (message "Switched org-brain to %s" directory)))
 
 (defun org-brain-maybe-switch-brain ()
   "Switch brain to `default-directory' if a file named \".org-brain-data.el\" exists there."
@@ -1228,8 +1228,8 @@ not contain `org-brain-files-extension'."
       (when is-selected (org-brain-select new-name 1))
       (cl-flet ((replace-entry (e) (if (org-brain-filep e)
                                        (if (equal e file-entry) new-name e)
-                                     (if (equal (car e) file-entry)
-                                         (cons new-name (cdr e)) e))))
+                                     (when (equal (car e) file-entry)
+                                       (cons new-name (cdr e)) e))))
         (setq org-brain-pins (mapcar #'replace-entry org-brain-pins))
         (setq org-brain-selected (mapcar #'replace-entry org-brain-selected))
         (setq org-brain--vis-history (mapcar #'replace-entry org-brain--vis-history))
@@ -1775,9 +1775,9 @@ cancelled manually with `org-brain-stop-wandering'."
   (quit-window))
 
 (defun org-brain-title-as-button (entry)
-  "The title of ENTRY when displayed as a button"
-   (org-brain-title entry (or (not org-brain-visualizing-mind-map)
-                              org-brain-cap-mind-map-titles)))
+  "The title of ENTRY when displayed as a button."
+  (org-brain-title entry (or (not org-brain-visualizing-mind-map)
+                             org-brain-cap-mind-map-titles)))
 
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
@@ -2034,8 +2034,7 @@ Helper function for `org-brain-visualize'."
         (let* ((parent-tags (org-with-point-at
                                 (org-brain-entry-marker (car parent))
                               (org-get-tags nil t)))
-               (children-links (if (member org-brain-exclude-siblings-tag parent-tags)
-                                   nil
+               (children-links (unless (member org-brain-exclude-siblings-tag parent-tags)
                                  (cdr parent)))
                (col-start (+ 3 max-width))
                (parent-title (org-brain-title (car parent))))
@@ -2210,8 +2209,7 @@ Return the position of ENTRY in the buffer."
       (let* ((parent-tags (org-with-point-at
                               (org-brain-entry-marker (car parent))
                             (org-get-tags nil t)))
-             (children-links (if (member org-brain-exclude-siblings-tag parent-tags)
-                                 nil
+             (children-links (unless (member org-brain-exclude-siblings-tag parent-tags)
                                (cdr parent))))
         (dolist (sibling (sort children-links org-brain-visualize-sort-function))
           (insert (org-brain-map-create-indentation indent))
