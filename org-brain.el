@@ -946,6 +946,20 @@ PROPERTY could for instance be BRAIN_CHILDREN."
                                              (org-brain-entry-identifier parent)))
     (org-save-all-org-buffers)))
 
+(defun org-brain-store-link-to-current-line ()
+  "Store a relationship link to this line in the current file"
+  (interactive)
+  (org-brain-add-resource (concat
+                           (buffer-file-name)
+                           "::"
+                           (number-to-string (line-number-at-pos)))))
+
+(defun org-brain-store-link-to-current-file ()
+  "Store a relationship link to the current file"
+  (interactive)
+  (org-brain-add-resource (buffer-file-name)))
+
+
 (defun org-brain-remove-line-if-matching (regex)
   "Delete current line, if matching REGEX."
   (when (string-match regex (buffer-substring (line-beginning-position)
