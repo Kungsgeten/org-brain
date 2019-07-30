@@ -240,7 +240,7 @@ Insert links using `org-insert-link'."
   :group 'org-brain
   :type '(string))
 
-;;;;; Faces
+;;;;; Faces and face helper functions
 
 (defface org-brain-title
   '((t . (:inherit 'org-level-1)))
@@ -252,40 +252,60 @@ Insert links using `org-insert-link'."
 
 (defface org-brain-button
   '((t . (:inherit button)))
-  "Face for header-entry buttons in the org-brain visualize buffer.")
+  "Face for header-entry buttons in the org-brain visualize buffer.
+File entries also use this, but also applies `org-brain-file-face-template'.")
 
 (defface org-brain-parent
   '((t . (:inherit (font-lock-builtin-face org-brain-button))))
-  "Face for the entries' linked header-entry parent nodes.")
+  "Face for the entries' linked header-entry parent nodes.
+File entries also use this, but also applies `org-brain-file-face-template'.")
 
 (defface org-brain-local-parent
   '((t . (:inherit org-brain-parent :weight bold)))
-  "Face for the entries' local header-entry parent nodes.")
+  "Face for the entries' local header-entry parent nodes.
+File entries also use this, but also applies `org-brain-file-face-template'.")
 
 (defface org-brain-child
   '((t . (:inherit org-brain-button)))
-  "Face for the entries' linked header-entry child nodes.")
+  "Face for the entries' linked header-entry child nodes.
+File entries also use this, but also applies `org-brain-file-face-template'.")
 
 (defface org-brain-local-child
   '((t . (:inherit org-brain-child :weight bold)))
-  "Face for the entries' local header-entry child nodes.")
+  "Face for the entries' local header-entry child nodes.
+File entries also use this, but also applies `org-brain-file-face-template'.")
 
 (defface org-brain-sibling
   '((t . (:inherit org-brain-child)))
-  "Face for the entries' header-entry sibling nodes.")
+  "Face for the entries' header-entry sibling nodes.
+File entries also use this, but also applies `org-brain-file-face-template'.")
 
 (defface org-brain-local-sibling
   '((t . (:inherit org-brain-sibling :weight bold)))
   "Face for the entries' local header-entry sibling nodes.
-An entry is a local sibling of another entry if they share a local parent.")
+An entry is a local sibling of another entry if they share a local parent.
+File entries also use this, but also applies `org-brain-file-face-template'.")
 
 (defface org-brain-friend
   '((t . (:inherit org-brain-button)))
-  "Face for the entries' header-entry friend nodes.")
+  "Face for the entries' header-entry friend nodes.
+File entries also use this, but also applies `org-brain-file-face-template'.")
 
 (defface org-brain-pinned
   '((t . (:inherit org-brain-button)))
-  "Face for pinned header entries.")
+
+  "Face for pinned header entries.
+File entries also use this, but also applies `org-brain-file-face-template'.")
+
+(defface org-brain-selected-list
+  '((t . (:inherit org-brain-pinned)))
+  "Face for header entries in the selection list.
+File entries also use this, but also applies `org-brain-file-face-template'.")
+
+(defface org-brain-history-list
+  '((t . (:inherit org-brain-pinned)))
+  "Face for header entries in the history list.
+File entries also use this, but also applies `org-brain-file-face-template'.")
 
 (defface org-brain-file-face-template
   '((t . (:slant italic)))
@@ -302,6 +322,21 @@ If FRAME is not specified, `selected-frame' is used."
     (alist->plist (seq-filter
                    (lambda (f) (not (equal (cdr f) 'unspecified)))
                    (face-all-attributes face (or frame (selected-frame)))))))
+
+(defun org-brain-display-face (entry &optional face)
+  "Return the final display face for ENTRY.
+Takes FACE as a starting face, or `org-brain-button' if FACE is not specified.
+Applies the attributes in `org-brain-selected-face-template'
+and `org-brain-file-face-template' as appropriate."
+  (let ((selected-face-attrs
+         (when (member entry org-brain-selected)
+           (org-brain-specified-face-attrs 'org-brain-selected-face-template)))
+        (file-face-attrs
+         (when (org-brain-filep entry)
+           (org-brain-specified-face-attrs 'org-brain-file-face-template))))
+    (append (list :inherit (or face 'org-brain-button))
+            selected-face-attrs
+            file-face-attrs)))
 
 (defface org-brain-selected-face-template
   `((t . ,(org-brain-specified-face-attrs 'highlight)))
@@ -1816,21 +1851,6 @@ cancelled manually with `org-brain-stop-wandering'."
   (org-brain-title entry (or (not org-brain-visualizing-mind-map)
                              org-brain-cap-mind-map-titles)))
 
-(defun org-brain-display-face (entry &optional face)
-  "Return the final display face for ENTRY.
-Takes FACE as a starting face, or `org-brain-button' if FACE is not specified.
-Applies the attributes in `org-brain-selected-face-template'
-and `org-brain-file-face-template' as appropriate."
-  (let ((selected-face-attrs
-         (when (member entry org-brain-selected)
-           (org-brain-specified-face-attrs 'org-brain-selected-face-template)))
-        (file-face-attrs
-         (when (org-brain-filep entry)
-           (org-brain-specified-face-attrs 'org-brain-file-face-template))))
-    (append (list :inherit (or face 'org-brain-button))
-            selected-face-attrs
-            file-face-attrs)))
-
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
   (insert-text-button
@@ -2041,7 +2061,7 @@ Helper function for `org-brain-visualize'."
     (insert "SELECTED:")
     (dolist (selection (sort (copy-sequence org-brain-selected) org-brain-visualize-sort-function))
       (insert "  ")
-      (org-brain-insert-visualize-button selection 'org-brain-pinned))
+      (org-brain-insert-visualize-button selection 'org-brain-selected-list))
     (insert "\n")))
 
 (defun org-brain--hist-entries-to-draw (max-width hist width to-draw)
@@ -2066,7 +2086,7 @@ Helper function for `org-brain-visualize'."
   (insert "HISTORY:")
   (dolist (entry (org-brain--hist-entries-to-draw (window-width) org-brain--vis-history (string-width "HISTORY:") nil))
     (insert "  ")
-    (org-brain-insert-visualize-button entry 'org-brain-pinned))
+    (org-brain-insert-visualize-button entry 'org-brain-history-list))
   (insert "\n"))
 
 (defun org-brain--insert-wire (&rest strings)
