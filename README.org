@@ -175,7 +175,7 @@ available in =org-brain-visualize=:
 | T          | =org-brain-set-tags=                 | Change the tags of the entry.                              |
 | d          | =org-brain-delete-entry=             | Choose an entry to delete.                                 |
 | l          | =org-brain-visualize-add-resource=   | Add a new resource link in entry                           |
-| r          | =org-brain-open-resource=            | Shortcut to choose and open a resource from the entry.     |
+| r          | =org-brain-open-resource=            | Choose and open a resource from the entry.                 |
 | C-y        | =org-brain-visualize-paste-resource= | Add a new resource link from clipboard                     |
 | a          | =org-brain-visualize-attach=         | Run =org-attach= on entry (headline entries only)            |
 | A          | =org-brain-archive=                  | Archive the entry (headline entries only)                  |
@@ -185,14 +185,16 @@ available in =org-brain-visualize=:
 | w          | =org-brain-visualize-random=         | Visualize one of your entries at random.                   |
 | W          | =org-brain-visualize-wander=         | Visualize at random, in a set interval. =W= again to cancel. |
 
+You may use =org-store-link= inside of =org-brain-visualize= in order to store a
+link to the currently visualized =org-brain= entry.
+
 If the /universal argument/ =C-u= is used when running
 =org-brain-visualize-random= or =org-brain-visualize-wander=, the randomized
 targets are restricted to descendants (children, grandchildren,
 grand-grandchildren etc) of the currently visualized entry. Use for instance
 =C-u W= to wander among the descendants.
 
-You may use =org-store-link= inside of =org-brain-visualize= in order to store a
-link to the currently visualized =org-brain= entry.
+The /universal argument/ =C-u= can also be used with =org-brain-open-resource=. This lets you choose not only resource from the visualized entry, but also from descendants (children, grand-children, etc) of that entry.
 
 When using the mind map visualization (toggle by pressing =m=), you can use the
 following keybindings in order to show or hide successive levels of hierarchy relative to the current entry.

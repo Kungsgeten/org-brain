@@ -823,11 +823,14 @@ The car is the raw-link and the cdr is the description."
                                     attachment))
                             (org-attach-file-list attach-dir)))))))))
 
-(defun org-brain--choose-resource (entry)
-  "Use `completing-read' to get link to a resource from ENTRY."
-  (let ((resources (mapcar (lambda (x)
-                             (cons (or (cdr x) (car x)) (car x)))
-                           (org-brain-resources entry))))
+(defun org-brain--choose-resource (entries)
+  "Use `completing-read' to get link to a resource from ENTRIES."
+  (let ((resources (mapcan
+                    (lambda (entry)
+                      (mapcar (lambda (x)
+                                (cons (or (cdr x) (car x)) (car x)))
+                              (org-brain-resources entry)))
+                    entries)))
     (if (equal (length resources) 1)
         (cdar resources)
       (cdr (assoc (completing-read "Resource: " resources nil t) resources)))))
@@ -835,10 +838,14 @@ The car is the raw-link and the cdr is the description."
 ;;;###autoload
 (defun org-brain-open-resource (entry)
   "Choose and open a resource from ENTRY.
+If run with `\\[universal-argument]' then also choose from descendants of ENTRY.
 Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
   (interactive (list (or (ignore-errors (org-brain-entry-at-pt))
                          (org-brain-choose-entry "Resource from: " 'all))))
-  (org-open-link-from-string (org-brain--choose-resource entry)))
+  (org-open-link-from-string (org-brain--choose-resource
+                              (if current-prefix-arg
+                                  (org-brain-descendants entry)
+                                (list entry)))))
 
 (defun org-brain--local-parent (entry)
   "Get file local parent of ENTRY, as a list."
