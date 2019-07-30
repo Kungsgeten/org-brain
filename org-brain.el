@@ -1963,8 +1963,10 @@ If called interactively use current FILE
 and prompt for ENTRY, unless called with `\\[universal-argument]'
 in which case use the current/last visualized entry."
   (interactive (list (buffer-file-name)))
-  (org-brain-add-resource file nil nil (or entry (when current-prefix-arg
-                                                   org-brain--vis-entry)))
+  (org-brain-add-resource (concat "file:" file)
+                          nil nil
+                          (or entry (when current-prefix-arg
+                                      org-brain--vis-entry)))
   (ignore-errors
     (with-current-buffer "*org-brain*"
       (org-brain--revert-if-visualizing)))
