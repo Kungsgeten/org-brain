@@ -2203,7 +2203,8 @@ Helper function for `org-brain-visualize'."
           ;; Line to main entry
           (move-to-column (/ (+ (cdar (last parent-positions))
                                 (cdar parent-positions))
-                             2))
+                             2)
+			  t)
           (delete-char 1)
           (when (> (length parent-positions) 1)
             (org-brain--insert-wire "+")
