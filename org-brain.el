@@ -704,32 +704,33 @@ ignore `org-brain-exclude-children-tag' and
       ((entry-text
         (if (org-brain-filep entry)
             ;; File entry
-            (with-temp-buffer
-              (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-              (if (and (not all-data)
-                       (let ((filetags (org-brain--file-tags entry)))
-                         (or (member org-brain-show-children-tag filetags)
-                             (member org-brain-exclude-children-tag filetags))))
-                  ;; Get entire buffer
+            (let ((keyword-regex "^#\\+[a-zA-Z_]+:"))
+              (with-temp-buffer
+                (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+                (if (and (not all-data)
+                         (let ((filetags (org-brain--file-tags entry)))
+                           (or (member org-brain-show-children-tag filetags)
+                               (member org-brain-exclude-children-tag filetags))))
+                    ;; Get entire buffer
+                    (buffer-substring-no-properties
+                     (or (save-excursion
+                           (when (re-search-backward keyword-regex nil t)
+                             (end-of-line)
+                             (point)))
+                         (point-min))
+                     (point-max))
+                  ;; Get text up to first heading
+                  (goto-char (point-min))
+                  (or (outline-next-heading)
+                      (goto-char (point-max)))
                   (buffer-substring-no-properties
-                   (or (save-excursion
-                         (when (re-search-backward "^[#:*]" nil t)
-                           (end-of-line)
-                           (point)))
+                   (or (unless all-data
+                         (save-excursion
+                           (when (re-search-backward keyword-regex nil t)
+                             (end-of-line)
+                             (point))))
                        (point-min))
-                   (point-max))
-                ;; Get text up to first heading
-                (goto-char (point-min))
-                (or (outline-next-heading)
-                    (goto-char (point-max)))
-                (buffer-substring-no-properties
-                 (or (unless all-data
-                       (save-excursion
-                         (when (re-search-backward "^[#:*]" nil t)
-                           (end-of-line)
-                           (point))))
-                     (point-min))
-                 (point))))
+                   (point)))))
           ;; Headline entry
           (org-with-point-at (org-brain-entry-marker entry)
             (let ((tags (org-get-tags nil t)))
