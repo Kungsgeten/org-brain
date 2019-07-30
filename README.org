@@ -256,6 +256,10 @@ entries.
 
 The names of the relationship inserting links (=brain-child=, =brain-parent= and =brain-friend=) can be customized with the variables =org-brain-child-link-name=, =org-brain-parent-link-name=, and =org-brain-friend-link-name=. This customization should be done before loading =org-brain=. If you're using =use-package=, put the customization in the =:init= block.
 
+** Other commands
+
+If you're browsing a file and want to add the file -- or the current line in the file -- as a resource to an entry, you can use =M-x org-brain-add-file-as-resource= or =M-x org-brain-add-file-line-as-resource=. If any of these are run with /universal argument/ =C-u= then add the resources to current/last visualized entry.
+
 ** General information
 
 If you try to add a child/parent/friend to an entry which doesn't exist, that

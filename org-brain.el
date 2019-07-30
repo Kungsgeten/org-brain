@@ -946,20 +946,6 @@ PROPERTY could for instance be BRAIN_CHILDREN."
                                              (org-brain-entry-identifier parent)))
     (org-save-all-org-buffers)))
 
-(defun org-brain-store-link-to-current-line ()
-  "Store a relationship link to this line in the current file"
-  (interactive)
-  (org-brain-add-resource (concat
-                           (buffer-file-name)
-                           "::"
-                           (number-to-string (line-number-at-pos)))))
-
-(defun org-brain-store-link-to-current-file ()
-  "Store a relationship link to the current file"
-  (interactive)
-  (org-brain-add-resource (buffer-file-name)))
-
-
 (defun org-brain-remove-line-if-matching (regex)
   "Delete current line, if matching REGEX."
   (when (string-match regex (buffer-substring (line-beginning-position)
@@ -1954,6 +1940,35 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
   (org-brain--revert-if-visualizing))
 
 (defalias 'org-brain-visualize-add-resource #'org-brain-add-resource)
+
+(defun org-brain-add-file-line-as-resource (file line &optional entry)
+  "Add a link to a FILE LINE as a resource in ENTRY.
+If called interactively use current FILE and LINE
+and prompt for ENTRY, unless called with `\\[universal-argument]'
+in which case use the current/last visualized entry."
+  (interactive (list (buffer-file-name)
+                     (number-to-string (line-number-at-pos))))
+  (org-brain-add-resource (concat "file:" file "::" line)
+                          nil nil
+                          (or entry (when current-prefix-arg
+                                      org-brain--vis-entry)))
+  (ignore-errors
+    (with-current-buffer "*org-brain*"
+      (org-brain--revert-if-visualizing)))
+  (message "A new resource has been added."))
+
+(defun org-brain-add-file-as-resource (file &optional entry)
+  "Add a link to a FILE as a resource in ENTRY.
+If called interactively use current FILE
+and prompt for ENTRY, unless called with `\\[universal-argument]'
+in which case use the current/last visualized entry."
+  (interactive (list (buffer-file-name)))
+  (org-brain-add-resource file nil nil (or entry (when current-prefix-arg
+                                                   org-brain--vis-entry)))
+  (ignore-errors
+    (with-current-buffer "*org-brain*"
+      (org-brain--revert-if-visualizing)))
+  (message "A new resource has been added."))
 
 (defun org-brain-visualize-attach ()
   "Use `org-attach' on `org-brain--vis-entry'."
