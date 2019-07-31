@@ -102,11 +102,6 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   :group 'org-brain
   :type '(boolean))
 
-(defcustom org-brain-show-descriptions nil
-  "Should descriptions of buttons be shown in `org-brain-visualize'?"
-  :group 'org-brain
-  :type '(boolean))
-
 (defcustom org-brain-quit-after-goto nil
   "Should the *org-brain* buffer window close itself after executing a goto command?"
   :group 'org-brain
@@ -311,6 +306,11 @@ File entries also use this, but also applies `org-brain-file-face-template'.")
   '((t . (:slant italic)))
   "Attributes of this face are added to file-entry faces.")
 
+(defface org-brain-edge-annotation-face-template
+  '((t . (:box t)))
+  "Attributes of this face are added to links which have an edge annotation
+to the visualized entry.")
+
 ;; This needs to be here or defface complains that it is undefined.
 (defun org-brain-specified-face-attrs (face &optional frame)
   "Return a plist of all face attributes of FACE that are not `unspecified'.
@@ -326,17 +326,22 @@ If FRAME is not specified, `selected-frame' is used."
 (defun org-brain-display-face (entry &optional face)
   "Return the final display face for ENTRY.
 Takes FACE as a starting face, or `org-brain-button' if FACE is not specified.
-Applies the attributes in `org-brain-selected-face-template'
-and `org-brain-file-face-template' as appropriate."
+Applies the attributes in `org-brain-edge-annotation-face-template',
+`org-brain-selected-face-template', and `org-brain-file-face-template'
+as appropriate."
   (let ((selected-face-attrs
          (when (member entry org-brain-selected)
            (org-brain-specified-face-attrs 'org-brain-selected-face-template)))
         (file-face-attrs
          (when (org-brain-filep entry)
-           (org-brain-specified-face-attrs 'org-brain-file-face-template))))
+           (org-brain-specified-face-attrs 'org-brain-file-face-template)))
+        (annotation-attrs
+         (when (org-brain-get-edge-annotation org-brain--vis-entry entry)
+           (org-brain-specified-face-attrs 'org-brain-edge-annotation-face-template))))
     (append (list :inherit (or face 'org-brain-button))
             selected-face-attrs
-            file-face-attrs)))
+            file-face-attrs
+            annotation-attrs)))
 
 (defface org-brain-selected-face-template
   `((t . ,(org-brain-specified-face-attrs 'highlight)))
@@ -568,19 +573,6 @@ Isn't recursive, so do not parse local children."
   (with-temp-buffer
     (insert (org-brain-text entry t))
     (org-element-parse-buffer)))
-
-(defun org-brain-description (entry)
-  "Get description of ENTRY.
-Descriptions are written like this:
-
-#+BEGIN_description
-This is a description.
-#+END_description"
-  (org-element-map (org-brain-entry-data entry) 'special-block
-    (lambda (s-block)
-      (when (string-equal (org-element-property :type s-block) "description")
-        (org-element-interpret-data (org-element-contents s-block))))
-    nil t t))
 
 (defun org-brain--file-targets (file)
   "Return alist of (name . entry-id) for all entries (including the file) in FILE."
@@ -1847,7 +1839,7 @@ cancelled manually with `org-brain-stop-wandering'."
    'action (lambda (_x) (org-brain-visualize entry))
    'id (org-brain-entry-identifier entry)
    'follow-link t
-   'help-echo (when org-brain-show-descriptions (org-brain-description entry))
+   'help-echo (org-brain-get-edge-annotation org-brain--vis-entry entry)
    'aa2u-text t
    'face (org-brain-display-face entry face)))
 
@@ -1864,11 +1856,12 @@ cancelled manually with `org-brain-stop-wandering'."
 
 (defun org-brain-button-at-point ()
   "If there's an entry link button at `point' return (entry . button)."
-  (when-let* ((button (button-at (point)))
-              (id (button-get button 'id))
-              (entry (or (org-brain-entry-from-id id)
-                         (org-entry-restore-space id))))
-    (cons entry button)))
+  (if-let* ((button (button-at (point)))
+            (id (button-get button 'id))
+            (entry (or (org-brain-entry-from-id id)
+                       (org-entry-restore-space id))))
+      (cons entry button)
+    (user-error "No entry button at point")))
 
 (defun org-brain-add-resource (&optional link description prompt entry)
   "Insert LINK with DESCRIPTION in ENTRY.
@@ -1992,17 +1985,63 @@ See `org-brain-add-resource'."
 (defun org-brain-select-button ()
   "Toggle selection of the entry linked to by the button at point."
   (interactive)
-  (if-let ((entry (car (org-brain-button-at-point))))
-      (progn (org-brain-select entry) t)
-    (user-error "No entry button at point")))
+  (org-brain-select (car (org-brain-button-at-point)))
+  t)
 
 ;;;###autoload
 (defun org-brain-select-dwim (arg)
   "Use `org-brain-select-button' or `org-brain-select' depending on context.
-If run with `\\[universal-argument\\]' (ARG is non nil) then always use `org-brain-select'."
+If run with `\\[universal-argument\\]' (ARG is non nil)
+then always use `org-brain-select'."
   (interactive "P")
   (when (or arg (not (ignore-errors (org-brain-select-button))))
     (org-brain-select (org-brain-entry-at-pt))))
+
+(defun org-brain-edge-prop-name (entry)
+  "Retrun edge annotation property name of ENTRY."
+  (concat "BRAIN_EDGE_" (org-brain-entry-identifier entry)))
+
+(defun org-brain-get-edge-annotation (from to)
+  "Get edge annotation FROM an entry TO another entry."
+  (if (org-brain-filep from)
+      (cdr (assoc (upcase (org-brain-edge-prop-name to)) (org-brain-keywords from)))
+    (org-entry-get (org-brain-entry-marker from) (org-brain-edge-prop-name to))))
+
+(defun org-brain-annotate-edge (entry target annotation two-way)
+  "When visualizing ENTRY, links to TARGET will have an ANNOTATION.
+You can think of it as edges with comments in a graph.
+If TWO-WAY is non-nil, then also add the ANNOTATION from TARGET to ENTRY.
+
+When called interactively use the visualized ENTRY,
+`org-brain-button-at-point' as TARGET, and prompt for ANNOTATION.
+TWO-WAY will be t unless called with `\\[universal-argument\\]'."
+  (interactive
+   (let ((target (car (org-brain-button-at-point))))
+     (list org-brain--vis-entry
+           target
+           (read-string (concat (org-brain-title target) " edge: "))
+           (not current-prefix-arg))))
+  (if (org-brain-filep entry)
+      ;; File entry
+      (let ((edge-regex (format "^#\\+%s:"
+                                (org-brain-edge-prop-name target))))
+        (with-temp-file (org-brain-entry-path entry)
+          (insert-file-contents (org-brain-entry-path entry))
+          (if (re-search-forward edge-regex nil t)
+              (org-brain-remove-line-if-matching edge-regex)
+            (goto-char (point-min)))
+          (when (> (length annotation) 0)
+            (insert "#+" (org-brain-edge-prop-name target) ": " annotation "\n"))))
+    ;; Headline entry
+    (org-with-point-at (org-brain-entry-marker entry)
+      (if (> (length annotation) 0)
+          (org-set-property (org-brain-edge-prop-name target) annotation)
+        (org-delete-property (org-brain-edge-prop-name target)))
+      (save-buffer)))
+  (when two-way
+    (run-with-idle-timer 0.2 nil 'org-brain-annotate-edge
+                         target entry annotation nil))
+  (org-brain--revert-if-visualizing))
 
 (defun org-brain-visualize-back ()
   "Go back to the previously visualized entry."
@@ -2022,20 +2061,11 @@ If run with `\\[universal-argument\\]' (ARG is non nil) then always use `org-bra
     (org-brain-stop-wandering)
     (revert-buffer)))
 
-(defun org-brain-visualize-eldoc-function ()
-  "Return description of org-brain entry button at point."
-  (ignore-errors
-    (plist-get (text-properties-at (button-at (point)))
-               'help-echo)))
-
 (define-derived-mode org-brain-visualize-mode
   special-mode  "Org-brain Visualize"
   "Major mode for `org-brain-visualize'.
 \\{org-brain-visualize-mode-map}"
-  (setq-local revert-buffer-function #'org-brain-visualize-revert)
-  (when org-brain-show-descriptions
-    (add-function :before-until (local 'eldoc-documentation-function)
-                  #'org-brain-visualize-eldoc-function)))
+  (setq-local revert-buffer-function #'org-brain-visualize-revert))
 
 ;;;;; Keybindings
 
@@ -2073,6 +2103,7 @@ If run with `\\[universal-argument\\]' (ARG is non nil) then always use `org-bra
 (define-key org-brain-visualize-mode-map "-" 'org-brain-hide-descendant-level)
 (define-key org-brain-visualize-mode-map "z" 'org-brain-show-ancestor-level)
 (define-key org-brain-visualize-mode-map "Z" 'org-brain-hide-ancestor-level)
+(define-key org-brain-visualize-mode-map "e" 'org-brain-annotate-edge)
 
 (define-prefix-command 'org-brain-select-map)
 (define-key org-brain-select-map "s" 'org-brain-clear-selected)
