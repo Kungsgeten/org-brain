@@ -7,7 +7,7 @@
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25") (org "9.2"))
-;; Version: 0.6
+;; Version: 0.7
 
 ;;; Commentary:
 
@@ -1465,25 +1465,6 @@ If STATUS is omitted, toggle between selected / not selected."
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
-(defun org-brain-select-button ()
-  "Toggle selection of the entry linked to by the button at point."
-  (interactive)
-  (when-let* ((button (button-at (point)))
-              (id (button-get button 'id))
-              (entry (or (org-brain-entry-from-id id)
-                         (org-entry-restore-space id))))
-    (org-brain-select entry)
-    ;; Return t to confirm that a button has been selected
-    t))
-
-(defun org-brain-select-dwim (arg)
-  "Use `org-brain-select-button' or `org-brain-select' depending on context.
-If run with `\\[universal-argument\\]' (ARG is non nil) then always use `org-brain-select'."
-  (interactive "P")
-  (when (or arg (not (org-brain-select-button)))
-    (org-brain-select (org-brain-entry-at-pt))))
-
-;;;###autoload
 (defun org-brain-clear-selected ()
   "Clear the selected list."
   (interactive)
@@ -1881,6 +1862,14 @@ cancelled manually with `org-brain-stop-wandering'."
    'follow-link t
    'aa2u-text t))
 
+(defun org-brain-button-at-point ()
+  "If there's an entry link button at `point' return (entry . button)."
+  (when-let* ((button (button-at (point)))
+              (id (button-get button 'id))
+              (entry (or (org-brain-entry-from-id id)
+                         (org-entry-restore-space id))))
+    (cons entry button)))
+
 (defun org-brain-add-resource (&optional link description prompt entry)
   "Insert LINK with DESCRIPTION in ENTRY.
 If ENTRY is nil, try to get it from context or prompt for it.
@@ -1998,6 +1987,22 @@ See `org-brain-add-resource'."
   (org-brain-add-resource (current-kill 0) nil t))
 
 (defalias 'org-brain-visualize-paste-resource #'org-brain-paste-resource)
+
+;;;###autoload
+(defun org-brain-select-button ()
+  "Toggle selection of the entry linked to by the button at point."
+  (interactive)
+  (if-let ((entry (car (org-brain-button-at-point))))
+      (progn (org-brain-select entry) t)
+    (user-error "No entry button at point")))
+
+;;;###autoload
+(defun org-brain-select-dwim (arg)
+  "Use `org-brain-select-button' or `org-brain-select' depending on context.
+If run with `\\[universal-argument\\]' (ARG is non nil) then always use `org-brain-select'."
+  (interactive "P")
+  (when (or arg (not (ignore-errors (org-brain-select-button))))
+    (org-brain-select (org-brain-entry-at-pt))))
 
 (defun org-brain-visualize-back ()
   "Go back to the previously visualized entry."
