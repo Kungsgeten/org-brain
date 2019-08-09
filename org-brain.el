@@ -122,6 +122,12 @@ filenames will be shown instead, which is faster."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-headline-entry-name-format-string "%s::%s"
+  "How headline entries are represented when choosing entries.
+This `format' string is used in `org-brain-entry-name' for headline entries.
+`format' gets two objects: the file and the headline."
+  :group 'org-brain
+  :type '(string))
 (defcustom org-brain-visualize-text-hook nil
   "Hook runs after inserting `org-brain-text' in `org-brain-visualize'.
 
@@ -569,13 +575,12 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
 
 (defun org-brain-entry-name (entry)
   "Get name string of ENTRY."
-  (if org-brain-file-entries-use-title
-      (if (org-brain-filep entry)
+  (if (org-brain-filep entry)
+      (if org-brain-file-entries-use-title
           (concat (file-name-directory entry) (org-brain-title entry))
-        (concat (org-brain-entry-name (car entry)) "::" (cadr entry)))
-    (if (org-brain-filep entry)
-        entry
-      (concat (car entry) "::" (cadr entry)))))
+        entry)
+    (format org-brain-headline-entry-name-format-string
+            (org-brain-entry-name (car entry)) (cadr entry))))
 
 (defun org-brain-entry-data (entry)
   "Run `org-element-parse-buffer' on ENTRY text.
@@ -594,7 +599,8 @@ Isn't recursive, so do not parse local children."
               (delay-mode-hooks
                 (org-mode)
                 (mapcar (lambda (entry)
-                          (cons (concat file-entry-name "::" (car entry))
+                          (cons (format org-brain-headline-entry-name-format-string
+                                        file-entry-name (car entry))
                                 (cadr entry)))
                         (remove nil (org-map-entries
                                      #'org-brain--name-and-id-at-point))))))))
