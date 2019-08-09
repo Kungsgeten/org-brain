@@ -734,7 +734,8 @@ ignore `org-brain-exclude-children-tag' and
                      (point-max))
                   ;; Get text up to first heading
                   (goto-char (point-min))
-                  (or (outline-next-heading)
+                  (or (looking-at-p org-heading-regexp)
+                      (outline-next-heading)
                       (goto-char (point-max)))
                   (buffer-substring-no-properties
                    (or (unless all-data
