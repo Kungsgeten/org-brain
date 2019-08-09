@@ -205,9 +205,24 @@ Doing so allows for adding multiple entries at once."
 
 (defcustom org-brain-visualize-one-child-per-line nil
   "If non-nil, each child of the visualized entry is listed on its own line.
-If nil (default), children are filled up to the `fill-column'."
+If nil (default), `org-brain-child-fill-column-sexp' is evaluated
+to determine the fill column."
   :group 'org-brain
   :type '(boolean))
+
+(defcustom org-brain-child-fill-column-sexp 'fill-column
+  "Where to break lines when visualizing children?
+When `org-brain-visualize-one-child-per-line' is nil,
+this variable is evaluated to determine the fill column
+when visualizing children.
+Reasonable values include
+
+'0: every child will be on its own line
+'fill-column: lines will break at `fill-column'
+'(window-width): lines will break at the width of the window
+'most-positive-fixnum: All children will be on one line"
+  :group 'org-brain
+  :type '(sexp))
 
 (defcustom org-brain-refile-max-level 1
   "The default max-level used by `org-brain-refile'."
@@ -2257,16 +2272,17 @@ Helper function for `org-brain-visualize'."
 (defun org-brain--vis-children (entry)
   "Insert children of ENTRY.
 Helper function for `org-brain-visualize'."
-  (when-let ((children (org-brain-children entry)))
+  (when-let ((children (org-brain-children entry))
+             (fill-col (if org-brain-visualize-one-child-per-line
+                           0
+                         (eval org-brain-child-fill-column-sexp))))
     (insert "\n\n")
     (dolist (child (sort children org-brain-visualize-sort-function))
       (let ((child-title (org-brain-title child))
             (face (if (member entry (org-brain--local-parent child))
                       'org-brain-local-child
                     'org-brain-child)))
-        (when (or org-brain-visualize-one-child-per-line
-                  (> (+ (current-column) (length child-title))
-                     fill-column))
+        (when (> (+ (current-column) (length child-title)) fill-col)
           (insert "\n"))
         (org-brain-insert-visualize-button child face)
         (insert "  ")))))
