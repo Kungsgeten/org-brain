@@ -640,11 +640,12 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                        (write-region "" nil entry-path))
                      (if (equal (length id) 2)
                          ;; Create new headline entry in file
-                         (with-current-buffer (find-file-noselect entry-path)
+                         (org-with-point-at (org-brain-entry-marker entry-file)
                            (goto-char (point-max))
                            (insert (concat "\n* " (cadr id)))
                            (let ((new-id (org-id-get-create)))
                              (run-hooks 'org-brain-new-entry-hook)
+                             (save-buffer)
                              (list entry-file (cadr id) new-id)))
                        entry-file))))))
             (if org-brain-entry-separator
@@ -685,7 +686,11 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
   (if (org-brain-filep entry)
       (let ((path (org-brain-entry-path entry)))
         (if (file-exists-p path)
-            (set-marker (make-marker) 0 (find-file-noselect path))
+            (set-marker (make-marker) 0
+                        (or (get-file-buffer path)
+                            (with-current-buffer (create-file-buffer path)
+                              (set-visited-file-name path)
+                              (current-buffer))))
           ;; If file doesn't exists, it is probably an id
           (or (org-id-find entry t)
               (org-brain--missing-id-error entry))))
@@ -926,28 +931,26 @@ PROPERTY could for instance be BRAIN_CHILDREN."
     (org-save-all-org-buffers)
     (if (org-brain-filep parent)
         ;; Parent = File
-        (with-current-buffer (find-file-noselect (org-brain-entry-path parent))
+        (org-with-point-at (org-brain-entry-marker parent)
           (goto-char (point-min))
           (if (re-search-forward "^#\\+BRAIN_CHILDREN:.*$" nil t)
               (insert (concat " " (org-brain-entry-identifier child)))
             (insert (concat "#+BRAIN_CHILDREN: "
                             (org-brain-entry-identifier child)
-                            "\n\n")))
-          (save-buffer))
+                            "\n\n"))))
       ;; Parent = Headline
       (org-entry-add-to-multivalued-property (org-brain-entry-marker parent)
                                              "BRAIN_CHILDREN"
                                              (org-brain-entry-identifier child)))
     (if (org-brain-filep child)
         ;; Child = File
-        (with-current-buffer (find-file-noselect (org-brain-entry-path child))
+        (org-with-point-at (org-brain-entry-marker child)
           (goto-char (point-min))
           (if (re-search-forward "^#\\+BRAIN_PARENTS:.*$" nil t)
               (insert (concat " " (org-brain-entry-identifier parent)))
             (insert (concat "#+BRAIN_PARENTS: "
                             (org-brain-entry-identifier parent)
-                            "\n\n")))
-          (save-buffer))
+                            "\n\n"))))
       ;; Child = Headline
       (org-entry-add-to-multivalued-property (org-brain-entry-marker child)
                                              "BRAIN_PARENTS"
@@ -967,7 +970,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
   (org-save-all-org-buffers)
   (if (org-brain-filep parent)
       ;; Parent = File
-      (with-current-buffer (find-file-noselect (org-brain-entry-path parent))
+      (org-with-point-at (org-brain-entry-marker parent)
         (goto-char (point-min))
         (re-search-forward "^#\\+BRAIN_CHILDREN:.*$")
         (beginning-of-line)
@@ -982,7 +985,7 @@ PROPERTY could for instance be BRAIN_CHILDREN."
                                                 (org-brain-entry-identifier child)))
   (if (org-brain-filep child)
       ;; Child = File
-      (with-current-buffer (find-file-noselect (org-brain-entry-path child))
+      (org-with-point-at (org-brain-entry-marker child)
         (goto-char (point-min))
         (re-search-forward "^#\\+BRAIN_PARENTS:.*$")
         (beginning-of-line)
@@ -1023,7 +1026,7 @@ If called interactively use `org-brain-entry-at-pt' and prompt for children."
       (error "Child name must be at least 1 character"))
     (if (org-brain-filep entry)
         ;; File entry
-        (with-current-buffer (find-file-noselect (org-brain-entry-path entry))
+        (org-with-point-at (org-brain-entry-marker entry)
           (goto-char (point-min))
           (if (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
               (progn
@@ -1094,7 +1097,7 @@ If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around."
   (unless (member entry2 (org-brain-friends entry1))
     (if (org-brain-filep entry1)
         ;; Entry1 = File
-        (with-current-buffer (find-file-noselect (org-brain-entry-path entry1))
+        (org-with-point-at (org-brain-entry-marker entry1)
           (goto-char (point-min))
           (if (re-search-forward "^#\\+BRAIN_FRIENDS:.*$" nil t)
               (insert (concat " " (org-brain-entry-identifier entry2)))
@@ -1134,7 +1137,7 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
   (when (member entry2 (org-brain-friends entry1))
     (if (org-brain-filep entry1)
         ;; Entry1 = File
-        (with-current-buffer (find-file-noselect (org-brain-entry-path entry1))
+        (org-with-point-at (org-brain-entry-marker entry1)
           (goto-char (point-min))
           (re-search-forward "^#\\+BRAIN_FRIENDS:.*$")
           (beginning-of-line)
@@ -1554,14 +1557,13 @@ If run interactively, get ENTRY from context and prompt for TITLE."
      (list entry-at-pt (read-string "Title: " new-title))))
   (if (org-brain-filep entry)
       ;; File entry
-      (let ((entry-path (org-brain-entry-path entry)))
-        (with-current-buffer (find-file-noselect entry-path)
-          (goto-char (point-min))
-          (when (assoc "TITLE" (org-brain-keywords entry))
-            (re-search-forward "^#\\+TITLE:")
-            (kill-whole-line))
-          (insert (format "#+TITLE: %s\n" title))
-          (save-buffer)))
+      (org-with-point-at (org-brain-entry-marker entry)
+        (goto-char (point-min))
+        (when (assoc "TITLE" (org-brain-keywords entry))
+          (re-search-forward "^#\\+TITLE:")
+          (kill-whole-line))
+        (insert (format "#+TITLE: %s\n" title))
+        (save-buffer))
     ;; Headline entry
     (org-with-point-at (org-brain-entry-marker entry)
       (org-edit-headline title)
@@ -1577,7 +1579,7 @@ Instead sets #+FILETAGS on file ENTRY.
 If run interactively, get ENTRY from context."
   (interactive (list (org-brain-entry-at-pt)))
   (if (org-brain-filep entry)
-      (with-current-buffer (find-file-noselect (org-brain-entry-path entry))
+      (org-with-point-at (org-brain-entry-marker entry)
         (let ((tag-str (read-string "FILETAGS: "
                                     (mapconcat #'identity org-file-tags ":"))))
           (goto-char (point-min))
@@ -1909,8 +1911,7 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
                  (insert "- " l)))))
     (if (org-brain-filep entry)
         ;; File entry
-        (with-temp-file (org-brain-entry-path entry)
-          (insert-file-contents (org-brain-entry-path entry))
+        (org-with-point-at (org-brain-entry-marker entry)
           (goto-char (point-min))
           (or (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
               (goto-char (point-max)))
@@ -1920,7 +1921,8 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
             (insert ":RESOURCES:\n:END:\n")
             (re-search-backward org-brain-resources-start-re nil t)
             (end-of-line))
-          (insert-resource-link))
+          (insert-resource-link)
+          (save-buffer))
       ;; Headline entry
       (org-with-point-at (org-brain-entry-marker entry)
         (goto-char (cdr (org-get-property-block)))
@@ -1978,16 +1980,11 @@ in which case use the current/last visualized entry."
     (error "Not in org-brain-visualize-mode"))
   (when (org-brain-filep org-brain--vis-entry)
     (error "Can only attach to headline entries"))
-  (let* ((entry-path (org-brain-entry-path org-brain--vis-entry))
-         (existing-buffer (find-buffer-visiting entry-path)))
-    (with-current-buffer (find-file entry-path)
-      (goto-char (cdr (org-id-find (nth 2 org-brain--vis-entry))))
-      (call-interactively #'org-attach)
-      (save-buffer)
-      (if existing-buffer
-          (switch-to-buffer "*org-brain*")
-        (kill-this-buffer))
-      (revert-buffer))))
+  (org-with-point-at (org-brain-entry-marker org-brain--vis-entry)
+    (goto-char (cdr (org-id-find (nth 2 org-brain--vis-entry))))
+    (call-interactively #'org-attach)
+    (save-buffer))
+  (org-brain--revert-if-visualizing))
 
 (defun org-brain-paste-resource ()
   "Add `current-kill' as a resource link.
@@ -2041,13 +2038,13 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
       ;; File entry
       (let ((edge-regex (format "^#\\+%s:"
                                 (org-brain-edge-prop-name target))))
-        (with-temp-file (org-brain-entry-path entry)
-          (insert-file-contents (org-brain-entry-path entry))
+        (org-with-point-at (org-brain-entry-marker entry)
           (if (re-search-forward edge-regex nil t)
               (org-brain-remove-line-if-matching edge-regex)
             (goto-char (point-min)))
           (when (> (length annotation) 0)
-            (insert "#+" (org-brain-edge-prop-name target) ": " annotation "\n"))))
+            (insert "#+" (org-brain-edge-prop-name target) ": " annotation "\n"))
+          (save-buffer)))
     ;; Headline entry
     (org-with-point-at (org-brain-entry-marker entry)
       (if (> (length annotation) 0)
