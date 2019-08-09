@@ -203,19 +203,14 @@ Doing so allows for adding multiple entries at once."
   :group 'org-brain
   :type '(string))
 
-(defcustom org-brain-visualize-one-child-per-line nil
-  "If non-nil, each child of the visualized entry is listed on its own line.
-If nil (default), `org-brain-child-fill-column-sexp' is evaluated
-to determine the fill column."
-  :group 'org-brain
-  :type '(boolean))
+(make-obsolete-variable
+ 'org-brain-visualize-one-child-per-line
+ "Setting `org-brain-child-linebreak-sexp' to 0 visualizes one child per line."
+ "0.7")
 
-(defcustom org-brain-child-fill-column-sexp 'fill-column
+(defcustom org-brain-child-linebreak-sexp 'fill-column
   "Where to break lines when visualizing children?
-When `org-brain-visualize-one-child-per-line' is nil,
-this variable is evaluated to determine the fill column
-when visualizing children.
-Reasonable values include
+Reasonable values include:
 
 '0: every child will be on its own line
 'fill-column: lines will break at `fill-column'
@@ -2273,9 +2268,7 @@ Helper function for `org-brain-visualize'."
   "Insert children of ENTRY.
 Helper function for `org-brain-visualize'."
   (when-let ((children (org-brain-children entry))
-             (fill-col (if org-brain-visualize-one-child-per-line
-                           0
-                         (eval org-brain-child-fill-column-sexp))))
+             (fill-col (eval org-brain-child-linebreak-sexp)))
     (insert "\n\n")
     (dolist (child (sort children org-brain-visualize-sort-function))
       (let ((child-title (org-brain-title child))
