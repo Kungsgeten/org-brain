@@ -665,7 +665,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
   "Get alist of `org-mode' keywords and their values in file ENTRY."
   (if (org-brain-filep entry)
       (with-temp-buffer
-        (insert-file-contents (org-brain-entry-path entry))
+        (insert (org-brain-text entry t))
         (org-element-map (org-element-parse-buffer) 'keyword
           (lambda (kw)
             (cons (org-element-property :key kw)
