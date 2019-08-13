@@ -339,25 +339,24 @@ If FRAME is not specified, `selected-frame' is used."
                    (lambda (f) (not (equal (cdr f) 'unspecified)))
                    (face-all-attributes face (or frame (selected-frame)))))))
 
-(defun org-brain-display-face (entry &optional face)
+(defun org-brain-display-face (entry &optional face edge)
   "Return the final display face for ENTRY.
 Takes FACE as a starting face, or `org-brain-button' if FACE is not specified.
 Applies the attributes in `org-brain-edge-annotation-face-template',
 `org-brain-selected-face-template', and `org-brain-file-face-template'
-as appropriate."
+as appropriate.
+EDGE determines if `org-brain-edge-annotation-face-template' should be used."
   (let ((selected-face-attrs
          (when (member entry org-brain-selected)
            (org-brain-specified-face-attrs 'org-brain-selected-face-template)))
         (file-face-attrs
          (when (org-brain-filep entry)
-           (org-brain-specified-face-attrs 'org-brain-file-face-template)))
-        (annotation-attrs
-         (when (org-brain-get-edge-annotation org-brain--vis-entry entry)
-           (org-brain-specified-face-attrs 'org-brain-edge-annotation-face-template))))
+           (org-brain-specified-face-attrs 'org-brain-file-face-template))))
     (append (list :inherit (or face 'org-brain-button))
             selected-face-attrs
             file-face-attrs
-            annotation-attrs)))
+            (when edge
+              (org-brain-specified-face-attrs 'org-brain-edge-annotation-face-template)))))
 
 (defface org-brain-selected-face-template
   `((t . ,(org-brain-specified-face-attrs 'highlight)))
@@ -372,6 +371,9 @@ as appropriate."
 
 (defvar org-brain--vis-entry nil
   "The last entry argument to `org-brain-visualize'.")
+
+(defvar org-brain--vis-entry-keywords nil
+  "The `org-brain-keywords' of `org-brain--vis-entry'.")
 
 (defvar org-brain--vis-history nil
   "History previously visualized entries.  Newest first.")
@@ -1752,6 +1754,8 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
       (setq org-brain--vis-entry entry)
       (setq org-brain-mind-map-parent-level (default-value 'org-brain-mind-map-parent-level))
       (setq org-brain-mind-map-child-level (default-value 'org-brain-mind-map-child-level)))
+    (setq org-brain--vis-entry-keywords (when (org-brain-filep entry)
+                                          (org-brain-keywords entry)))
     (let ((inhibit-read-only t)
           (entry-pos))
       (delete-region (point-min) (point-max))
@@ -1851,14 +1855,17 @@ cancelled manually with `org-brain-stop-wandering'."
 
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
-  (insert-text-button
-   (org-brain-title-as-button entry)
-   'action (lambda (_x) (org-brain-visualize entry))
-   'id (org-brain-entry-identifier entry)
-   'follow-link t
-   'help-echo (org-brain-get-edge-annotation org-brain--vis-entry entry)
-   'aa2u-text t
-   'face (org-brain-display-face entry face)))
+  (let ((annotation (org-brain-get-edge-annotation org-brain--vis-entry
+                                                   entry
+                                                   org-brain--vis-entry-keywords)))
+    (insert-text-button
+     (org-brain-title-as-button entry)
+     'action (lambda (_x) (org-brain-visualize entry))
+     'id (org-brain-entry-identifier entry)
+     'follow-link t
+     'help-echo annotation
+     'aa2u-text t
+     'face (org-brain-display-face entry face annotation))))
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
@@ -2013,10 +2020,12 @@ then always use `org-brain-select'."
   "Retrun edge annotation property name of ENTRY."
   (concat "BRAIN_EDGE_" (org-brain-entry-identifier entry)))
 
-(defun org-brain-get-edge-annotation (from to)
-  "Get edge annotation FROM an entry TO another entry."
+(defun org-brain-get-edge-annotation (from to &optional keywords)
+  "Get edge annotation FROM an entry TO another entry.
+If KEYWORDS is given, use it instead of `org-brain-keywords' (optimization)."
   (if (org-brain-filep from)
-      (cdr (assoc (upcase (org-brain-edge-prop-name to)) (org-brain-keywords from)))
+      (cdr (assoc (upcase (org-brain-edge-prop-name to))
+                  (or keywords (org-brain-keywords from))))
     (org-entry-get (org-brain-entry-marker from) (org-brain-edge-prop-name to))))
 
 (defun org-brain-annotate-edge (entry target annotation two-way)
