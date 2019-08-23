@@ -829,7 +829,9 @@ The car is the raw-link and the cdr is the description."
         (unless (member org-brain-exclude-resouces-tag (org-get-tags nil t))
           (append links
                   ;; Attachments
-                  (when-let ((attach-dir (org-attach-dir)))
+                  (when-let ((attach-dir (if (file-directory-p (org-attach-dir))
+                                             (org-attach-dir)
+                                           nil)))
                     (mapcar (lambda (attachment)
                               (cons (format "file:%s"
                                             (org-link-escape
