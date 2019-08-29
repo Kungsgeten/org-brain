@@ -1896,25 +1896,22 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
   (unless entry
     (setq entry (or (ignore-errors (org-brain-entry-at-pt))
                     (org-brain-choose-entry "Insert link in entry: " 'all))))
-  (cl-flet ((insert-resource-link
-             ()
-             (if link
-                 (progn
-                   (when prompt
-                     (setq link (read-string "Insert link: " link))
-                     (when (string-match org-bracket-link-regexp link)
-                       (let ((linkdesc (match-string 3 link)))
-                         (when (and (not description) linkdesc)
-                           (setq description linkdesc))
-                         (setq link (match-string 1 link))))
-                     (setq description (read-string "Link description: " description)))
-                   (newline-and-indent)
-                   (insert "- " (org-make-link-string link description)))
-               (when-let ((l (with-temp-buffer
-                               (org-insert-link-global)
-                               (buffer-string))))
-                 (newline-and-indent)
-                 (insert "- " l)))))
+  (let ((link-text
+         (if link
+             (progn
+               (when prompt
+                 (setq link (read-string "Insert link: " link))
+                 (when (string-match org-bracket-link-regexp link)
+                   (let ((linkdesc (match-string 3 link)))
+                     (when (and (not description) linkdesc)
+                       (setq description linkdesc))
+                     (setq link (match-string 1 link))))
+                 (setq description (read-string "Link description: " description)))
+               (concat "- " (org-make-link-string link description)))
+           (when-let ((l (with-temp-buffer
+                           (org-insert-link-global)
+                           (buffer-string))))
+             (concat "- " l)))))
     (if (org-brain-filep entry)
         ;; File entry
         (org-with-point-at (org-brain-entry-marker entry)
@@ -1927,7 +1924,8 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
             (insert ":RESOURCES:\n:END:\n")
             (re-search-backward org-brain-resources-start-re nil t)
             (end-of-line))
-          (insert-resource-link)
+          (newline-and-indent)
+          (insert link-text)
           (save-buffer))
       ;; Headline entry
       (org-with-point-at (org-brain-entry-marker entry)
@@ -1937,12 +1935,13 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
             (end-of-line)
           (open-line 1)
           (indent-for-tab-command)
-          (insert ":RESOURCES:\n")
-          (indent-for-tab-command)
-          (insert ":END:")
-          (re-search-backward org-brain-resources-start-re nil t)
-          (end-of-line))
-        (insert-resource-link)
+          (insert ":RESOURCES:")
+          (save-excursion
+            (insert "\n")
+            (indent-for-tab-command)
+            (insert ":END:")))
+        (newline-and-indent)
+        (insert link-text)
         (save-buffer))))
   (org-brain--revert-if-visualizing))
 
