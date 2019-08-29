@@ -663,6 +663,15 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
   (let ((org-brain-entry-separator nil))
     (car (org-brain-choose-entries prompt entries predicate require-match initial-input))))
 
+(defun org-brain-first-headline-position ()
+  "Get position of first headline in buffer.  `point-max' if no headline exists."
+  (save-excursion
+    (goto-char (point-min))
+    (or (looking-at-p org-heading-regexp)
+        (outline-next-heading)
+        (goto-char (point-max)))
+    (point)))
+
 (defun org-brain-keywords (entry)
   "Get alist of `org-mode' keywords and their values in file ENTRY."
   (if (org-brain-filep entry)
@@ -670,11 +679,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
         (insert
          (with-temp-buffer
            (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-           (goto-char (point-min))
-           (or (looking-at-p org-heading-regexp)
-               (outline-next-heading)
-               (goto-char (point-max)))
-           (buffer-substring-no-properties (point-min) (point))))
+           (buffer-substring-no-properties (point-min) (org-brain-first-headline-position))))
         (org-element-map (org-element-parse-buffer) 'keyword
           (lambda (kw)
             (cons (org-element-property :key kw)
@@ -726,10 +731,7 @@ Only get the body text, unless ALL-DATA is t."
             ;; File entry
             (with-temp-buffer
               (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-              (goto-char (point-min))
-              (or (looking-at-p org-heading-regexp)
-                  (outline-next-heading)
-                  (goto-char (point-max)))
+              (goto-char (org-brain-first-headline-position))
               (buffer-substring-no-properties
                (if all-data
                    (point-min)
@@ -758,19 +760,17 @@ Only get the body text, unless ALL-DATA is t."
                         (org-end-of-subtree t))
                     (setq end (point)))
                   (buffer-substring-no-properties (point) end))))))))
-    (with-temp-buffer
-      (insert (org-remove-indentation entry-text))
-      (goto-char (point-min))
-      (unless all-data
-        (or (looking-at-p org-heading-regexp)
-            (outline-next-heading)
-            (goto-char (point-max)))
+    (if all-data
+        (org-remove-indentation entry-text)
+      (with-temp-buffer
+        (insert (org-remove-indentation entry-text))
+        (goto-char (org-brain-first-headline-position))
         (if (re-search-backward org-brain-resources-start-re nil t)
             (progn
               (end-of-line)
               (re-search-forward org-drawer-regexp nil t))
-          (goto-char (point-min))))
-      (buffer-substring (point) (point-max)))))
+          (goto-char (point-min)))
+        (buffer-substring (point) (point-max))))))
 
 (defun org-brain-parents (entry)
   "Get parents of ENTRY.
