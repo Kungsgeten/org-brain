@@ -1350,6 +1350,7 @@ If NOCONFIRM is nil, ask if we really want to delete."
                (format "%s and its %d local children will be deleted. Are you sure? "
                        (org-brain-entry-name entry)
                        (length local-children))))
+      (ignore-errors (org-brain-select entry -1))
       (dolist (child local-children)
         (org-brain-delete-entry child t))
       (org-brain--remove-relationships entry)
@@ -1545,6 +1546,12 @@ Ignores selected entries that are not friends of ENTRY."
   (interactive (list (org-brain-entry-at-pt)))
   (dolist (selected org-brain-selected)
     (ignore-errors (org-brain-remove-friendship entry selected))))
+
+(defun org-brain-delete-selected-entries ()
+  "Delete all of the selected entries."
+  (interactive)
+  (dolist (selected org-brain-selected)
+    (org-brain-delete-entry selected)))
 
 ;;;###autoload
 (defun org-brain-set-title (entry title)
@@ -2135,6 +2142,7 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
 (define-key org-brain-select-map "F" 'org-brain-remove-selected-friendships)
 (define-key org-brain-select-map "s" 'org-brain-clear-selected)
 (define-key org-brain-select-map "S" 'org-brain-clear-selected)
+(define-key org-brain-select-map "d" 'org-brain-delete-selected-entries)
 
 (define-key org-brain-visualize-mode-map "s" 'org-brain-select-dwim)
 (define-key org-brain-visualize-mode-map "S" 'org-brain-select-map)
