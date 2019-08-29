@@ -381,6 +381,9 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 (defvar org-brain-resources-start-re "^[ \t]*:RESOURCES:[ \t]*$"
   "Regular expression matching the first line of a resources drawer.")
 
+(defvar org-brain-keyword-regex "^#\\+[a-zA-Z_]+:"
+  "Regular expression matching org keywords.")
+
 (defvar org-brain-pins nil "List of pinned org-brain entries.")
 
 (defvar org-brain-selected nil "List of selected org-brain entries.")
@@ -585,8 +588,7 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
             (org-brain-entry-name (car entry)) (cadr entry))))
 
 (defun org-brain-entry-data (entry)
-  "Run `org-element-parse-buffer' on ENTRY text.
-Isn't recursive, so do not parse local children."
+  "Run `org-element-parse-buffer' on ENTRY text."
   (with-temp-buffer
     (insert (org-brain-text entry t))
     (org-element-parse-buffer)))
@@ -665,7 +667,14 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
   "Get alist of `org-mode' keywords and their values in file ENTRY."
   (if (org-brain-filep entry)
       (with-temp-buffer
-        (ignore-errors (insert (org-brain-text entry t)))
+        (insert
+         (with-temp-buffer
+           (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+           (goto-char (point-min))
+           (or (looking-at-p org-heading-regexp)
+               (outline-next-heading)
+               (goto-char (point-max)))
+           (buffer-substring-no-properties (point-min) (point))))
         (org-element-map (org-element-parse-buffer) 'keyword
           (lambda (kw)
             (cons (org-element-property :key kw)
@@ -710,41 +719,29 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
 
 (defun org-brain-text (entry &optional all-data)
   "Get the text of ENTRY as string.
-Only get the body text, unless ALL-DATA is t.  ALL-DATA will
-ignore `org-brain-exclude-children-tag' and
-`org-brain-show-children-tag' on file entries."
+Only get the body text, unless ALL-DATA is t."
   (when-let
       ((entry-text
         (if (org-brain-filep entry)
             ;; File entry
-            (let ((keyword-regex "^#\\+[a-zA-Z_]+:"))
-              (with-temp-buffer
-                (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-                (if (and (not all-data)
-                         (let ((filetags (org-brain--file-tags entry)))
-                           (or (member org-brain-show-children-tag filetags)
-                               (member org-brain-exclude-children-tag filetags))))
-                    ;; Get entire buffer
-                    (buffer-substring-no-properties
-                     (or (save-excursion
-                           (when (re-search-backward keyword-regex nil t)
-                             (end-of-line)
-                             (point)))
-                         (point-min))
-                     (point-max))
-                  ;; Get text up to first heading
-                  (goto-char (point-min))
-                  (or (looking-at-p org-heading-regexp)
-                      (outline-next-heading)
-                      (goto-char (point-max)))
-                  (buffer-substring-no-properties
-                   (or (unless all-data
-                         (save-excursion
-                           (when (re-search-backward keyword-regex nil t)
-                             (end-of-line)
-                             (point))))
-                       (point-min))
-                   (point)))))
+            (with-temp-buffer
+              (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+              (goto-char (point-min))
+              (or (looking-at-p org-heading-regexp)
+                  (outline-next-heading)
+                  (goto-char (point-max)))
+              (buffer-substring-no-properties
+               (if all-data
+                   (point-min)
+                 (save-excursion
+                   (when (re-search-backward org-brain-keyword-regex nil t)
+                     (end-of-line)
+                     (point))))
+               (if (let ((filetags (org-brain--file-tags entry)))
+                     (or (member org-brain-show-children-tag filetags)
+                         (member org-brain-exclude-children-tag filetags)))
+                   (point-max)
+                 (point))))
           ;; Headline entry
           (org-with-point-at (org-brain-entry-marker entry)
             (let ((tags (org-get-tags nil t)))
@@ -764,9 +761,15 @@ ignore `org-brain-exclude-children-tag' and
     (with-temp-buffer
       (insert (org-remove-indentation entry-text))
       (goto-char (point-min))
-      (when (and (not all-data)
-                 (re-search-forward org-brain-resources-start-re nil t))
-        (re-search-forward org-drawer-regexp nil t))
+      (unless all-data
+        (or (looking-at-p org-heading-regexp)
+            (outline-next-heading)
+            (goto-char (point-max)))
+        (if (re-search-backward org-brain-resources-start-re nil t)
+            (progn
+              (end-of-line)
+              (re-search-forward org-drawer-regexp nil t))
+          (goto-char (point-min))))
       (buffer-substring (point) (point-max)))))
 
 (defun org-brain-parents (entry)
@@ -1927,7 +1930,11 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
               (goto-char (point-max)))
           (if (re-search-backward org-brain-resources-start-re nil t)
               (end-of-line)
-            (goto-char (point-min))
+            (if (re-search-backward org-brain-keyword-regex nil t)
+                (progn
+                  (end-of-line)
+                  (newline-and-indent))
+              (goto-char (point-min)))
             (insert ":RESOURCES:\n:END:\n")
             (re-search-backward org-brain-resources-start-re nil t)
             (end-of-line))
