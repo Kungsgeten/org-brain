@@ -1031,12 +1031,8 @@ If called interactively use `org-brain-entry-at-pt' and prompt for children."
     (if (org-brain-filep entry)
         ;; File entry
         (org-with-point-at (org-brain-entry-marker entry)
-          (goto-char (point-min))
-          (if (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
-              (progn
-                (beginning-of-line)
-                (open-line 1))
-            (goto-char (point-max)))
+          (goto-char (org-brain-first-headline-position))
+          (open-line 1)
           (insert (concat "* " child-name))
           (org-id-get-create)
           (run-hooks 'org-brain-new-entry-hook)
@@ -1262,6 +1258,7 @@ If run interactively, get ENTRY from context."
 ;;;###autoload
 (defun org-brain-refile (max-level)
   "Run `org-refile' to a heading in `org-brain-files', with set MAX-LEVEL.
+When in `org-brain-visualize-mode' the current entry will be refiled.
 If MAX-LEVEL isn't given, use `org-brain-refile-max-level'.
 After refiling, all headlines will be given an id."
   (interactive "p")
@@ -1271,7 +1268,13 @@ After refiling, all headlines will be given an id."
         (org-after-refile-insert-hook org-after-refile-insert-hook))
     (add-hook 'org-after-refile-insert-hook
               (lambda () (org-map-tree 'org-id-get-create)))
-    (org-refile)))
+    (if (eq major-mode 'org-brain-visualize-mode)
+        (if (org-brain-filep org-brain--vis-entry)
+            (user-error "Only headline entries can be refiled")
+          (org-with-point-at (org-brain-entry-marker org-brain--vis-entry)
+            (org-refile))
+          (org-brain--revert-if-visualizing))
+      (org-refile))))
 
 (defun org-brain--remove-relationships (entry &optional recursive)
   "Remove all external relationships from ENTRY.
@@ -1925,9 +1928,7 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
     (if (org-brain-filep entry)
         ;; File entry
         (org-with-point-at (org-brain-entry-marker entry)
-          (goto-char (point-min))
-          (or (re-search-forward (concat "^\\(" org-outline-regexp "\\)") nil t)
-              (goto-char (point-max)))
+          (goto-char (org-brain-first-headline-position))
           (if (re-search-backward org-brain-resources-start-re nil t)
               (end-of-line)
             (if (re-search-backward org-brain-keyword-regex nil t)
@@ -2138,6 +2139,7 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
 (define-key org-brain-visualize-mode-map "z" 'org-brain-show-ancestor-level)
 (define-key org-brain-visualize-mode-map "Z" 'org-brain-hide-ancestor-level)
 (define-key org-brain-visualize-mode-map "e" 'org-brain-annotate-edge)
+(define-key org-brain-visualize-mode-map "\C-c\C-w" 'org-brain-refile)
 
 (define-prefix-command 'org-brain-select-map)
 (define-key org-brain-select-map "s" 'org-brain-clear-selected)
