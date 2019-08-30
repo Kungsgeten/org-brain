@@ -87,6 +87,12 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
           (const :tag "Only file entries" files)
           (const :tag "Only root file entries" root)))
 
+(defcustom org-brain-include-file-entries t
+  "If set to nil `org-brain' is optimized for headline entries.
+Only headlines will be considered as entries when visualizing."
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-show-resources t
   "Should entry resources be shown in `org-brain-visualize'?"
   :group 'org-brain
@@ -572,7 +578,9 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
              (if-let ((id (org-entry-get nil "ID")))
                  (org-brain-entry-from-id id)
                (error "Current headline have no ID"))
-           (org-brain-path-entry-name (buffer-file-name))))
+           (if org-brain-include-file-entries
+               (org-brain-path-entry-name (buffer-file-name))
+             (error "Not under an org headline, and org-brain-include-file-entries is nil"))))
         ((eq major-mode 'org-brain-visualize-mode)
          org-brain--vis-entry)
         (t
@@ -597,7 +605,8 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
   "Return alist of (name . entry-id) for all entries (including the file) in FILE."
   (let* ((file-relative (org-brain-path-entry-name file))
          (file-entry-name (org-brain-entry-name file-relative)))
-    (append (list (cons file-entry-name file-relative))
+    (append (when org-brain-include-file-entries
+              (list (cons file-entry-name file-relative)))
             (with-temp-buffer
               (insert-file-contents file)
               (delay-mode-hooks
@@ -642,15 +651,19 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                      (unless (file-exists-p entry-path)
                        (make-directory (file-name-directory entry-path) t)
                        (write-region "" nil entry-path))
-                     (if (equal (length id) 2)
+                     (if (or (not org-brain-include-file-entries)
+                             (equal (length id) 2))
                          ;; Create new headline entry in file
                          (org-with-point-at (org-brain-entry-marker entry-file)
-                           (goto-char (point-max))
-                           (insert (concat "\n* " (cadr id)))
-                           (let ((new-id (org-id-get-create)))
-                             (run-hooks 'org-brain-new-entry-hook)
-                             (save-buffer)
-                             (list entry-file (cadr id) new-id)))
+                           (if (and (not org-brain-include-file-entries)
+                                    (re-search-forward (concat "\n\\* +" (car id)) nil t))
+                               (org-brain-entry-at-pt)
+                             (goto-char (point-max))
+                             (insert (concat "\n* " (or (cadr id) (car id))))
+                             (let ((new-id (org-id-get-create)))
+                               (run-hooks 'org-brain-new-entry-hook)
+                               (save-buffer)
+                               (list entry-file (or (cadr id) (car id)) new-id))))
                        entry-file))))))
             (if org-brain-entry-separator
                 (split-string choices org-brain-entry-separator)
@@ -873,7 +886,7 @@ Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
                 (if (and (org-up-heading-safe)
                          (org-entry-get nil "ID"))
                     (org-brain-entry-from-id (org-entry-get nil "ID"))
-                  (car entry))))))
+                  (when org-brain-include-file-entries (car entry)))))))
       (list parent)))
 
 (defun org-brain--local-children (entry)
@@ -2524,8 +2537,9 @@ LINK-TYPE will be \"brain\" by default."
 (defun org-brain--switch-link-complete ()
   "Create an org-link target string to an org-brain and one of its entries."
   (let* ((org-brain-path (read-directory-name "Brain dir: " org-brain-path))
-         (entry (org-brain-choose-entry "Entry: " (append (org-brain-files t)
-                                                          (org-brain-headline-entries)))))
+         (entry (org-brain-choose-entry
+                 "Entry: " (append (when org-brain-include-file-entries (org-brain-files t))
+                                   (org-brain-headline-entries)))))
     (concat "brainswitch:" org-brain-path
             "::"
             (if (org-brain-filep entry)
