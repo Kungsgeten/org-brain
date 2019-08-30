@@ -84,7 +84,7 @@ annotated connection.
 
 The easiest way is to get =org-brain= from MELPA. If you do not want to do that,
 clone this git repository or download =org-brain.el= and add it to your
-load-path. The example below is using [[https://github.com/jwiegley/use-package][use-package]] and assumer that you're using
+load-path. The example below is using [[https://github.com/jwiegley/use-package][use-package]] and assumes that you're using
 MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
 =use-package= instead.
 
