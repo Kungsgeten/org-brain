@@ -735,10 +735,11 @@ Only get the body text, unless ALL-DATA is t."
               (buffer-substring-no-properties
                (if all-data
                    (point-min)
-                 (save-excursion
-                   (when (re-search-backward org-brain-keyword-regex nil t)
-                     (end-of-line)
-                     (point))))
+                 (or (save-excursion
+                       (when (re-search-backward org-brain-keyword-regex nil t)
+                         (end-of-line)
+                         (point)))
+                     (point-min)))
                (if (let ((filetags (org-brain--file-tags entry)))
                      (or (member org-brain-show-children-tag filetags)
                          (member org-brain-exclude-children-tag filetags)))
