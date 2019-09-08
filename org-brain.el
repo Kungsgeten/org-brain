@@ -618,13 +618,13 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
                         (remove nil (org-map-entries
                                      #'org-brain--name-and-id-at-point))))))))
 
-(defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input)
+(defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input hist def inherit-input-method)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
 ENTRIES can be a list, or 'all which lists all headline and file entries.
 Return the prompted entries in a list.
 Very similar to `org-brain-choose-entry', but can return several entries.
 
-For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
+For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD see `completing-read'."
   (unless org-id-locations (org-id-locations-load))
   (let* ((targets (if (eq entries 'all)
                       (mapcan #'org-brain--file-targets
@@ -636,7 +636,7 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                                       (nth 2 x))))
                             entries)))
          (choices (completing-read prompt targets
-                                   predicate require-match initial-input)))
+                                   predicate require-match initial-input hist def inherit-input-method)))
     (mapcar (lambda (title)
               (let ((id (or (cdr (assoc title targets))
                             title)))
@@ -669,12 +669,12 @@ For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
                 (split-string choices org-brain-entry-separator)
               (list choices)))))
 
-(defun org-brain-choose-entry (prompt entries &optional predicate require-match initial-input)
+(defun org-brain-choose-entry (prompt entries &optional predicate require-match initial-input hist def inherit-input-method)
   "PROMPT for an entry from ENTRIES and return it.
 ENTRIES can be 'all, which lists all headline and file entries.
-For PREDICATE, REQUIRE-MATCH and INITIAL-INPUT, see `completing-read'."
+For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METHOD see `completing-read'."
   (let ((org-brain-entry-separator nil))
-    (car (org-brain-choose-entries prompt entries predicate require-match initial-input))))
+    (car (org-brain-choose-entries prompt entries predicate require-match initial-input hist def inherit-input-method))))
 
 (defun org-brain-first-headline-position ()
   "Get position of first headline in buffer.  `point-max' if no headline exists."
