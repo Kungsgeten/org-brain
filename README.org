@@ -353,6 +353,7 @@ drawer of =org-mode= headlines:
 - =BRAIN_PARENTS=
 - =BRAIN_CHILDREN=
 - =BRAIN_FRIENDS=
+- =BRAIN_EDGE_$IDENTIFIER=
 - =ID=
 
 These properties are also mirrored as file keywords at the top of file entries,
@@ -364,6 +365,14 @@ want to remove these properties, use the corresponding command instead
 
 You might also see that =org-brain= inserts a =RESOURCES= drawer. It is okay to
 modify this drawer manually.
+
+The names of the parents/children/friends properties, the prefix for edge
+properties and the =RESOURCES= drawer can customized by setting the variables
+=org-brain-parents-property-name=, =org-brain-children-property-name=,
+=org-brain-friends-property-name=, =org-brain-edge-property-prefix-name= and
+=org-brain-resources-drawer-name=, respectively. Of course, after doing any
+customization, the property/drawer names of existing brain files have to be
+adjusted manually.
 
 ** =org-brain= is slow!
 
