@@ -257,6 +257,36 @@ Insert links using `org-insert-link'."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-children-property-name "BRAIN_CHILDREN"
+  "The name for the org-mode property in which child relationships are stored.
+Must be set before `org-brain' is loaded."
+  :group 'org-brain
+  :type '(string))
+
+(defcustom org-brain-parents-property-name "BRAIN_PARENTS"
+  "The name for the org-mode property in which brain relationships are stored.
+Must be set before `org-brain' is loaded."
+  :group 'org-brain
+  :type '(string))
+
+(defcustom org-brain-friends-property-name "BRAIN_FRIENDS"
+  "The name for the org-mode property in which friend relationships are stored.
+Must be set before `org-brain' is loaded."
+  :group 'org-brain
+  :type '(string))
+
+(defcustom org-brain-edge-property-prefix-name "BRAIN_EDGE"
+  "The prefix for the org-mode property in which edge annotations are stored.
+Must be set before `org-brain' is loaded."
+  :group 'org-brain
+  :type '(string))
+
+(defcustom org-brain-resources-drawer-name "RESOURCES"
+  "The org-mode drawer name in which resources of an entry are stored.
+Must be set before `org-brain' is loaded."
+  :group 'org-brain
+  :type '(string))
+
 ;;;;; Faces and face helper functions
 
 (defface org-brain-title
@@ -384,7 +414,7 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 (defvar org-brain--vis-history nil
   "History previously visualized entries.  Newest first.")
 
-(defvar org-brain-resources-start-re "^[ \t]*:RESOURCES:[ \t]*$"
+(defvar org-brain-resources-start-re (concat "^[ \t]*:" org-brain-resources-drawer-name ":[ \t]*$")
   "Regular expression matching the first line of a resources drawer.")
 
 (defvar org-brain-keyword-regex "^#\\+[a-zA-Z_]+:"
@@ -790,13 +820,13 @@ Only get the body text, unless ALL-DATA is t."
   "Get parents of ENTRY.
 Often you want the siblings too, then use `org-brain-siblings' instead."
   (delete-dups
-   (append (org-brain--linked-property-entries entry "BRAIN_PARENTS")
+   (append (org-brain--linked-property-entries entry org-brain-parents-property-name)
            (org-brain--local-parent entry))))
 
 (defun org-brain-children (entry)
   "Get children of ENTRY."
   (delete-dups
-   (append (org-brain--linked-property-entries entry "BRAIN_CHILDREN")
+   (append (org-brain--linked-property-entries entry org-brain-children-property-name)
            (org-brain--local-children entry))))
 
 (defun org-brain-descendants (entry)
@@ -823,7 +853,7 @@ Return an alist where key = parent, value = siblings from that parent."
 
 (defun org-brain-friends (entry)
   "Get friends of ENTRY."
-  (delete-dups (org-brain--linked-property-entries entry "BRAIN_FRIENDS")))
+  (delete-dups (org-brain--linked-property-entries entry org-brain-friends-property-name)))
 
 (defun org-brain-resources (entry)
   "Get alist of links in ENTRY, excluding `org-brain-ignored-resource-links'.
@@ -951,27 +981,27 @@ PROPERTY could for instance be BRAIN_CHILDREN."
         ;; Parent = File
         (org-with-point-at (org-brain-entry-marker parent)
           (goto-char (point-min))
-          (if (re-search-forward "^#\\+BRAIN_CHILDREN:.*$" nil t)
+          (if (re-search-forward (concat "^#\\+" org-brain-children-property-name ":.*$") nil t)
               (insert (concat " " (org-brain-entry-identifier child)))
-            (insert (concat "#+BRAIN_CHILDREN: "
+            (insert (concat "#+" org-brain-children-property-name ": "
                             (org-brain-entry-identifier child)
                             "\n\n"))))
       ;; Parent = Headline
       (org-entry-add-to-multivalued-property (org-brain-entry-marker parent)
-                                             "BRAIN_CHILDREN"
+                                             org-brain-children-property-name
                                              (org-brain-entry-identifier child)))
     (if (org-brain-filep child)
         ;; Child = File
         (org-with-point-at (org-brain-entry-marker child)
           (goto-char (point-min))
-          (if (re-search-forward "^#\\+BRAIN_PARENTS:.*$" nil t)
+          (if (re-search-forward (concat "^#\\+" org-brain-parents-property-name ":.*$") nil t)
               (insert (concat " " (org-brain-entry-identifier parent)))
-            (insert (concat "#+BRAIN_PARENTS: "
+            (insert (concat "#+" org-brain-parents-property-name ": "
                             (org-brain-entry-identifier parent)
                             "\n\n"))))
       ;; Child = Headline
       (org-entry-add-to-multivalued-property (org-brain-entry-marker child)
-                                             "BRAIN_PARENTS"
+                                             org-brain-parents-property-name
                                              (org-brain-entry-identifier parent)))
     (org-save-all-org-buffers)))
 
@@ -990,31 +1020,31 @@ PROPERTY could for instance be BRAIN_CHILDREN."
       ;; Parent = File
       (org-with-point-at (org-brain-entry-marker parent)
         (goto-char (point-min))
-        (re-search-forward "^#\\+BRAIN_CHILDREN:.*$")
+        (re-search-forward (concat "^#\\+" org-brain-children-property-name ":.*$"))
         (beginning-of-line)
         (re-search-forward (concat " " (org-brain-entry-identifier child)))
         (replace-match "")
-        (org-brain-remove-line-if-matching "^#\\+BRAIN_CHILDREN:[[:space:]]*$")
+        (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-children-property-name ":[[:space:]]*$"))
         (org-brain-remove-line-if-matching "^[[:space:]]*$")
         (save-buffer))
     ;; Parent = Headline
     (org-entry-remove-from-multivalued-property (org-brain-entry-marker parent)
-                                                "BRAIN_CHILDREN"
+                                                org-brain-children-property-name
                                                 (org-brain-entry-identifier child)))
   (if (org-brain-filep child)
       ;; Child = File
       (org-with-point-at (org-brain-entry-marker child)
         (goto-char (point-min))
-        (re-search-forward "^#\\+BRAIN_PARENTS:.*$")
+        (re-search-forward (concat "^#\\+" org-brain-parents-property-name ":.*$"))
         (beginning-of-line)
         (re-search-forward (concat " " (org-brain-entry-identifier parent)))
         (replace-match "")
-        (org-brain-remove-line-if-matching "^#\\+BRAIN_PARENTS:[[:space:]]*$")
+        (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-parents-property-name ":[[:space:]]*$"))
         (org-brain-remove-line-if-matching "^[[:space:]]*$")
         (save-buffer))
     ;; Child = Headline
     (org-entry-remove-from-multivalued-property (org-brain-entry-marker child)
-                                                "BRAIN_PARENTS"
+                                                org-brain-parents-property-name
                                                 (org-brain-entry-identifier parent)))
   (org-save-all-org-buffers))
 
@@ -1098,7 +1128,7 @@ If called interactively use `org-brain-entry-at-pt' and prompt for PARENT."
   (interactive (let ((e (org-brain-entry-at-pt)))
                  (list e (org-brain-choose-entry "Remove parent: "
         	                                 (org-brain--linked-property-entries
-                                                  e "BRAIN_PARENTS")
+                                                  e org-brain-parents-property-name)
 	                                         nil t))))
   (org-brain-remove-relationship parent entry)
   (org-brain--revert-if-visualizing))
@@ -1113,15 +1143,15 @@ If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around."
         ;; Entry1 = File
         (org-with-point-at (org-brain-entry-marker entry1)
           (goto-char (point-min))
-          (if (re-search-forward "^#\\+BRAIN_FRIENDS:.*$" nil t)
+          (if (re-search-forward (concat "^#\\+" org-brain-friends-property-name ":.*$") nil t)
               (insert (concat " " (org-brain-entry-identifier entry2)))
-            (insert (concat "#+BRAIN_FRIENDS: "
+            (insert (concat "#+" org-brain-friends-property-name ": "
                             (org-brain-entry-identifier entry2)
                             "\n\n")))
           (save-buffer))
       ;; Entry1 = Headline
       (org-entry-add-to-multivalued-property (org-brain-entry-marker entry1)
-                                             "BRAIN_FRIENDS"
+                                             org-brain-friends-property-name
                                              (org-brain-entry-identifier entry2))))
   (unless oneway (org-brain--internal-add-friendship entry2 entry1 t))
   (org-save-all-org-buffers))
@@ -1153,16 +1183,16 @@ If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY
         ;; Entry1 = File
         (org-with-point-at (org-brain-entry-marker entry1)
           (goto-char (point-min))
-          (re-search-forward "^#\\+BRAIN_FRIENDS:.*$")
+          (re-search-forward (concat "^#\\+" org-brain-friends-property-name ":.*$"))
           (beginning-of-line)
           (re-search-forward (concat " " (org-brain-entry-identifier entry2)))
           (replace-match "")
-          (org-brain-remove-line-if-matching "^#\\+BRAIN_FRIENDS:[[:space:]]*$")
+          (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-friends-property-name ":[[:space:]]*$"))
           (org-brain-remove-line-if-matching "^[[:space:]]*$")
           (save-buffer))
       ;; Entry2 = Headline
       (org-entry-remove-from-multivalued-property (org-brain-entry-marker entry1)
-                                                  "BRAIN_FRIENDS"
+                                                  org-brain-friends-property-name
                                                   (org-brain-entry-identifier entry2))))
   (if oneway
       (org-brain--revert-if-visualizing)
@@ -1231,7 +1261,7 @@ If ALL is nil, choose only between externally linked children."
                    (if all
                        (org-brain-children entry)
                      (org-brain--linked-property-entries
-                      entry "BRAIN_CHILDREN"))
+                      entry org-brain-children-property-name))
                    nil t)))
 
 ;;;###autoload
@@ -1245,7 +1275,7 @@ If ALL is nil, choose only between externally linked parents."
                    (if all
                        (org-brain-parents entry)
                      (org-brain--linked-property-entries
-                      entry "BRAIN_PARENTS"))
+                      entry org-brain-parents-property-name))
                    nil t)))
 
 ;;;###autoload
@@ -1266,7 +1296,7 @@ If run interactively, get ENTRY from context."
   (org-brain-goto (org-brain-choose-entry
                    "Goto friend: "
                    (org-brain--linked-property-entries
-                    entry "BRAIN_FRIENDS")
+                    entry org-brain-friends-property-name)
                    nil t)))
 
 ;;;###autoload
@@ -1296,10 +1326,10 @@ Also unpin and unselect the entry.
 
 If RECURSIVE is t, remove local children's relationships."
   (dolist (child (org-brain--linked-property-entries
-                  entry "BRAIN_CHILDREN"))
+                  entry org-brain-children-property-name))
     (org-brain-remove-relationship entry child))
   (dolist (parent (org-brain--linked-property-entries
-                   entry "BRAIN_PARENTS"))
+                   entry org-brain-parents-property-name))
     (org-brain-remove-relationship parent entry))
   (dolist (friend (org-brain-friends entry))
     (org-brain-remove-friendship entry friend))
@@ -1323,8 +1353,8 @@ not contain `org-brain-files-extension'."
       (error "There's already a file %s" newpath))
     (when (member newpath (mapcar #'buffer-file-name (buffer-list)))
       (error "There's an active buffer associated with file %s" newpath))
-    (let ((children (org-brain--linked-property-entries file-entry "BRAIN_CHILDREN"))
-          (parents (org-brain--linked-property-entries file-entry "BRAIN_PARENTS"))
+    (let ((children (org-brain--linked-property-entries file-entry org-brain-children-property-name))
+          (parents (org-brain--linked-property-entries file-entry org-brain-parents-property-name))
           (friends (org-brain-friends file-entry))
           (is-pinned (member file-entry org-brain-pins))
           (is-selected (member file-entry org-brain-selected)))
@@ -1417,7 +1447,7 @@ of ENTRY and insert there too."
                                        ,(list-to-items (org-brain-parents entry))))
                           ,(remq nil `("Children"
                                        ,(list-to-items (org-brain--linked-property-entries
-                                                        entry "BRAIN_CHILDREN"))))
+                                                        entry org-brain-children-property-name))))
                           ,(remq nil `("Friends"
                                        ,(list-to-items (org-brain-friends entry))))))
        "\n:END:\n")))
@@ -1643,8 +1673,8 @@ If interactive, also prompt for ENTRY."
     (when (file-exists-p path)
       (error "That file already exists"))
     (let ((parents (org-brain-parents entry))
-          (external-parents (org-brain--linked-property-entries entry "BRAIN_PARENTS"))
-          (children (org-brain--linked-property-entries entry "BRAIN_CHILDREN"))
+          (external-parents (org-brain--linked-property-entries entry org-brain-parents-property-name))
+          (children (org-brain--linked-property-entries entry org-brain-children-property-name))
           (friends (org-brain-friends entry))
           (hl-text (org-with-point-at (org-brain-entry-marker entry)
                      (setq level (org-outline-level))
@@ -1950,7 +1980,7 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
                   (end-of-line)
                   (newline-and-indent))
               (goto-char (point-min)))
-            (insert ":RESOURCES:\n:END:\n")
+            (insert (concat ":" org-brain-resources-drawer-name ":\n:END:\n"))
             (re-search-backward org-brain-resources-start-re nil t)
             (end-of-line))
           (newline-and-indent)
@@ -1964,7 +1994,7 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
             (end-of-line)
           (open-line 1)
           (indent-for-tab-command)
-          (insert ":RESOURCES:")
+          (insert (concat ":" org-brain-resources-drawer-name ":"))
           (save-excursion
             (insert "\n")
             (indent-for-tab-command)
@@ -2046,7 +2076,7 @@ then always use `org-brain-select'."
 
 (defun org-brain-edge-prop-name (entry)
   "Retrun edge annotation property name of ENTRY."
-  (concat "BRAIN_EDGE_" (org-brain-entry-identifier entry)))
+  (concat org-brain-edge-property-prefix-name "_" (org-brain-entry-identifier entry)))
 
 (defun org-brain-get-edge-annotation (from to &optional keywords)
   "Get edge annotation FROM an entry TO another entry.
