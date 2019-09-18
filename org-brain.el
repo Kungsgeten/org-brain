@@ -1256,13 +1256,14 @@ If run with `\\[universal-argument]', or SAME-WINDOW as t, use current window."
 If run interactively, get ENTRY from context.
 If ALL is nil, choose only between externally linked children."
   (interactive (list (org-brain-entry-at-pt)))
-  (org-brain-goto (org-brain-choose-entry
-                   "Goto child: "
-                   (if all
-                       (org-brain-children entry)
-                     (org-brain--linked-property-entries
-                      entry org-brain-children-property-name))
-                   nil t)))
+  (let* ((entries (if all (org-brain-children entry)
+                  (org-brain--linked-property-entries
+                   entry org-brain-children-property-name)))
+         (child (cond
+                  ((equal 1 (length entries)) (car-safe entries))
+                  ((not child) (error (concat entry " has no children")))
+                  (t (org-brain-choose-entry "Goto child: " entries nil t)))))
+    (org-brain-goto child)))
 
 ;;;###autoload
 (defun org-brain-goto-parent (entry &optional all)
@@ -1270,13 +1271,14 @@ If ALL is nil, choose only between externally linked children."
 If run interactively, get ENTRY from context.
 If ALL is nil, choose only between externally linked parents."
   (interactive (list (org-brain-entry-at-pt)))
-  (org-brain-goto (org-brain-choose-entry
-                   "Goto parent: "
-                   (if all
-                       (org-brain-parents entry)
-                     (org-brain--linked-property-entries
-                      entry org-brain-parents-property-name))
-                   nil t)))
+  (let* ((entries (if all (org-brain-parents entry)
+                  (org-brain--linked-property-entries
+                   entry org-brain-parents-property-name)))
+         (parent (cond
+                  ((equal 1 (length entries)) (car-safe entries))
+                  ((not parent) (error (concat entry " has no parent")))
+                  (t (org-brain-choose-entry "Goto parent: " entries nil t)))))
+    (org-brain-goto parent)))
 
 ;;;###autoload
 (defun org-brain-visualize-parent (entry)
@@ -1293,11 +1295,13 @@ This allows the user to quickly jump up the hierarchy."
   "Goto a friend of ENTRY.
 If run interactively, get ENTRY from context."
   (interactive (list (org-brain-entry-at-pt)))
-  (org-brain-goto (org-brain-choose-entry
-                   "Goto friend: "
-                   (org-brain--linked-property-entries
-                    entry org-brain-friends-property-name)
-                   nil t)))
+    (let* ((entries (org-brain--linked-property-entries
+                     entry org-brain-friends-property-name))
+           (friend (cond
+                    ((equal 1 (length entries)) (car-safe entries))
+                    ((not friend) (error (concat entry " has no friends")))
+                    (t (org-brain-choose-entry "Goto friend: " entries nil t)))))
+      (org-brain-goto friend)))
 
 ;;;###autoload
 (defun org-brain-refile (max-level)
