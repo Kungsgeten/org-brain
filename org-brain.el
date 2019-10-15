@@ -34,6 +34,7 @@
 (require 'org-id)
 (require 'picture)
 (require 'subr-x)
+(require 'seq)
 
 (defgroup org-brain nil
   "Org-mode concept mapping"
