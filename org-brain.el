@@ -6,8 +6,8 @@
 ;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
-;; Package-Requires: ((emacs "25") (org "9.2"))
-;; Version: 0.7
+;; Package-Requires: ((emacs "25.1") (org "9.2"))
+;; Version: 0.8
 
 ;;; Commentary:
 
@@ -30,6 +30,7 @@
 
 (require 'org-element)
 (require 'org-attach)
+(require 'org-agenda)
 (require 'org-macs)
 (require 'org-id)
 (require 'picture)
@@ -108,6 +109,16 @@ Only headlines will be considered as entries when visualizing."
   "Should the navigation history be shown in `org-brain-visualize'?"
   :group 'org-brain
   :type '(boolean))
+
+(defcustom org-brain-show-icons t
+  "Should icons from `org-agenda-category-icon-alist' be shown when visualizing?"
+  :group 'org-brain
+  :type '(boolean))
+
+(defcustom org-brain-category-icon-width 2
+  "The character width of icons."
+  :group 'org-brain
+  :type '(integer))
 
 (defcustom org-brain-quit-after-goto nil
   "Should the *org-brain* buffer window close itself after executing a goto command?"
@@ -1926,13 +1937,25 @@ cancelled manually with `org-brain-stop-wandering'."
   (org-brain-stop-wandering)
   (quit-window))
 
+(defun org-brain-entry-icon (entry)
+  "Get a string representing the icon of ENTRY.
+Checks for the org mode category of ENTRY, then search for the
+category icon in `org-agenda-category-icon-alist'."
+  (when (and org-brain-show-icons
+             org-agenda-category-icon-alist)
+    (org-with-point-at (org-brain-entry-marker entry)
+      (when-let ((icon (org-agenda-get-category-icon (org-get-category))))
+        (propertize (make-string org-brain-category-icon-width ? ) 'display icon)))))
+
 (defun org-brain-title-as-button (entry)
   "The title of ENTRY when displayed as a button."
-  (org-brain-title entry (or (not org-brain-visualizing-mind-map)
-                             org-brain-cap-mind-map-titles)))
+  (concat (org-brain-entry-icon entry)
+          (org-brain-title entry (or (not org-brain-visualizing-mind-map)
+                                     org-brain-cap-mind-map-titles))))
 
 (defun org-brain-insert-visualize-button (entry &optional face)
-  "Insert a button, running `org-brain-visualize' on ENTRY when clicked."
+  "Insert a button, running `org-brain-visualize' on ENTRY when clicked.
+FACE is sent to `org-brain-display-face' and sets the face of the button."
   (let ((annotation (org-brain-get-edge-annotation org-brain--vis-entry
                                                    entry
                                                    org-brain--vis-entry-keywords)))
@@ -2286,12 +2309,12 @@ Helper function for `org-brain-visualize'."
                (sibling-middle (ceiling (/ (length children-links) 2.0)))
                (base-line (if org-brain-show-history 5 4))
                (col-start (+ 3 max-width))
-               (parent-title (org-brain-title (car parent))))
+               (parent-width (string-width (org-brain-title-as-button (car parent)))))
           (org-goto-line base-line)
           (mapc
            (lambda (child)
              (picture-forward-column col-start)
-             (org-brain--insert-wire (make-string (1+ (string-width parent-title)) ?\ ) "+-")
+             (org-brain--insert-wire (make-string (1+ parent-width) ?\ ) "+-")
              (org-brain-insert-visualize-button
               child
               (if (and (member (car parent) (org-brain--local-parent child))
@@ -2307,7 +2330,7 @@ Helper function for `org-brain-visualize'."
           (forward-line (1- sibling-middle))
           (picture-forward-column col-start)
           (push (cons (picture-current-line)
-                      (+ (current-column) (/ (string-width parent-title) 2)))
+                      (+ (current-column) (/ parent-width 2)))
                 parent-positions)
           (org-brain-insert-visualize-button
            (car parent)
@@ -2317,7 +2340,7 @@ Helper function for `org-brain-visualize'."
           (setq max-width (max max-width (current-column)))
           (when children-links
             (org-brain--insert-wire "-")
-            (delete-char (+ 1 (string-width parent-title))))))
+            (delete-char (+ 1 parent-width)))))
       ;; Draw lines
       (when parent-positions
         (let ((maxline (line-number-at-pos (point-max))))

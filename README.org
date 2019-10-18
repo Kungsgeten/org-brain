@@ -345,6 +345,12 @@ You can have multiple brains simply by having more than one brain folder. In thi
 
 If you run =org-brain-visualize= from inside an org-file in /the root/ of an org-brain directory, =org-brain= will automatically switch to this brain.
 
+** Category icons
+
+=org-brain= supports showing icons for your entries, depending on their [[https://orgmode.org/manual/Categories.html][category]]. Use the variable =org-agenda-category-icon-alist= to specify icons for categories.
+
+See example of using /all-the-icons/ for this below under /Other useful packages/.
+
 ** Take note!
 
 =org-brain= creates and uses several headline properties in the =PROPERTIES=
@@ -497,23 +503,26 @@ After installing =all-the-icons= you could decorate the resources in =org-brain=
   (defun org-brain-insert-resource-icon (link)
     "Insert an icon, based on content of org-mode LINK."
     (insert (format "%s "
-                    (cond ((string-prefix-p "http" link)
-                           (cond ((string-match "wikipedia\\.org" link)
-                                  (all-the-icons-faicon "wikipedia-w"))
-                                 ((string-match "github\\.com" link)
-                                  (all-the-icons-octicon "mark-github"))
-                                 ((string-match "vimeo\\.com" link)
-                                  (all-the-icons-faicon "vimeo"))
-                                 ((string-match "youtube\\.com" link)
-                                  (all-the-icons-faicon "youtube"))
-                                 (t
-                                  (all-the-icons-faicon "globe"))))
-                          ((string-prefix-p "brain:" link)
+                    (cond ((string-prefix-p "brain:" link)
                            (all-the-icons-fileicon "brain"))
+                          ((string-prefix-p "info:" link)
+                           (all-the-icons-octicon "info"))
+                          ((string-prefix-p "help:" link)
+                           (all-the-icons-material "help"))
+                          ((string-prefix-p "http" link)
+                           (all-the-icons-icon-for-url link))
                           (t
                            (all-the-icons-icon-for-file link))))))
 
-  (add-hook 'org-brain-after-resource-button-functions #'org-brain-insert-resource-icon)
+    (add-hook 'org-brain-after-resource-button-functions #'org-brain-insert-resource-icon)
+#+END_SRC
+
+You could also use =all-the-icons= to add icons to entry [[https://orgmode.org/manual/Categories.html][categories]]. For instance if you have two categories named /computers/ and /books/ which you want icons for:
+
+#+BEGIN_SRC emacs-lisp
+  (setq org-agenda-category-icon-alist
+        `(("computers" ,(list (all-the-icons-material "computer")) nil nil :ascent center)
+          ("books" ,(list (all-the-icons-faicon "book")) nil nil :ascent center)))
 #+END_SRC
 
 ** [[http://jblevins.org/projects/deft/][deft]]
