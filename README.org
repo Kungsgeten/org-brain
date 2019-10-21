@@ -343,7 +343,7 @@ The following tags modify the way how information is shown when an
 entry is visualized.
 
 - =:ownline:= :: Make each child of the tagged entry appear on its own
-                 line when the tagged entry is visualized. This does
+                 line when the tagged entry is visualized. This
                  only affect the tagged entry. I works akin to
                  temporarily setting =org-brain-child-fill-column-sexp=
                  to =0=.
