@@ -349,7 +349,7 @@ entry is visualized.
                  to =0=.
 
 - =:nosort:= :: Display each child of the tagged node in the order the
-                children are listed in the file. This affects the
+                children are listed in the file, rather than in the sorted order determined by =org-brain-visualize-sort-function=. This affects the
                 order of the node’s children in both the child list
                 (when the tagged node is being visited) and in the
                 sibling list (when one of the tagged node’s children
