@@ -339,6 +339,22 @@ is visualized:
      entries.
 - =:nosiblings:= :: You may have an entry with lots of children, and when you visualize one of these children you might not want to see the siblings from this parent. A good example would be if you have an =index= entry or similar. By tagging the parent with =nosiblings= the parent's children will not show siblings from that parent. You can change the tag name by modifying =org-brain-exclude-siblings-tag=.
 
+The following tags modify the way how information is shown when an
+entry is visualized.
+
+- =:ownline:= :: Make each child of the tagged entry appear on its own
+                 line when the tagged entry is visualized. This does
+                 only affect the tagged entry. I works akin to
+                 temporarily setting =org-brain-child-fill-column-sexp=
+                 to =0=.
+
+- =:nosort:= :: Display each child of the tagged node in the order the
+                children are listed in the file. This affects the
+                order of the node’s children in both the child list
+                (when the tagged node is being visited) and in the
+                sibling list (when one of the tagged node’s children
+                is being visited).
+
 ** Having multiple brains
 
 You can have multiple brains simply by having more than one brain folder. In this way, each folder becomes a separate brain. You can switch between these using =M-x org-brain-switch-brain=. You can also use =brainswitch:= links in =org-mode= to switch brains.
