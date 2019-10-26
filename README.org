@@ -194,6 +194,7 @@ available in =org-brain-visualize=:
 | o          | =org-brain-goto-current=             | Open current entry for editing                                                    |
 | O          | =org-brain-goto=                     | Choose and edit one of your =org-brain= entries                                     |
 | v          | =org-brain-visualize=                | Choose and visualize a different entry                                            |
+| V          | =org-brain-visualize-follow=         | Similar to =org-agenda-follow-mode=; view visualized entry in another window.       |
 | w          | =org-brain-visualize-random=         | Visualize one of your entries at random.                                          |
 | W          | =org-brain-visualize-wander=         | Visualize at random, in a set interval. =W= again to cancel.                        |
 

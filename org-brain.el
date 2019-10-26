@@ -1792,6 +1792,20 @@ If you don't want to sort the relationships, set this to `ignore'.")
 
 ;;;; Visualize
 
+(defvar org-brain--visualize-follow nil "Used by `org-brain-visualize-follow'.")
+
+;;;###autoload
+(defun org-brain-visualize-follow (should-follow)
+  "Set if `org-brain-visualize' SHOULD-FOLLOW the current entry or not.
+When following, the visualized entry will be shown in a separate
+buffer when changing the visualized entry.
+If run interactively, toggle following on/off."
+  (interactive (list (not org-brain--visualize-follow)))
+  (setq org-brain--visualize-follow should-follow)
+  (message (if should-follow
+               "Enabled following visualized entry."
+             "Disabled following visualized entry.")))
+
 ;;;###autoload
 (defun org-brain-visualize (entry &optional nofocus nohistory wander)
   "View a concept map with ENTRY at the center.
@@ -1881,6 +1895,8 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
         (org-brain-visualize-mode))
       (goto-char entry-pos))
     (unless nofocus
+      (when org-brain--visualize-follow
+        (org-brain-goto-current))
       (pop-to-buffer "*org-brain*"))))
 
 ;;;###autoload
@@ -2208,6 +2224,7 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
 (define-key org-brain-visualize-mode-map "o" 'org-brain-goto-current)
 (define-key org-brain-visualize-mode-map "O" 'org-brain-goto)
 (define-key org-brain-visualize-mode-map "v" 'org-brain-visualize)
+(define-key org-brain-visualize-mode-map "V" 'org-brain-visualize-follow)
 (define-key org-brain-visualize-mode-map "f" 'org-brain-add-friendship)
 (define-key org-brain-visualize-mode-map "F" 'org-brain-remove-friendship)
 (define-key org-brain-visualize-mode-map "d" 'org-brain-delete-entry)
