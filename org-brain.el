@@ -165,6 +165,11 @@ Can be used to prettify the buffer output, e.g. `ascii-art-to-unicode'."
   :group 'org-brain
   :type 'hook)
 
+(defcustom org-brain-visualize-follow-hook nil
+  "Hook run after viewing an entry by means of `org-brain-visualize-follow'."
+  :group 'org-brain
+  :type 'hook)
+
 (defcustom org-brain-after-resource-button-functions nil
   "Hook run during `org-brain-insert-resource-button'.
 Insert a bullet, then run hook functions, then insert the actual button.
@@ -1896,7 +1901,8 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
       (goto-char entry-pos))
     (unless nofocus
       (when org-brain--visualize-follow
-        (org-brain-goto-current))
+        (org-brain-goto-current)
+        (run-hooks 'org-brain-visualize-follow-hook))
       (pop-to-buffer "*org-brain*"))))
 
 ;;;###autoload
