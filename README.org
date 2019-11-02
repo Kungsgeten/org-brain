@@ -165,54 +165,61 @@ might want to bind to a key). From there you can browse entries, add/remove
 relationships, open entries for editing etc. The following keybindings are
 available in =org-brain-visualize=:
 
-| Key        | Command                            | Description                                                                       |
-|------------+------------------------------------+-----------------------------------------------------------------------------------|
-| m          | =org-brain-visualize-mind-map=       | Toggle between normal and mind-map visualization.                                 |
-| j or TAB   | =forward-button=                     | Goto next link                                                                    |
-| k or S-TAB | =backward-button=                    | Goto previous link                                                                |
-| b          | =org-brain-visualize-back=           | Like the back button in a web browser.                                            |
-| h or *     | =org-brain-add-child-headline=       | Add a new child /headline/ to entry                                                 |
-| c          | =org-brain-add-child=                | Add an existing entry, or a new /file/, as a child                                  |
-| C          | =org-brain-remove-child=             | Remove one the entry's child relations                                            |
-| e          | =org-brain-annotate-edge=            | Annotate the connection between the visualized entry and the entry link at point. |
-| p          | =org-brain-add-parent=               | Add an existing entry, or a new /file/, as a parent                                 |
-| P          | =org-brain-remove-parent=            | Remove one of the entry's parent relations                                        |
-| f          | =org-brain-add-friendship=           | Add an existing entry, or a new /file/, as a friend                                 |
-| F          | =org-brain-remove-friendship=        | Remove one of the entry's friend relations                                        |
-| n          | =org-brain-pin=                      | Toggle if the entry is pinned or not                                              |
-| s          | =org-brain-select-dwim=              | Select an entry for batch processing.                                             |
-| S          | =org-brain-select-map=               | Prefix key to do batch processing with selected entries.                          |
-| t          | =org-brain-set-title=                | Change the title of the entry.                                                    |
-| T          | =org-brain-set-tags=                 | Change the tags of the entry.                                                     |
-| d          | =org-brain-delete-entry=             | Choose an entry to delete.                                                        |
-| l          | =org-brain-visualize-add-resource=   | Add a new resource link in entry                                                  |
-| r          | =org-brain-open-resource=            | Choose and open a resource from the entry.                                        |
-| C-y        | =org-brain-visualize-paste-resource= | Add a new resource link from clipboard                                            |
-| C-c C-w    | =org-brain-refile=                   | Refile (move) current entry to another entry (change local parent).               |
-| a          | =org-brain-visualize-attach=         | Run =org-attach= on entry (headline entries only)                                   |
-| A          | =org-brain-archive=                  | Archive the entry (headline entries only)                                         |
-| o          | =org-brain-goto-current=             | Open current entry for editing                                                    |
-| O          | =org-brain-goto=                     | Choose and edit one of your =org-brain= entries                                     |
-| v          | =org-brain-visualize=                | Choose and visualize a different entry                                            |
-| V          | =org-brain-visualize-follow=         | Similar to =org-agenda-follow-mode=; view visualized entry in another window.       |
-| w          | =org-brain-visualize-random=         | Visualize one of your entries at random.                                          |
-| W          | =org-brain-visualize-wander=         | Visualize at random, in a set interval. =W= again to cancel.                        |
+| Key         | Command                            | Description                                                                       |
+|-------------+------------------------------------+-----------------------------------------------------------------------------------|
+| m           | =org-brain-visualize-mind-map=       | Toggle between normal and mind-map visualization.                                 |
+| j or TAB    | =forward-button=                     | Goto next link                                                                    |
+| k or S-TAB  | =backward-button=                    | Goto previous link                                                                |
+| b           | =org-brain-visualize-back=           | Like the back button in a web browser.                                            |
+| h or *      | =org-brain-add-child-headline=       | Add a new child /headline/ to entry                                                 |
+| c           | =org-brain-add-child=                | Add an existing entry, or a new /file/, as a child                                  |
+| C           | =org-brain-remove-child=             | Remove one the entry's child relations                                            |
+| e           | =org-brain-annotate-edge=            | Annotate the connection between the visualized entry and the entry link at point. |
+| p           | =org-brain-add-parent=               | Add an existing entry, or a new /file/, as a parent                                 |
+| P           | =org-brain-remove-parent=            | Remove one of the entry's parent relations                                        |
+| f           | =org-brain-add-friendship=           | Add an existing entry, or a new /file/, as a friend                                 |
+| F           | =org-brain-remove-friendship=        | Remove one of the entry's friend relations                                        |
+| n           | =org-brain-pin=                      | Toggle if the entry is pinned or not                                              |
+| s           | =org-brain-select-dwim=              | Select an entry for batch processing.                                             |
+| S           | =org-brain-select-map=               | Prefix key to do batch processing with selected entries.                          |
+| t           | =org-brain-set-title=                | Change the title of the entry.                                                    |
+| T           | =org-brain-set-tags=                 | Change the tags of the entry.                                                     |
+| d           | =org-brain-delete-entry=             | Choose an entry to delete.                                                        |
+| l           | =org-brain-visualize-add-resource=   | Add a new resource link in entry                                                  |
+| r           | =org-brain-open-resource=            | Choose and open a resource from the entry.                                        |
+| C-y         | =org-brain-visualize-paste-resource= | Add a new resource link from clipboard                                            |
+| a           | =org-brain-visualize-attach=         | Run =org-attach= on entry (headline entries only)                                   |
+| A           | =org-brain-archive=                  | Archive the entry (headline entries only)                                         |
+| o           | =org-brain-goto-current=             | Open current entry for editing                                                    |
+| O           | =org-brain-goto=                     | Choose and edit one of your =org-brain= entries                                     |
+| v           | =org-brain-visualize=                | Choose and visualize a different entry                                            |
+| V           | =org-brain-visualize-follow=         | Similar to =org-agenda-follow-mode=; view visualized entry in another window.       |
+| w           | =org-brain-visualize-random=         | Visualize one of your entries at random.                                          |
+| W           | =org-brain-visualize-wander=         | Visualize at random, in a set interval. =W= again to cancel.                        |
+| C-c C-x C-v | =org-toggle-inline-images=           | Display org-mode images in the entry text.                                        |
+| M           | Move prefix                        | Move (refile) the current entry.                                                  |
+| M r         | =org-brain-refile=                   | Move current entry to another entry (change local parent).                        |
+| M p         | =org-brain-change-local-parent=      | Choose among the entry's parents and make another of them the local parent.       |
 
 You may use =org-store-link= inside of =org-brain-visualize= in order to store a
 link to the currently visualized =org-brain= entry.
 
-If the /universal argument/ =C-u= is used when running
-=org-brain-visualize-random= or =org-brain-visualize-wander=, the randomized
-targets are restricted to descendants (children, grandchildren,
-grand-grandchildren etc) of the currently visualized entry. Use for instance
-=C-u W= to wander among the descendants.
+If the /universal argument/ =C-u= is used when running =org-brain-visualize-random= or
+=org-brain-visualize-wander=, the randomized targets are restricted to descendants
+(children, grandchildren, grand-grandchildren etc) of the currently visualized
+entry. Use for instance =C-u W= to wander among the descendants.
 
-The /universal argument/ =C-u= can also be used with =org-brain-open-resource=. This lets you choose not only resource from the visualized entry, but also from descendants (children, grand-children, etc) of that entry.
+The /universal argument/ =C-u= can also be used with =org-brain-open-resource=. This
+lets you choose not only resource from the visualized entry, but also from
+descendants (children, grand-children, etc) of that entry.
 
-If the /universal argument/ =C-u= is used when calling =org-brain-annotate-edge= then the annotation will be "one-way". The default behaviour is otherwise to annotate the connection in both directions.
+If the /universal argument/ =C-u= is used when calling =org-brain-annotate-edge= then
+the annotation will be "one-way". The default behaviour is otherwise to annotate
+the connection in both directions.
 
 When using the mind map visualization (toggle by pressing =m=), you can use the
-following keybindings in order to show or hide successive levels of hierarchy relative to the current entry.
+following keybindings in order to show or hide successive levels of hierarchy
+relative to the current entry.
 
 | Key | Command                         | Description                                                              |
 |-----+---------------------------------+--------------------------------------------------------------------------|

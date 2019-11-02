@@ -2364,6 +2364,7 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
 (define-key org-brain-visualize-mode-map "Z" 'org-brain-hide-ancestor-level)
 (define-key org-brain-visualize-mode-map "e" 'org-brain-annotate-edge)
 (define-key org-brain-visualize-mode-map "\C-c\C-w" 'org-brain-refile)
+(define-key org-brain-visualize-mode-map "\C-c\C-x\C-v" 'org-toggle-inline-images)
 
 (define-prefix-command 'org-brain-select-map)
 (define-key org-brain-select-map "s" 'org-brain-clear-selected)
@@ -2379,6 +2380,12 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
 
 (define-key org-brain-visualize-mode-map "s" 'org-brain-select-dwim)
 (define-key org-brain-visualize-mode-map "S" 'org-brain-select-map)
+
+(define-prefix-command 'org-brain-move-map)
+(define-key org-brain-move-map "r" 'org-brain-refile)
+(define-key org-brain-move-map "p" 'org-brain-change-local-parent)
+
+(define-key org-brain-visualize-mode-map "M" 'org-brain-move-map)
 
 ;;;;; Drawing helpers
 
