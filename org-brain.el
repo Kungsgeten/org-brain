@@ -853,13 +853,58 @@ Only get the body text, unless ALL-DATA is t."
 Often you want the siblings too, then use `org-brain-siblings' instead."
   (delete-dups
    (append (org-brain--linked-property-entries entry org-brain-parents-property-name)
-           (org-brain--local-parent entry))))
+           (org-brain-local-parent entry))))
+
+(defun org-brain-local-parent (entry)
+  "Get file local parent of ENTRY, as a list."
+  (if-let ((parent
+            (unless (org-brain-filep entry)
+              (org-with-point-at (org-brain-entry-marker entry)
+                (if (and (org-up-heading-safe)
+                         (org-entry-get nil "ID"))
+                    (org-brain-entry-from-id (org-entry-get nil "ID"))
+                  (when org-brain-include-file-entries (car entry)))))))
+      (list parent)))
 
 (defun org-brain-children (entry)
   "Get children of ENTRY."
   (delete-dups
    (append (org-brain--linked-property-entries entry org-brain-children-property-name)
-           (org-brain--local-children entry))))
+           (org-brain-local-children entry))))
+
+(defun org-brain-local-children (entry)
+  "Get file local children of ENTRY."
+  (remove
+   entry
+   (if (org-brain-filep entry)
+       ;; File entry
+       (with-temp-buffer
+         (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+         (org-element-map (org-element-parse-buffer 'headline) 'headline
+           (lambda (headline)
+             (when-let ((id (org-element-property :ID headline)))
+               (unless (org-brain-id-exclude-taggedp id)
+                 (org-brain-entry-from-id id))))
+           nil nil 'headline))
+     ;; Headline entry
+     (org-with-point-at (org-brain-entry-marker entry)
+       (let (children)
+         (deactivate-mark)
+         (org-mark-subtree)
+         (org-goto-first-child)
+         (setq children
+               (org-map-entries
+                (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
+                t 'region-start-level
+                (lambda ()
+                  (let ((id (org-entry-get nil "ID")))
+                    (when (or (not id)
+                              (org-brain-id-exclude-taggedp id))
+                      (save-excursion
+                        (outline-next-heading)
+                        (point)))))))
+         (deactivate-mark)
+         children)))))
 
 (defun org-brain-descendants (entry)
   "Get all entries which descend from ENTRY.
@@ -873,6 +918,32 @@ The ENTRY itself is also included in the returned list."
                    (mapc #'collect-descendants (org-brain-children e)))))
       (collect-descendants entry)
       checked)))
+
+(defun org-brain-local-descendants (entry)
+  "Return the local descendants of ENTRY (excluding ENTRY itself).
+Similar to `org-brain-descendants' but only for local children."
+  (remove
+   entry
+   (if (org-brain-filep entry)
+       ;; File entry
+       (with-temp-buffer
+         (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+         (org-element-map (org-element-parse-buffer 'headline) 'headline
+           (lambda (headline)
+             (when-let ((id (org-element-property :ID headline)))
+               (unless (org-brain-id-exclude-taggedp id)
+                 (org-brain-entry-from-id id))))))
+     ;; Headline entry
+     (org-with-point-at (org-brain-entry-marker entry)
+       (org-map-entries
+        (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
+        t 'tree
+        (lambda ()
+          (let ((id (org-entry-get nil "ID")))
+            (when (or (not id)
+                      (org-brain-id-exclude-taggedp id))
+              (or (outline-next-heading)
+                  (point))))))))))
 
 (defun org-brain-siblings (entry)
   "Get siblings of ENTRY.
@@ -939,51 +1010,6 @@ Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
                               (if current-prefix-arg
                                   (org-brain-descendants entry)
                                 (list entry)))))
-
-(defun org-brain--local-parent (entry)
-  "Get file local parent of ENTRY, as a list."
-  (if-let ((parent
-            (unless (org-brain-filep entry)
-              (org-with-point-at (org-brain-entry-marker entry)
-                (if (and (org-up-heading-safe)
-                         (org-entry-get nil "ID"))
-                    (org-brain-entry-from-id (org-entry-get nil "ID"))
-                  (when org-brain-include-file-entries (car entry)))))))
-      (list parent)))
-
-(defun org-brain--local-children (entry)
-  "Get file local children of ENTRY."
-  (remove
-   entry
-   (if (org-brain-filep entry)
-       ;; File entry
-       (with-temp-buffer
-         (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-         (org-element-map (org-element-parse-buffer 'headline) 'headline
-           (lambda (headline)
-             (when-let ((id (org-element-property :ID headline)))
-               (unless (org-brain-id-exclude-taggedp id)
-                 (org-brain-entry-from-id id))))
-           nil nil 'headline))
-     ;; Headline entry
-     (org-with-point-at (org-brain-entry-marker entry)
-       (let (children)
-         (deactivate-mark)
-         (org-mark-subtree)
-         (org-goto-first-child)
-         (setq children
-               (org-map-entries
-                (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
-                t 'region-start-level
-                (lambda ()
-                  (let ((id (org-entry-get nil "ID")))
-                    (when (or (not id)
-                              (org-brain-id-exclude-taggedp id))
-                      (save-excursion
-                        (outline-next-heading)
-                        (point)))))))
-         (deactivate-mark)
-         children)))))
 
 (defun org-brain--linked-property-entries (entry property)
   "Get list of entries linked to in ENTRY by PROPERTY.
@@ -1136,8 +1162,17 @@ If called interactively use `org-brain-entry-at-point' and prompt for CHILD."
                  (list e (org-brain-choose-entry "Remove child: "
                                                  (org-brain-children e)
                                                  nil t))))
-  (if (member child (org-brain--local-children entry))
-      (org-brain-delete-entry child)
+  (if (member child (org-brain-local-children entry))
+      (if (and (> (length (org-brain-parents child)) 1)
+               (y-or-n-p
+                (format "%s is %s's local parent. Would you like to change the local parent of %s? "
+                        (org-brain-title entry) (org-brain-title child) (org-brain-title child))))
+          (let* ((linked-parents (org-brain--linked-property-entries child "BRAIN_PARENTS"))
+                 (new-parent (if (equal 1 (length linked-parents))
+                                 (car-safe linked-parents)
+                               (org-brain-choose-entry "Refile to parent: " linked-parents))))
+            (org-brain-remove-relationship entry (org-brain-change-local-parent child new-parent)))
+        (org-brain-delete-entry child))
     (org-brain-remove-relationship entry child))
   (org-brain--revert-if-visualizing))
 
@@ -1155,14 +1190,23 @@ Several parents can be added, by using `org-brain-entry-separator'."
 
 ;;;###autoload
 (defun org-brain-remove-parent (entry parent)
-  "Remove external PARENT from ENTRY.
+  "Remove PARENT from ENTRY.
 If called interactively use `org-brain-entry-at-pt' and prompt for PARENT."
   (interactive (let ((e (org-brain-entry-at-pt)))
                  (list e (org-brain-choose-entry "Remove parent: "
-        	                                 (org-brain--linked-property-entries
-                                                  e org-brain-parents-property-name)
-	                                         nil t))))
-  (org-brain-remove-relationship parent entry)
+                                                 (org-brain-parents e)
+                                                 nil t))))
+  (if (member entry (org-brain-local-children parent))
+      (if-let* ((linked-parents (org-brain--linked-property-entries entry "BRAIN_PARENTS"))
+                (new-parent (if (equal 1 (length linked-parents))
+                                (car-safe linked-parents)
+                              (org-brain-choose-entry (format "Removing %s's local parent. Refile to: "
+                                                              (org-brain-title entry))
+                                                      linked-parents))))
+          (org-brain-remove-relationship parent (org-brain-change-local-parent entry new-parent))
+        (error "%s is %s's only parent, it can't be removed"
+               (org-brain-title parent) (org-brain-title entry)))
+    (org-brain-remove-relationship parent entry))
   (org-brain--revert-if-visualizing))
 
 (defun org-brain--internal-add-friendship (entry1 entry2 &optional oneway)
@@ -1261,11 +1305,12 @@ If ENTRY isn't specified, ask for the ENTRY."
   (org-brain-goto entry #'pop-to-buffer))
 
 ;;;###autoload
-(defun org-brain-goto-end (&optional entry)
+(defun org-brain-goto-end (&optional entry same-window)
   "Like `org-brain-goto', but visits the end of ENTRY.
+If SAME-WINDOW is t, use the current window.
 If ENTRY isn't specified, ask for the ENTRY."
   (interactive)
-  (if (org-brain-filep (org-brain-goto entry))
+  (if (org-brain-filep (org-brain-goto entry (if same-window nil #'pop-to-buffer)))
       (or (outline-next-heading)
           (goto-char (point-max)))
     (let ((tags (org-get-tags nil t)))
@@ -1318,7 +1363,7 @@ If ALL is nil, choose only between externally linked parents."
   "Visualize a parent of ENTRY, preferring local parents.
 This allows the user to quickly jump up the hierarchy."
   (interactive (list (org-brain-entry-at-pt)))
-  (if-let ((parent (car (or (org-brain--local-parent entry)
+  (if-let ((parent (car (or (org-brain-local-parent entry)
                             (org-brain-parents entry)))))
       (org-brain-visualize parent)
     (error "This entry has no parent")))
@@ -1357,6 +1402,74 @@ After refiling, all headlines will be given an id."
           (org-brain--revert-if-visualizing))
       (org-refile))))
 
+(defun org-brain-refile-to (entry parent)
+  "Refile ENTRY to be a local child of PARENT, returning the new refiled entry.
+
+If ENTRY is linked to PARENT before the refile, this relationship is removed.
+Pins, history, and selected lists are updated
+to account for the change in ENTRY's local parent."
+  (when (member parent (org-brain-local-descendants entry))
+    (error "Cannot refile. New parent %s is a local descendant of %s"
+           (org-brain-title parent) (org-brain-title entry)))
+  (when (org-brain-filep entry)
+    (error "Cannot refile a file entry"))
+  (let ((entry-marker (org-brain-entry-marker entry))
+        (parent-title (org-brain-title parent)))
+    (if (org-brain-filep parent)
+        ;; Parent is a file entry
+        (let ((parent-path (org-brain-entry-path parent)))
+          (with-current-buffer (find-file-noselect parent-path)
+            (goto-char (point-max))
+            (insert "\n* temp headline")
+            (let ((newpoint (point)))
+              (org-with-point-at entry-marker
+                (org-refile nil nil (list parent-title parent-path "" newpoint))))
+            (outline-next-heading)
+            (org-promote-subtree)
+            (outline-previous-heading)
+            (org-cut-subtree)
+            (pop kill-ring)
+            (forward-line -1)
+            (org-brain-remove-line-if-matching "^[[:space:]]*$")))
+      ;; Parent is a headline entry
+      (let ((id (org-brain-entry-identifier parent)))
+        (pcase (org-id-find id)
+          (`(,file-name . ,pos)
+           (org-with-point-at entry-marker
+             (org-refile nil nil (list parent-title file-name "" pos))))
+          (_ (error "Parent headline with ID %s not found" id)))))
+    (let ((new-entry (org-brain-entry-from-id (org-brain-entry-identifier entry))))
+      (cl-flet ((replace-entry (e) (if (equal e entry) new-entry e)))
+        (setq org-brain-pins (mapcar #'replace-entry org-brain-pins))
+        (setq org-brain--vis-history (mapcar #'replace-entry org-brain--vis-history))
+        (setq org-brain-selected (mapcar #'replace-entry org-brain-selected)))
+      (when (member parent
+                    (org-brain--linked-property-entries new-entry "BRAIN_PARENTS"))
+          (org-brain-remove-relationship parent new-entry))
+      (org-save-all-org-buffers)
+      (when (eq entry 'org-brain--vis-entry)
+        (setq org-brain--vis-entry new-entry))
+      new-entry)))
+
+;;;###autoload
+(defun org-brain-change-local-parent (entry parent)
+  "Refile ENTRY to be a local child of PARENT.
+Entries are relinked so existing parent-child relationships are unaffected.
+
+If called interactively, ENTRY is the current entry
+and PARENT is prompted for among the list of ENTRY's linked parents.
+Returns the new refiled entry."
+  (interactive
+   (let* ((this-entry (org-brain-entry-at-pt))
+          (linked-parents (org-brain--linked-property-entries this-entry "BRAIN_PARENTS"))
+          (chosen-parent (org-brain-choose-entry "Refile to parent: " linked-parents)))
+     (list this-entry chosen-parent)))
+  (let ((old-parent (car (org-brain-local-parent entry)))
+        (new-entry (org-brain-refile-to entry parent)))
+    (org-brain-add-relationship old-parent new-entry)
+    (org-brain--revert-if-visualizing)
+    new-entry))
+
 (defun org-brain--remove-relationships (entry &optional recursive)
   "Remove all external relationships from ENTRY.
 Also unpin and unselect the entry.
@@ -1373,7 +1486,7 @@ If RECURSIVE is t, remove local children's relationships."
   (ignore-errors (org-brain-pin entry -1)
                  (org-brain-select entry -1))
   (when recursive
-    (dolist (child (org-brain--local-children entry))
+    (dolist (child (org-brain-local-children entry))
       (org-brain--remove-relationships child t))))
 
 ;;;###autoload
@@ -1431,7 +1544,7 @@ If NOCONFIRM is nil, ask if we really want to delete."
   (interactive
    (list (org-brain-choose-entry "Delete entry: " 'all nil t)
          nil))
-  (let ((local-children (org-brain--local-children entry)))
+  (let ((local-children (org-brain-local-children entry)))
     (when (or noconfirm
               (yes-or-no-p
                (format "%s and its %d local children will be deleted. Are you sure? "
@@ -1489,7 +1602,7 @@ of ENTRY and insert there too."
                                        ,(list-to-items (org-brain-friends entry))))))
        "\n:END:\n")))
   (when recursive
-    (dolist (child (org-brain--local-children entry))
+    (dolist (child (org-brain-local-children entry))
       (org-brain-insert-relationships child t))))
 
 ;;;###autoload
@@ -2340,8 +2453,8 @@ Helper function for `org-brain-visualize'."
              (org-brain--insert-wire (make-string (1+ parent-width) ?\ ) "+-")
              (org-brain-insert-visualize-button
               child
-              (if (and (member (car parent) (org-brain--local-parent child))
-                       (member (car parent) (org-brain--local-parent entry)))
+              (if (and (member (car parent) (org-brain-local-parent child))
+                       (member (car parent) (org-brain-local-parent entry)))
                   'org-brain-local-sibling
                 'org-brain-sibling))
              (setq max-width (max max-width (current-column)))
@@ -2357,7 +2470,7 @@ Helper function for `org-brain-visualize'."
                 parent-positions)
           (org-brain-insert-visualize-button
            (car parent)
-           (if (member (car parent) (org-brain--local-parent entry))
+           (if (member (car parent) (org-brain-local-parent entry))
                'org-brain-local-parent
              'org-brain-parent))
           (setq max-width (max max-width (current-column)))
@@ -2416,7 +2529,7 @@ Helper function for `org-brain-visualize'."
                          children
                        (sort children org-brain-visualize-sort-function)))
         (let ((child-title (org-brain-title child))
-              (face (if (member entry (org-brain--local-parent child))
+              (face (if (member entry (org-brain-local-parent child))
                         'org-brain-local-child
                       'org-brain-child)))
           (when (> (+ (current-column) (length child-title)) fill-col)
