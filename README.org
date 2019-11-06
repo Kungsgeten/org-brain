@@ -585,7 +585,18 @@ init-file.
   (defun helm-org-rifle-brain ()
     "Rifle files in `org-brain-path'."
     (interactive)
-    (helm-org-rifle-directories (list org-brain-path)))
+    (let ((helm-org-rifle-close-unopened-file-buffers nil))
+      (helm-org-rifle-directories (list org-brain-path))))
+
+  (defun helm-org-rifle-open-in-brain (candidate)
+    (-let (((buffer . pos) candidate))
+      (with-current-buffer buffer
+        (goto-char pos)
+        (org-brain-visualize-entry-at-pt))))
+
+  (add-to-list 'helm-org-rifle-actions
+               (cons "Show entry in org-brain" 'helm-org-rifle-open-in-brain)
+               t)
 #+END_SRC
 
 ** [[https://github.com/weirdNox/org-noter][org-noter]]
