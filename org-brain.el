@@ -1452,18 +1452,22 @@ to account for the change in ENTRY's local parent."
       new-entry)))
 
 ;;;###autoload
-(defun org-brain-change-local-parent (entry parent)
+(defun org-brain-change-local-parent (&optional entry parent)
   "Refile ENTRY to be a local child of PARENT.
 Entries are relinked so existing parent-child relationships are unaffected.
 
-If called interactively, ENTRY is the current entry
-and PARENT is prompted for among the list of ENTRY's linked parents.
+If ENTRY is not supplied, the entry at point is used.
+If PARENT is not supplied, it is prompted for
+among the list of ENTRY's linked parents.
 Returns the new refiled entry."
-  (interactive
-   (let* ((this-entry (org-brain-entry-at-pt))
-          (linked-parents (org-brain--linked-property-entries this-entry "BRAIN_PARENTS"))
-          (chosen-parent (org-brain-choose-entry "Refile to parent: " linked-parents)))
-     (list this-entry chosen-parent)))
+  (interactive)
+  (unless entry (setq entry (org-brain-entry-at-pt)))
+  (unless parent (let ((linked-parents (org-brain--linked-property-entries entry "BRAIN_PARENTS")))
+                   (cl-case (length linked-parents)
+                     (0 (error "Entry \"%s\" has only one parent" (org-brain-title entry)))
+                     (1 (setq parent (car linked-parents)))
+                     (otherwise (setq parent (org-brain-choose-entry
+                                              (format "Refile \"%s\" to parent: " (org-brain-title entry)) linked-parents))))))
   (let ((old-parent (car (org-brain-local-parent entry)))
         (new-entry (org-brain-refile-to entry parent)))
     (org-brain-add-relationship old-parent new-entry)
@@ -1752,6 +1756,12 @@ Ignores selected entries that are not friends of ENTRY."
   (interactive)
   (dolist (selected org-brain-selected)
     (org-brain-delete-entry selected)))
+
+(defun org-brain-change-selected-local-parents ()
+  "Change the local parent of all the selected entries."
+  (interactive)
+  (dolist (selected org-brain-selected)
+    (org-brain-change-local-parent selected)))
 
 ;;;###autoload
 (defun org-brain-set-title (entry title)
