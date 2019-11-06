@@ -1447,7 +1447,7 @@ to account for the change in ENTRY's local parent."
                     (org-brain--linked-property-entries new-entry "BRAIN_PARENTS"))
           (org-brain-remove-relationship parent new-entry))
       (org-save-all-org-buffers)
-      (when (eq entry 'org-brain--vis-entry)
+      (when (eq entry org-brain--vis-entry)
         (setq org-brain--vis-entry new-entry))
       new-entry)))
 
