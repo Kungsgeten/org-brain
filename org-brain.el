@@ -178,6 +178,44 @@ Can for instance be used in combination with `all-the-icons'."
   :group 'org-brain
   :type 'hook)
 
+(defcustom org-brain-vis-title-prepend-functions '(org-brain-entry-icon)
+  "Functions which `org-brain-vis-title' use before inserting the entry title.
+Each function should take the entry as the only argument, and
+should return a string. The strings are prepended to the entry title."
+  :group 'org-brain
+  :type 'hook
+  :options '(org-brain-entry-icon
+             org-brain-entry-todo-state
+             org-brain-entry-tags-string))
+
+(defcustom org-brain-vis-title-append-functions '()
+  "Functions which `org-brain-vis-title' use after inserting the entry title.
+Each function should take the entry as the only argument, and
+should return a string. The strings are appended to the entry title."
+  :group 'org-brain
+  :type 'hook
+  :options '(org-brain-entry-icon
+             org-brain-entry-todo-state
+             org-brain-entry-tags-string))
+
+(defcustom org-brain-vis-current-title-prepend-functions '()
+  "Like `org-brain-vis-title-prepend-functions' for the current visualized entry.
+First `org-brain-vis-title-prepend-functions' are ran, and then these."
+  :group 'org-brain
+  :type 'hook
+  :options '(org-brain-entry-icon
+             org-brain-entry-todo-state
+             org-brain-entry-tags-string))
+
+(defcustom org-brain-vis-current-title-append-functions '()
+  "Like `org-brain-vis-title-append-functions' for the current visualized entry.
+First `org-brain-vis-title-append-functions' are ran, and then these."
+  :group 'org-brain
+  :type 'hook
+  :options '(org-brain-entry-icon
+             org-brain-entry-todo-state
+             org-brain-entry-tags-string))
+
 (defcustom org-brain-exclude-text-tag "notext"
   "`org-mode' tag stopping `org-brain-visualize' from fetching entry text.
 Only applies to headline entries."
@@ -766,6 +804,21 @@ Works for both file and headline entries."
     (org-with-point-at
         (org-brain-entry-marker entry)
       (org-get-tags nil (not inherit)))))
+
+(defun org-brain-entry-tags-string (entry)
+  "Get a string of ENTRY's local tags."
+  (let ((tags (string-join (org-brain-get-tags entry) ":")))
+    (if (string-empty-p tags)
+        ""
+      (concat ":" tags ":"))))
+
+(defun org-brain-entry-todo-state (entry)
+  "Get the todo-state of ENTRY.
+Only works on headline entries."
+  (if (org-brain-filep entry)
+      ""
+    (org-with-point-at (org-brain-entry-marker entry)
+      (or (org-get-todo-state) ""))))
 
 (defun org-brain--missing-id-error (entry)
   "Error message to be shown if id of ENTRY isn't found by `org-id-find'."
@@ -2003,7 +2056,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
         (insert "\n\n")
         (org-brain--vis-parents-siblings entry)
         ;; Insert entry title
-        (let ((title (org-brain-title entry)))
+        (let ((title (org-brain-vis-title entry)))
           (let ((half-title-length (/ (string-width title) 2)))
             (if (>= half-title-length (current-column))
                 (delete-char (- (current-column)))
@@ -2092,11 +2145,33 @@ category icon in `org-agenda-category-icon-alist'."
       (when-let ((icon (org-agenda-get-category-icon (org-get-category))))
         (propertize (make-string org-brain-category-icon-width ? ) 'display icon)))))
 
-(defun org-brain-title-as-button (entry)
-  "The title of ENTRY when displayed as a button."
-  (concat (org-brain-entry-icon entry)
-          (org-brain-title entry (or (not org-brain-visualizing-mind-map)
-                                     org-brain-cap-mind-map-titles))))
+(defun org-brain-vis-title (entry)
+  "The title of ENTRY when shown in `org-brain-visualize-mode'."
+  (string-join (remove
+                ""
+                (list
+                 ;; Prepend stuff to the title
+                 (mapconcat (lambda (func) (funcall func entry))
+                            org-brain-vis-title-prepend-functions
+                            " ")
+                 (if (eq org-brain--vis-entry entry)
+                     (mapconcat (lambda (func) (funcall func entry))
+                                org-brain-vis-current-title-prepend-functions
+                                " ")
+                   "")
+                 ;; The title itself
+                 (org-brain-title entry (or (not org-brain-visualizing-mind-map)
+                                            org-brain-cap-mind-map-titles))
+                 ;; Append stuff to the title
+                 (mapconcat (lambda (func) (funcall func entry))
+                            org-brain-vis-title-append-functions
+                            " ")
+                 (if (eq org-brain--vis-entry entry)
+                     (mapconcat (lambda (func) (funcall func entry))
+                                org-brain-vis-current-title-append-functions
+                                " ")
+                   "")))
+               " "))
 
 (defun org-brain-insert-visualize-button (entry &optional face)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked.
@@ -2105,7 +2180,7 @@ FACE is sent to `org-brain-display-face' and sets the face of the button."
                                                    entry
                                                    org-brain--vis-entry-keywords)))
     (insert-text-button
-     (org-brain-title-as-button entry)
+     (org-brain-vis-title entry)
      'action (lambda (_x) (org-brain-visualize entry))
      'id (org-brain-entry-identifier entry)
      'follow-link t
@@ -2428,7 +2503,7 @@ Assumes elements will be drawn with a two-character padding between them.
 Helper function for `org-brain--vis-history'."
   (if (null hist)
       to-draw
-    (let* ((entry-title-width (string-width (org-brain-title-as-button (car hist))))
+    (let* ((entry-title-width (string-width (org-brain-vis-title (car hist))))
            (new-line-width (+ width 2 entry-title-width)))
       (if (and (<= max-width new-line-width)
                (not (null to-draw)))  ; Always display at least one entry
@@ -2463,7 +2538,7 @@ Helper function for `org-brain-visualize'."
                (sibling-middle (ceiling (/ (length children-links) 2.0)))
                (base-line (if org-brain-show-history 5 4))
                (col-start (+ 3 max-width))
-               (parent-width (string-width (org-brain-title-as-button (car parent)))))
+               (parent-width (string-width (org-brain-vis-title (car parent)))))
           (org-goto-line base-line)
           (mapc
            (lambda (child)

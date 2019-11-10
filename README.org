@@ -134,6 +134,29 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
    =org-brain-title-max-length=.
 9. Some users find it confusing having both /headline/ entries and /file/ entries (see below). It may be preferable to only use headline entries, by setting =org-brain-include-file-entries= to =nil=. If doing this, you should probably also set =org-brain-file-entries-use-title= to =nil=.
 
+** Category icons
+
+=org-brain= supports showing icons for your entries, depending on their [[https://orgmode.org/manual/Categories.html][category]]. Use the variable =org-agenda-category-icon-alist= to specify icons for categories.
+
+See example of using /all-the-icons/ for this below under /Other useful packages/.
+
+** Customizing the look of entry titles
+
+When visualizing you might want to see additional information about the entries. This can be done by customizing the following variables:
+
+- =org-brain-vis-title-prepend-functions=
+- =org-brain-vis-title-append-functions=
+- =org-brain-vis-current-title-prepend-functions=
+- =org-brain-vis-current-title-append-functions=
+
+Each of these variables should be a list of functions, which all takes an entry as the single parameter and returns a string. This string is the prepended or appended to the entry's title, according to the name of the function. The variables with the name =current= in them only applies the functions on the currently visualized entry (the focused one).
+
+Suitable functions to add to these lists might be:
+
+- =org-brain-entry-icon= (included in =org-brain-vis-title-prepend-functions= by default)
+- =org-brain-entry-todo-state=
+- =org-brain-entry-tags-string=
+
 * Headline and file entries
 
 There are two types of entries in =org-brain=: /headline/ entries and /file/
@@ -370,12 +393,6 @@ entry is visualized.
 You can have multiple brains simply by having more than one brain folder. In this way, each folder becomes a separate brain. You can switch between these using =M-x org-brain-switch-brain=. You can also use =brainswitch:= links in =org-mode= to switch brains.
 
 If you run =org-brain-visualize= from inside an org-file in /the root/ of an org-brain directory, =org-brain= will automatically switch to this brain.
-
-** Category icons
-
-=org-brain= supports showing icons for your entries, depending on their [[https://orgmode.org/manual/Categories.html][category]]. Use the variable =org-agenda-category-icon-alist= to specify icons for categories.
-
-See example of using /all-the-icons/ for this below under /Other useful packages/.
 
 ** Take note!
 
