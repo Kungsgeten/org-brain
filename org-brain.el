@@ -1013,7 +1013,7 @@ Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
 
 (defun org-brain--linked-property-entries (entry property)
   "Get list of entries linked to in ENTRY by PROPERTY.
-PROPERTY could for instance be BRAIN_CHILDREN."
+PROPERTY could for instance be `org-brain-children-property-name'."
   (let ((propertylist
          (if (org-brain-filep entry)
              ;; File entry
@@ -1167,7 +1167,7 @@ If called interactively use `org-brain-entry-at-point' and prompt for CHILD."
                (y-or-n-p
                 (format "%s is %s's local parent. Would you like to change the local parent of %s? "
                         (org-brain-title entry) (org-brain-title child) (org-brain-title child))))
-          (let* ((linked-parents (org-brain--linked-property-entries child "BRAIN_PARENTS"))
+          (let* ((linked-parents (org-brain--linked-property-entries child org-brain-parents-property-name))
                  (new-parent (if (equal 1 (length linked-parents))
                                  (car-safe linked-parents)
                                (org-brain-choose-entry "Refile to parent: " linked-parents))))
@@ -1197,7 +1197,7 @@ If called interactively use `org-brain-entry-at-pt' and prompt for PARENT."
                                                  (org-brain-parents e)
                                                  nil t))))
   (if (member entry (org-brain-local-children parent))
-      (if-let* ((linked-parents (org-brain--linked-property-entries entry "BRAIN_PARENTS"))
+      (if-let* ((linked-parents (org-brain--linked-property-entries entry org-brain-parents-property-name))
                 (new-parent (if (equal 1 (length linked-parents))
                                 (car-safe linked-parents)
                               (org-brain-choose-entry (format "Removing %s's local parent. Refile to: "
@@ -1444,8 +1444,8 @@ to account for the change in ENTRY's local parent."
         (setq org-brain--vis-history (mapcar #'replace-entry org-brain--vis-history))
         (setq org-brain-selected (mapcar #'replace-entry org-brain-selected)))
       (when (member parent
-                    (org-brain--linked-property-entries new-entry "BRAIN_PARENTS"))
-          (org-brain-remove-relationship parent new-entry))
+                    (org-brain--linked-property-entries new-entry org-brain-parents-property-name))
+        (org-brain-remove-relationship parent new-entry))
       (org-save-all-org-buffers)
       (when (eq entry org-brain--vis-entry)
         (setq org-brain--vis-entry new-entry))
@@ -1462,7 +1462,7 @@ among the list of ENTRY's linked parents.
 Returns the new refiled entry."
   (interactive)
   (unless entry (setq entry (org-brain-entry-at-pt)))
-  (unless parent (let ((linked-parents (org-brain--linked-property-entries entry "BRAIN_PARENTS")))
+  (unless parent (let ((linked-parents (org-brain--linked-property-entries entry org-brain-parents-property-name)))
                    (cl-case (length linked-parents)
                      (0 (error "Entry \"%s\" has only one parent" (org-brain-title entry)))
                      (1 (setq parent (car linked-parents)))
