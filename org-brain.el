@@ -6,8 +6,8 @@
 ;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
-;; Package-Requires: ((emacs "25.1") (org "9.2"))
-;; Version: 0.8
+;; Package-Requires: ((emacs "25.1") (org "9.2") (org-ql "0.3.2"))
+;; Version: 0.9
 
 ;;; Commentary:
 
@@ -36,6 +36,7 @@
 (require 'picture)
 (require 'subr-x)
 (require 'seq)
+(require 'org-ql)
 
 (defgroup org-brain nil
   "Org-mode concept mapping"
@@ -587,6 +588,13 @@ Ignores \"dotfiles\"."
       (directory-files
        org-brain-path t (format "^[^.].*\\.%s$" org-brain-files-extension)))))
 
+;; org-ql helpers
+(org-ql--defpred org-brain ()
+  "Return non-nil if entry could be a part of `org-brain'.
+Entry should have an ID and `org-brain-entry-at-point-excludedp' should return nil."
+  (and (org-entry-get (point) "ID")
+       (not (org-brain-entry-at-point-excludedp))))
+
 (defun org-brain-replace-links-with-visible-parts (raw-str)
   "Get RAW-STR with its links replaced by their descriptions."
   (let ((ret-str "")
@@ -622,28 +630,16 @@ visibility rendering/formatting in-buffer."
         (org-brain-replace-links-with-visible-parts (org-entry-get pom "ITEM"))
       (org-entry-get pom "ITEM"))))
 
-(defun org-brain--name-and-id-at-point ()
-  "Get name and id of headline entry at point.
-Respect excluded entries."
-  (unless (org-brain-entry-at-point-excludedp)
-    (when-let ((id (org-entry-get (point) "ID")))
-      (list (org-brain-headline-at (point)) id))))
+(defun org-brain--headline-entry-at-point ()
+  "Get headline entry at point."
+  (when-let ((id (org-entry-get (point) "ID")))
+    (list (org-brain-path-entry-name buffer-file-name)
+          (org-brain-headline-at (point)) id)))
 
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
-  (with-temp-buffer
-    (delay-mode-hooks
-      (org-mode)
-      (remove nil
-              (mapcan
-               (lambda (file)
-                 (insert-file-contents file nil nil nil 'replace)
-                 (let ((file-entry (org-brain-path-entry-name file)))
-                   (mapcar (lambda (entry)
-                             (cons file-entry entry))
-                           (remove nil (org-map-entries
-                                        #'org-brain--name-and-id-at-point)))))
-               (org-brain-files))))))
+  (org-ql-select (org-brain-files) '(org-brain)
+    :action #'org-brain--headline-entry-at-point))
 
 (defun org-brain-entry-from-id (id)
   "Get entry from ID."
@@ -670,9 +666,9 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
                                   (expand-file-name (buffer-file-name)))
            (error "Not in a brain file"))
          (if (ignore-errors (org-get-heading))
-             (if-let ((id (org-entry-get nil "ID")))
-                 (org-brain-entry-from-id id)
-               (error "Current headline have no ID"))
+             (or (and (not (org-brain-entry-at-point-excludedp))
+                      (org-brain--headline-entry-at-point))
+                 (error "Current headline has no ID or is excluded from org-brain"))
            (if org-brain-include-file-entries
                (org-brain-path-entry-name (buffer-file-name))
              (error "Not under an org headline, and org-brain-include-file-entries is nil"))))
@@ -702,16 +698,12 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
          (file-entry-name (org-brain-entry-name file-relative)))
     (append (when org-brain-include-file-entries
               (list (cons file-entry-name file-relative)))
-            (with-temp-buffer
-              (insert-file-contents file)
-              (delay-mode-hooks
-                (org-mode)
-                (mapcar (lambda (entry)
-                          (cons (format org-brain-headline-entry-name-format-string
-                                        file-entry-name (car entry))
-                                (cadr entry)))
-                        (remove nil (org-map-entries
-                                     #'org-brain--name-and-id-at-point))))))))
+            (mapcar (lambda (entry)
+                      (cons (format org-brain-headline-entry-name-format-string
+                                    file-entry-name (nth 1 entry))
+                            (nth 2 entry)))
+                    (org-ql-select file '(org-brain)
+                      :action #'org-brain--headline-entry-at-point)))))
 
 (defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input hist def inherit-input-method)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
@@ -931,33 +923,19 @@ Often you want the siblings too, then use `org-brain-siblings' instead."
    entry
    (if (org-brain-filep entry)
        ;; File entry
-       (with-temp-buffer
-         (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-         (org-element-map (org-element-parse-buffer 'headline) 'headline
-           (lambda (headline)
-             (when-let ((id (org-element-property :ID headline)))
-               (unless (org-brain-id-exclude-taggedp id)
-                 (org-brain-entry-from-id id))))
-           nil nil 'headline))
+       (org-ql-select (org-brain-entry-path entry)
+         '(and (level 1) (org-brain))
+         :action '(org-brain--headline-entry-at-point))
      ;; Headline entry
      (org-with-point-at (org-brain-entry-marker entry)
        (let (children)
-         (deactivate-mark)
-         (org-mark-subtree)
-         (org-goto-first-child)
-         (setq children
-               (org-map-entries
-                (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
-                t 'region-start-level
-                (lambda ()
-                  (let ((id (org-entry-get nil "ID")))
-                    (when (or (not id)
-                              (org-brain-id-exclude-taggedp id))
-                      (save-excursion
-                        (outline-next-heading)
-                        (point)))))))
-         (deactivate-mark)
-         children)))))
+         (org-narrow-to-subtree)
+         (let ((children (org-ql-select (current-buffer)
+                           `(and (level ,(1+ (org-current-level))) (org-brain))
+                           :action '(org-brain--headline-entry-at-point)
+                           :narrow t)))
+           (widen)
+           children))))))
 
 (defun org-brain-descendants (entry)
   "Get all entries which descend from ENTRY.
@@ -979,24 +957,19 @@ Similar to `org-brain-descendants' but only for local children."
    entry
    (if (org-brain-filep entry)
        ;; File entry
-       (with-temp-buffer
-         (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-         (org-element-map (org-element-parse-buffer 'headline) 'headline
-           (lambda (headline)
-             (when-let ((id (org-element-property :ID headline)))
-               (unless (org-brain-id-exclude-taggedp id)
-                 (org-brain-entry-from-id id))))))
+       (org-ql-select (org-brain-entry-path entry)
+         '(org-brain)
+         :action '(org-brain--headline-entry-at-point))
      ;; Headline entry
      (org-with-point-at (org-brain-entry-marker entry)
-       (org-map-entries
-        (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
-        t 'tree
-        (lambda ()
-          (let ((id (org-entry-get nil "ID")))
-            (when (or (not id)
-                      (org-brain-id-exclude-taggedp id))
-              (or (outline-next-heading)
-                  (point))))))))))
+       (let (descendants)
+         (org-narrow-to-subtree)
+         (let ((descendants (org-ql-select (current-buffer)
+                              `(and (level > ,(org-current-level)) (org-brain))
+                              :action '(org-brain--headline-entry-at-point)
+                              :narrow t)))
+           (widen)
+           descendants))))))
 
 (defun org-brain-siblings (entry)
   "Get siblings of ENTRY.
