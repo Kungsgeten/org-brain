@@ -173,7 +173,9 @@ If you have a headline entry, which you want to convert to a file entry, use
 =M-x org-brain-headline-to-file=. Unfortunately there is currently no function
 to convert a file entry into a headline entry.
 
-Most of =org-mode= is tailored towards working with headlines, and because of this =org-brain= has some limitations regarding what's possible with /file entries/. The concept of both headline and file entries is confusing to some users. If you prefer to only use headline entries, you can set the variable =org-brain-include-file-entries= to =nil=. It then also makes sense to set =org-brain-file-entries-use-title= to =nil=.
+Most of =org-mode= is tailored towards working with headlines, and because of this =org-brain= has some limitations regarding what's possible with /file entries/. The concept of both headline and file entries is confusing to some users.
+
+If you prefer to only use headline entries, you can set the variable =org-brain-include-file-entries= to =nil=. It then also makes sense to set =org-brain-file-entries-use-title= to =nil=. The headline entry name can then be formatted to not include the file entry title. =org-brain= passes two objects, the file and the headline, to the emacs [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Formatting-Strings.html][format]] function. By setting =org-brain-headline-entry-name-format-string= to ="%2$s"=, =org-brain= will format the headline entry name with only the second object, the headline title.
 
 * Usage
 
@@ -433,7 +435,7 @@ If you use [[https://github.com/emacs-helm/helm][Helm]] or [[https://oremacs.com
 
 These commands do not have any keybindings by default.
 
-* Backwards compability breaking changes
+* Backwards compatibility breaking changes
 ** 0.7
 
 As of version 0.7 /entry descriptions/ are deprecated. They made visualization slow, and it was quite a hassle to actually write them. The "help echo" text is now used for edge annotations instead.
