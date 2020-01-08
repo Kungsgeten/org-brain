@@ -167,24 +167,48 @@ content typically being the text before the first headline in the file) and all
 headlines /with an ID property/ inside these files are considered as /headline/
 entries.
 
-By default subdirectories inside =org-brain-path= are scanned recursively for files, so all subdirectories and their files are considered part of the brain. You can choose to only have the root of =org-brain-path= be scanned for files, by setting =org-brain-scan-directories-recursively= to =nil=.
+By default subdirectories inside =org-brain-path= are scanned recursively for
+files, so all subdirectories and their files are considered part of the brain.
+You can choose to only have the root of =org-brain-path= be scanned for files, by
+setting =org-brain-scan-directories-recursively= to =nil=.
 
-If you have a headline entry, which you want to convert to a file entry, use
-=M-x org-brain-headline-to-file=. Unfortunately there is currently no function
-to convert a file entry into a headline entry.
+If you have a headline entry, which you want to convert to a file entry, use =M-x
+org-brain-headline-to-file=. Unfortunately there is currently no function to
+convert a file entry into a headline entry.
 
-Most of =org-mode= is tailored towards working with headlines, and because of this =org-brain= has some limitations regarding what's possible with /file entries/. The concept of both headline and file entries is confusing to some users.
+** Limiting =org-brain= to headline entries
 
-If you prefer to only use headline entries, you can set the variable =org-brain-include-file-entries= to =nil=. It then also makes sense to set =org-brain-file-entries-use-title= to =nil=. The headline entry name can then be formatted to not include the file entry title. =org-brain= passes two objects, the file and the headline, to the emacs [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Formatting-Strings.html][format]] function. By setting =org-brain-headline-entry-name-format-string= to ="%2$s"=, =org-brain= will format the headline entry name with only the second object, the headline title. you can set =org-brain-fallback-file-function= to config headline's file. for example: place all headlines to "brain.org" when user only type headline.
+Most of =org-mode= is tailored towards working with headlines, and because of this
+=org-brain= has some limitations regarding what's possible with /file entries/. The
+concept of both headline and file entries is confusing to some users.
 
-#+BEGIN_EXAMPLE
-(setq org-brain-fallback-file-function #'my-org-brain-fallback-file-function)
+If you prefer to only use headline entries, you can set the variable
+=org-brain-include-file-entries= to =nil=. It then also makes sense to set
+=org-brain-file-entries-use-title= to =nil=.
 
-(defun my-org-brain-fallback-file-function (id)
-  (if (cdr id)
-      (car id)
-    "brain"))
-#+END_EXAMPLE
+You may choose to exclude the file part of entry names when choosing among
+entries. =org-brain= passes two objects, the file and the headline, to the emacs
+[[https://www.gnu.org/software/emacs/manual/html_node/elisp/Formatting-Strings.html][format]] function. By setting =org-brain-headline-entry-name-format-string= to
+="%2$s"=, =org-brain= will only show the headline title.
+
+When trying to create entries which doesn't exist, =org-brain= will by default
+create a new file for these entries. For instance if you've set
+=org-brain-include-file-entries= to =nil=, run =org-brain-visualize= and type in
+=Cucumbers= (an entry which doesn't exist) =org-brain= will create a file named
+=Cucumbers.org= and insert a =Cucumbers= headline there. You can change this
+behaviour by setting =org-brain-file-from-input-function=, let's say if you want
+to fallback to a default file. Here's an example:
+
+#+BEGIN_SRC emacs-lisp
+  (setq org-brain-include-file-entries nil)
+  (setq org-brain-file-entries-use-title nil)
+  (setq org-brain-headline-entry-name-format-string "%2$s")
+
+  (setq my/default-org-brain-file "brain")
+
+  (setq org-brain-file-from-input-function
+        (lambda (x) (if (cdr x) (car x) my/default-org-brain-file)))
+#+END_SRC
 
 * Usage
 

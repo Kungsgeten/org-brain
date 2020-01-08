@@ -96,14 +96,23 @@ Only headlines will be considered as entries when visualizing."
   :group 'org-brain
   :type '(boolean))
 
-(defcustom org-brain-fallback-file-function #'org-brain-fallback-file-function-default
-  "Return a fallback when user type no file part.
-When user create an entry without file part, this function will
-be called with an argument:
+(defcustom org-brain-file-from-input-function #'car
+  "Used when trying to get a file from user input.
+This function is called when the user input a file entry, or try
+to create a new entry, using `org-brain-choose-entries'.
 
-   (file-part headline-part)
+The function should return the file part of an entry. The
+function will be called with one argument: a list. The `car' of
+the argument is the file part of the entry input, while the
+`cadr' of the input is the headline part if one is specified.
 
-then return a fallback."
+Example:
+
+   User input: \"programming::emacs\"
+   Function argument: (\"programming\" \"emacs\")
+
+   User input:  \"programming\"
+   Function argument: (\"programming\")"
   :group 'org-brain
   :type '(function))
 
@@ -703,10 +712,6 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
                                (org-brain-headline-at))
                        (org-entry-get nil "ID")))))))
 
-(defun org-brain-fallback-file-function-default (id)
-  "The default function of `org-brain-fallback-file-function'."
-  (car id))
-
 (defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input hist def inherit-input-method)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
 ENTRIES can be a list, or 'all which lists all headline and file entries.
@@ -736,14 +741,15 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                  (progn
                    (setq id (split-string id "::" t))
                    (let* ((entry-path (org-brain-entry-path
-                                       (funcall org-brain-fallback-file-function id)
+                                       (funcall org-brain-file-from-input-function id)
                                        t))
                           (entry-file (org-brain-path-entry-name entry-path)))
                      (unless (file-exists-p entry-path)
                        (make-directory (file-name-directory entry-path) t)
                        (write-region "" nil entry-path))
                      (if (or (not org-brain-include-file-entries)
-                             (equal (length id) 2))
+                             (equal (length id) 2)
+                             (not (equal (car id) entry-path)))
                          ;; Create new headline entry in file
                          (org-with-point-at (org-brain-entry-marker entry-file)
                            (if (and (not org-brain-include-file-entries)
