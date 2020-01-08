@@ -96,6 +96,17 @@ Only headlines will be considered as entries when visualizing."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-fallback-file-function #'org-brain-fallback-file-function-default
+  "Return a fallback when user type no file part.
+When user create an entry without file part, this function will
+be called with an argument:
+
+   (file-part headline-part)
+
+then return a fallback."
+  :group 'org-brain
+  :type '(function))
+
 (defcustom org-brain-show-resources t
   "Should entry resources be shown in `org-brain-visualize'?"
   :group 'org-brain
@@ -692,6 +703,10 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
                                (org-brain-headline-at))
                        (org-entry-get nil "ID")))))))
 
+(defun org-brain-fallback-file-function-default (id)
+  "The default function of `org-brain-fallback-file-function'."
+  (car id))
+
 (defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input hist def inherit-input-method)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
 ENTRIES can be a list, or 'all which lists all headline and file entries.
@@ -720,7 +735,9 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                  ;; File entry
                  (progn
                    (setq id (split-string id "::" t))
-                   (let* ((entry-path (org-brain-entry-path (car id) t))
+                   (let* ((entry-path (org-brain-entry-path
+                                       (funcall org-brain-fallback-file-function id)
+                                       t))
                           (entry-file (org-brain-path-entry-name entry-path)))
                      (unless (file-exists-p entry-path)
                        (make-directory (file-name-directory entry-path) t)
