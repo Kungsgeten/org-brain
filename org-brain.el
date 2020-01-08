@@ -2651,12 +2651,25 @@ Each button is indented, starting at level determined by INDENT."
       0
     (1+ (cl-reduce #'max (mapcar #'org-brain-tree-depth tree)))))
 
-(defun org-brain-recursive-parents (entry max-level)
-  "Return a tree of ENTRY and its (grand)parents, up to MAX-LEVEL."
-  (cons (org-brain-title entry)
+(defun org-brain-recursive-parents (entry max-level &optional func)
+  "Return a tree of ENTRY and its (grand)parents, up to MAX-LEVEL.
+Apply FUNC to each tree member. FUNC is a function which takes an
+entry as the only argument. If FUNC is nil or omitted, get the
+raw entry data."
+  (cons (funcall (or func #'identity) entry)
         (when (> max-level 0)
-          (mapcar (lambda (x) (org-brain-recursive-parents x (1- max-level)))
+          (mapcar (lambda (x) (org-brain-recursive-parents x (1- max-level) func))
                   (org-brain-parents entry)))))
+
+(defun org-brain-recursive-children (entry max-level &optional func)
+  "Return a tree of ENTRY and its (grand)children up to MAX-LEVEL.
+Apply FUNC to each tree member. FUNC is a function which takes an
+entry as the only argument. If FUNC is nil or omitted, get the
+raw entry data."
+  (cons (funcall (or func #'identity) entry)
+        (when (> max-level 0)
+          (mapcar (lambda (x) (org-brain-recursive-children x (1- max-level) func))
+                  (org-brain-children entry)))))
 
 (defun org-brain-insert-recursive-parent-buttons (entry max-level indent)
   "Use `org-brain-insert-visualize-button' on ENTRY and its parents.
