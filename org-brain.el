@@ -749,7 +749,7 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                        (write-region "" nil entry-path))
                      (if (or (not org-brain-include-file-entries)
                              (equal (length id) 2)
-                             (not (equal (car id) entry-path)))
+                             (not (equal (car id) entry-file)))
                          ;; Create new headline entry in file
                          (org-with-point-at (org-brain-entry-marker entry-file)
                            (if (and (not org-brain-include-file-entries)
