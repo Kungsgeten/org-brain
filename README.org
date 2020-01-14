@@ -323,7 +323,14 @@ that they, when clicked, will open the =org-brain= entry for editing. When
 inserting a link like this, =org-brain= will run completion upon all your
 entries.
 
-- =brain:= :: The default kind of link. Just let's you visit another =org-brain= entry when clicked.
+- =brain:= :: The default kind of link. Just let's you visit another =org-brain=
+  entry when clicked. If the variable =org-brain-backlink= is =t= a brain-link will
+  also be created as a resource in the link target, linking back to the entry
+  where the link was created. If =org-brain-backlink= is set to a string, that
+  string will be added as a prefix to the title of the backlink. *Example:* You
+  set =org-brain-backlink= to ="<-- "= and create a =brain:= link in =Rabbits= linking
+  to =Carrots=. Now a resource with the description =<-- Rabbits= will be created in
+  =Carrots=.
 - =brain-child:= :: When inserted using =org-insert-link= this will make
                     the linked entry a child to the current =org-brain= entry,
                     upon completion. Keep in mind that this doesn't work if you
