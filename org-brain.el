@@ -2823,7 +2823,9 @@ LINK-TYPE will be \"brain\" by default."
                         (org-brain-title entry))
                 nil choice)
              (org-brain-add-resource
-              (concat "file:" (buffer-file-name))
+              (concat "file:" (file-relative-name
+                               (buffer-file-name)
+                               (file-name-directory (org-brain-entry-path choice))))
               (concat (and (stringp org-brain-backlink) org-brain-backlink)
                       (file-name-base))
               nil choice))))
