@@ -2815,12 +2815,18 @@ LINK-TYPE will be \"brain\" by default."
            (org-brain-add-relationship choice entry))
           ((string-equal link-type org-brain-friend-link-name)
            (org-brain--internal-add-friendship entry choice))
-          ((and entry org-brain-backlink (string-equal link-type "brain"))
-           (org-brain-add-resource
-            (concat "brain:" (org-brain-entry-identifier entry))
-            (concat (and (stringp org-brain-backlink) org-brain-backlink)
-                    (org-brain-title entry))
-            nil choice)))
+          ((and org-brain-backlink (string-equal link-type "brain"))
+           (if entry
+               (org-brain-add-resource
+                (concat "brain:" (org-brain-entry-identifier entry))
+                (concat (and (stringp org-brain-backlink) org-brain-backlink)
+                        (org-brain-title entry))
+                nil choice)
+             (org-brain-add-resource
+              (concat "file:" (buffer-file-name))
+              (concat (and (stringp org-brain-backlink) org-brain-backlink)
+                      (file-name-base))
+              nil choice))))
     (concat link-type ":" (if (org-brain-filep choice) choice (nth 2 choice)))))
 
 (defun org-brain-link-store ()
