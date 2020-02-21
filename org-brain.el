@@ -765,7 +765,13 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                          ;; Create new headline entry in file
                          (org-with-point-at (org-brain-entry-marker entry-file)
                            (if (and (not org-brain-include-file-entries)
-                                    (re-search-forward (concat "\n\\* +" (car id)) nil t))
+                                    (or
+                                     ;; Search heading without tags
+                                     (save-excursion
+                                       (re-search-forward (concat "\n\\* +" (car id) "[ \t]*$") nil t))
+                                     ;; Search heading with tags
+                                     (save-excursion
+                                       (re-search-forward (concat "\n\\* +" (car id) "[ \t]+:.*:$") nil t))))
                                (org-brain-entry-at-pt)
                              (goto-char (point-max))
                              (insert (concat "\n* " (or (cadr id) (car id))))
