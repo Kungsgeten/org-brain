@@ -89,7 +89,7 @@ Example: \"<--\" would add \"<--A\" in the example above."
   :group 'org-brain
   :type '(directory))
 
-(load org-brain-data-file t)
+(load org-brain-data-file t t)
 
 (defcustom org-brain-visualize-default-choices 'all
   "Which entries to choose from when using `org-brain-visualize'.
