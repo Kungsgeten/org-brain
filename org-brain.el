@@ -1590,6 +1590,14 @@ not contain `org-brain-files-extension'."
         (org-brain--internal-add-friendship new-name friend))
       (when (equal file-entry org-brain--vis-entry)
         (setq org-brain--vis-entry new-name))
+      ;; Change edges
+      (let ((edge-property (org-brain-edge-prop-name file-entry)))
+        (dolist (file (org-brain-files))
+          (with-temp-file file
+            (insert-file-contents file)
+            (goto-char (point-min))
+            (replace-regexp (concat edge-property ":")
+                            (concat org-brain-edge-property-prefix-name "_" (org-brain-entry-identifier new-name) ":")))))
       (org-brain--revert-if-visualizing)
       (message "Renamed %s to %s" file-entry new-name))))
 
