@@ -1740,7 +1740,21 @@ If STATUS is omitted, toggle between selected / not selected."
                (org-brain-save-data)
                (message "Entry unselected."))
            (error "Entry isn't selected"))))
-  (org-brain--revert-if-visualizing))
+  (org-brain--revert-if-visualizing)
+  (org-brain-jump-to-button entry))
+
+(defun org-brain-jump-to-button (entry)
+  "Jump to the button of ENTRY."
+  (goto-char (point-min))
+  ;; Skip org-brain headers.
+  (search-forward "\n\n" nil t)
+  (let ((status t))
+    (while status
+      (let* ((button (button-at (point)))
+             (id (when button (button-get button 'id))))
+        (if (or (eobp) (equal id (org-brain-entry-identifier entry)))
+            (setq status nil)
+          (forward-char))))))
 
 ;;;###autoload
 (defun org-brain-clear-selected ()
