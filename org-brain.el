@@ -1996,7 +1996,7 @@ If run interactively, toggle following on/off."
              "Disabled following visualized entry.")))
 
 ;;;###autoload
-(defun org-brain-visualize (entry &optional nofocus nohistory wander)
+(defun org-brain-visualize (entry &optional nofocus nohistory wander same-window)
   "View a concept map with ENTRY at the center.
 
 When run interactively, prompt for ENTRY and suggest
@@ -2013,7 +2013,8 @@ You can override `org-brain-visualize-default-choices':
 Unless NOFOCUS is non-nil, the `org-brain-visualize' buffer will gain focus.
 Unless NOHISTORY is non-nil, add the entry to `org-brain--vis-history'.
 Setting NOFOCUS to t implies also having NOHISTORY as t.
-Unless WANDER is t, `org-brain-stop-wandering' will be run."
+Unless WANDER is t, `org-brain-stop-wandering' will be run.
+Unless SAME-WINDOW is t, the buffer will be opened in another window."
   (interactive
    (progn
      (org-brain-maybe-switch-brain)
@@ -2087,7 +2088,9 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
       (when org-brain--visualize-follow
         (org-brain-goto-current)
         (run-hooks 'org-brain-visualize-follow-hook))
-      (pop-to-buffer "*org-brain*"))))
+      (if same-window
+	  (pop-to-buffer-same-window "*org-brain*")
+	(pop-to-buffer "*org-brain*")))))
 
 ;;;###autoload
 (defun org-brain-visualize-entry-at-pt ()
