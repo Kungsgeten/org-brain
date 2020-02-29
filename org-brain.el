@@ -693,7 +693,7 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
            (error "Not in a brain file"))
          (if (ignore-errors (org-get-heading))
              (or (org-brain--headline-entry-at-point)
-                 (error "Current headline has no ID"))
+                 (org-id-get-create))
            (if org-brain-include-file-entries
                (org-brain-path-entry-name (buffer-file-name))
              (error "Not under an org headline, and org-brain-include-file-entries is nil"))))
