@@ -1182,10 +1182,13 @@ PROPERTY could for instance be `org-brain-children-property-name'."
 (defun org-brain-add-child (entry children &optional verbose)
   "Add external CHILDREN (a list of entries) to ENTRY.
 If called interactively use `org-brain-entry-at-pt' and let user choose entry.
+Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY.
 If chosen CHILD entry doesn't exist, create it as a new file.
 Several children can be added, by using `org-brain-entry-separator'.
 If VERBOSE is non-nil then display a message."
-  (interactive (list (org-brain-entry-at-pt)
+  (interactive (list (if current-prefix-arg
+                         (car (org-brain-button-at-point))
+                       (org-brain-entry-at-pt))
                      (org-brain-choose-entries "Add child: " 'all)
                      t))
   (dolist (child-entry children)
@@ -1200,8 +1203,11 @@ If VERBOSE is non-nil then display a message."
   "Create new internal child headline(s) to ENTRY named CHILD-NAMES.
 Several children can be created, by using `org-brain-entry-separator'.
 If called interactively use `org-brain-entry-at-pt' and prompt for children.
+Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY.
 If VERBOSE is non-nil then display a message."
-  (interactive (list (org-brain-entry-at-pt)
+  (interactive (list (if current-prefix-arg
+                         (car (org-brain-button-at-point))
+                       (org-brain-entry-at-pt))
                      (read-string "Add child headline: ")
                      t))
   (dolist (child-name (split-string child-names org-brain-entry-separator))
@@ -1238,8 +1244,11 @@ If VERBOSE is non-nil then display a message."
 (defun org-brain-remove-child (entry child &optional verbose)
   "Remove CHILD from ENTRY.
 If called interactively use `org-brain-entry-at-point' and prompt for CHILD.
+Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY.
 If VERBOSE is non-nil then display a message."
-  (interactive (let ((e (org-brain-entry-at-pt)))
+  (interactive (let ((e (if current-prefix-arg
+                            (car (org-brain-button-at-point))
+                          (org-brain-entry-at-pt))))
                  (list e (org-brain-choose-entry "Remove child: "
                                                  (org-brain-children e)
                                                  nil t)
@@ -1265,10 +1274,14 @@ If VERBOSE is non-nil then display a message."
 (defun org-brain-add-parent (entry parents &optional verbose)
   "Add external PARENTS (a list of entries) to ENTRY.
 If called interactively use `org-brain-entry-at-pt' and prompt for PARENT.
+Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY.
+
 If chosen parent entry doesn't exist, create it as a new file.
 Several parents can be added, by using `org-brain-entry-separator'.
 If VERBOSE is non-nil then display a message."
-  (interactive (list (org-brain-entry-at-pt)
+  (interactive (list (if current-prefix-arg
+                         (car (org-brain-button-at-point))
+                       (org-brain-entry-at-pt))
                      (org-brain-choose-entries "Add parent: " 'all)
                      t))
   (dolist (parent parents)
@@ -1281,8 +1294,11 @@ If VERBOSE is non-nil then display a message."
 ;;;###autoload
 (defun org-brain-remove-parent (entry parent &optional verbose)
   "Remove PARENT from ENTRY.
-If called interactively use `org-brain-entry-at-pt' and prompt for PARENT."
-  (interactive (let ((e (org-brain-entry-at-pt)))
+If called interactively use `org-brain-entry-at-pt' and prompt for PARENT.
+Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY."
+  (interactive (let ((e (if current-prefix-arg
+                            (car (org-brain-button-at-point))
+                          (org-brain-entry-at-pt))))
                  (list e (org-brain-choose-entry "Remove parent: "
                                                  (org-brain-parents e)
                                                  nil t)
@@ -1330,10 +1346,14 @@ If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around."
 (defun org-brain-add-friendship (entry friends &optional verbose)
   "Add a new FRIENDS (a list of entries) to ENTRY.
 If called interactively use `org-brain-entry-at-pt' and prompt for FRIENDS.
+Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY.
+
 If chosen friend entry doesn't exist, create it as a new file.
 Several friends can be added, by using `org-brain-entry-separator'.
 If VERBOSE is non-nil then display a message."
-  (interactive (list (org-brain-entry-at-pt)
+  (interactive (list (if current-prefix-arg
+                         (car (org-brain-button-at-point))
+                       (org-brain-entry-at-pt))
                      (org-brain-choose-entries "Add friend: " 'all)
                      t))
   (dolist (friend-entry friends)
@@ -1349,9 +1369,12 @@ If VERBOSE is non-nil then display a message."
 If ONEWAY is t, then remove ENTRY2 as a friend of ENTRY1, but not vice versa.
 
 If run interactively, use `org-brain-entry-at-pt' as ENTRY1 and prompt for ENTRY2.
+Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY1.
 If VERBOSE is non-nil then display a message."
   (interactive
-   (let ((entry-at-pt (org-brain-entry-at-pt)))
+   (let ((entry-at-pt (if current-prefix-arg
+                          (car (org-brain-button-at-point))
+                        (org-brain-entry-at-pt))))
      (list entry-at-pt
            (org-brain-choose-entry "Remove friend: " (org-brain-friends entry-at-pt) nil t)
            nil t)))
@@ -1743,10 +1766,13 @@ Remove external relationships from ENTRY, in order to clean up the brain."
 (defun org-brain-pin (entry &optional status)
   "Change if ENTRY is pinned or not.
 If run interactively, get ENTRY from context.
+Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY.
 
 If STATUS is positive, pin the entry.  If negative, remove the pin.
 If STATUS is omitted, toggle between pinned / not pinned."
-  (interactive (list (org-brain-entry-at-pt)))
+  (interactive (list (if current-prefix-arg
+                         (car (org-brain-button-at-point))
+                       (org-brain-entry-at-pt))))
   (cond ((eq status nil)
          (if (member entry org-brain-pins)
              (org-brain-pin entry -1)
