@@ -175,9 +175,9 @@ filenames will be shown instead, which is faster."
 
 (defcustom org-brain-scan-for-header-entries t
   "If org-brain should scan for header entries inside files.
-This can be really slow if there are a lot of long file entries, but no
-header entries. This only affects selection prompts and not functions
-like `org-brain-headline-to-file'"
+Useful if you don't tend to use header entries in your workflow,
+since scanning can be slow in long file entries.
+This only affects selection prompts and not functions like `org-brain-headline-to-file'."
   :group 'org-brain
   :type '(boolean))
 
@@ -726,13 +726,21 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
      (append
       (when org-brain-include-file-entries
         (list (cons file-entry-name file-relative)))
-      (if org-brain-scan-for-header-entries
-	  (org-ql-select file org-brain--ql-query
-	    :action `(cons (format ,org-brain-headline-entry-name-format-string
-				   ,file-entry-name
-				   (org-brain-headline-at))
-			   (org-entry-get nil "ID")))
-	nil)))))
+      (org-ql-select file org-brain--ql-query
+	:action `(cons (format ,org-brain-headline-entry-name-format-string
+			       ,file-entry-name
+			       (org-brain-headline-at))
+		       (org-entry-get nil "ID")))))))
+
+(defun org-brain--all-targets ()
+  "Get an alist with (name . entry-id) of all targets in org-brain.
+`org-brain-include-file-entries' and `org-brain-scan-for-header-entries'
+affect the fetched targets."
+  (if org-brain-scan-for-header-entries
+      (mapcan #'org-brain--file-targets
+              (org-brain-files))
+    (mapcar (lambda (x) (cons (org-brain-entry-name x) x))
+            (org-brain-files t))))
 
 (defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input hist def inherit-input-method)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
@@ -743,8 +751,7 @@ Very similar to `org-brain-choose-entry', but can return several entries.
 For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD see `completing-read'."
   (unless org-id-locations (org-id-locations-load))
   (let* ((targets (if (eq entries 'all)
-                      (mapcan #'org-brain--file-targets
-                              (org-brain-files))
+                      (org-brain--all-targets)
                     (mapcar (lambda (x)
                               (cons (org-brain-entry-name x)
                                     (if (org-brain-filep x)
@@ -2975,8 +2982,7 @@ ENTRY should be a string; an id in the case of an headline entry."
 
   (defun helm-brain--source ()
     (helm-build-sync-source "Brain"
-                            :candidates (mapcan #'org-brain--file-targets
-                                                (org-brain-files))
+                            :candidates (org-brain--all-targets)
                             :action 'helm-brain--actions))
 
   (defun helm-brain ()
@@ -2993,8 +2999,7 @@ Supports selecting multiple entries at once."
     "Use Ivy to choose among your org-brain entries.
 Provides actions for visualizing, adding/removing relations, etc."
     (interactive)
-    (let ((targets (mapcan #'org-brain--file-targets
-                           (org-brain-files))))
+    (let ((targets (org-brain--all-targets)))
       (ivy-read "Org-brain: "
                 targets
                 :require-match t

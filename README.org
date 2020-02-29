@@ -132,7 +132,12 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
 8. If you have very long entry names, =org-brain-visualize= may take a lot of
    horizontal space. You can cap the shown length of entry titles, by setting
    =org-brain-title-max-length=.
-9. Some users find it confusing having both /headline/ entries and /file/ entries (see below). It may be preferable to only use headline entries, by setting =org-brain-include-file-entries= to =nil=. If doing this, you should probably also set =org-brain-file-entries-use-title= to =nil=.
+9. Some users find it confusing having both /headline/ entries and /file/ entries
+   (see below). It may be preferable to only use headline entries, by setting
+   =org-brain-include-file-entries= to =nil=. If doing this, you should probably
+   also set =org-brain-file-entries-use-title= to =nil=. Another possibility is if
+   you're only using file entries, in which case you can set
+   =org-brain-scan-for-header-entries= to =nil=.
 
 ** Category icons
 
@@ -209,6 +214,13 @@ to fallback to a default file. Here's an example:
   (setq org-brain-file-from-input-function
         (lambda (x) (if (cdr x) (car x) my/default-org-brain-file)))
 #+END_SRC
+
+** Limiting =org-brain= to file entries
+
+If you instead prefer to work with file entries, you can set
+=org-brain-scan-for-header-entries= to =nil=. It will still be possible to add
+headline entries, but they will be excluded from most searches when choosing
+among entries.
 
 * Usage
 
