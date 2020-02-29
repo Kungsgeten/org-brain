@@ -393,6 +393,11 @@ Must be set before `org-brain' is loaded."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-open-same-window nil
+  "Should `org-brain-visualize' open up in the same window it was launched in?"
+  :group 'org-brain
+  :type '(boolean))
+
 ;;;;; Faces and face helper functions
 
 (defface org-brain-title
@@ -2165,7 +2170,9 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
       (when org-brain--visualize-follow
         (org-brain-goto-current)
         (run-hooks 'org-brain-visualize-follow-hook))
-      (pop-to-buffer "*org-brain*"))))
+      (if org-brain-open-same-window
+	  (pop-to-buffer "*org-brain*")
+	(pop-to-buffer-same-window "*org-brain*")))))
 
 ;;;###autoload
 (defun org-brain-visualize-entry-at-pt ()
