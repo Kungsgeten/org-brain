@@ -2198,14 +2198,15 @@ FACE is sent to `org-brain-display-face' and sets the face of the button."
 
 (defun org-brain-jump-to-visualize-button (entry)
   "If ENTRY has a visualize button in the current buffer, jump to its position."
-  (let ((start-pos (point))
-        (entry-id (org-brain-entry-identifier entry)))
-    (goto-char (point-min))
-    (search-forward "\n\n" nil t)
-    (while (and (or (ignore-errors (forward-button 1))
-                    (goto-char start-pos))
-                (not (equal (button-get (button-at (point)) 'id)
-                            entry-id))))))
+  (when (eq major-mode 'org-brain-visualize-mode)
+    (let ((start-pos (point))
+          (entry-id (org-brain-entry-identifier entry)))
+      (goto-char (point-min))
+      (search-forward "\n\n" nil t)
+      (while (and (or (ignore-errors (forward-button 1))
+                      (and (goto-char start-pos) nil))
+                  (not (equal (button-get (button-at (point)) 'id)
+                              entry-id)))))))
 
 (defun org-brain-insert-resource-button (resource &optional indent)
   "Insert a new line with a RESOURCE button, indented by INDENT spaces."
@@ -2420,7 +2421,7 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
 (defun org-brain--revert-if-visualizing ()
   "Revert buffer if in `org-brain-visualize-mode'."
   (when (eq major-mode 'org-brain-visualize-mode)
-    (let ((button-entry (car (org-brain-button-at-point))))
+    (let ((button-entry (car (ignore-errors (org-brain-button-at-point)))))
       (org-brain-stop-wandering)
       (revert-buffer)
       (when button-entry (org-brain-jump-to-visualize-button button-entry)))))
