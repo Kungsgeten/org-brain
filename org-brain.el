@@ -173,6 +173,14 @@ filenames will be shown instead, which is faster."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-scan-for-header-entries t
+  "If org-brain should scan for header entries inside files.
+This can be really slow if there are a lot of long file entries, but no
+header entries. This only affects selection prompts and not functions
+like `org-brain-headline-to-file'"
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-headline-entry-name-format-string "%s::%s"
   "How headline entries are represented when choosing entries.
 This `format' string is used in `org-brain-entry-name' for headline entries.
@@ -718,11 +726,13 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
      (append
       (when org-brain-include-file-entries
         (list (cons file-entry-name file-relative)))
-      (org-ql-select file org-brain--ql-query
-        :action `(cons (format ,org-brain-headline-entry-name-format-string
-                               ,file-entry-name
-                               (org-brain-headline-at))
-                       (org-entry-get nil "ID")))))))
+      (if org-brain-scan-for-header-entries
+	  (org-ql-select file org-brain--ql-query
+	    :action `(cons (format ,org-brain-headline-entry-name-format-string
+				   ,file-entry-name
+				   (org-brain-headline-at))
+			   (org-entry-get nil "ID")))
+	nil)))))
 
 (defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input hist def inherit-input-method)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
