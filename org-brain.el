@@ -901,7 +901,7 @@ Only get the body text, unless ALL-DATA is t."
             ;; File entry
             (with-temp-buffer
               (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-              (goto-char (org-brain-first-headline-position))
+              (goto-char (buffer-size))
               (buffer-substring-no-properties
                (if all-data
                    (point-min)
