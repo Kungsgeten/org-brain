@@ -535,6 +535,8 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 
 (defvar org-brain-selected nil "List of selected org-brain entries.")
 
+(defvar org-brain-show-full-entry nil "Show the entire entry contents.")
+
 ;;;###autoload
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
@@ -901,7 +903,7 @@ Only get the body text, unless ALL-DATA is t."
             ;; File entry
             (with-temp-buffer
               (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-              (goto-char (buffer-size))
+              (goto-char (if org-brain-show-full-entry (buffer-size) (org-brain-first-headline-position)))
               (buffer-substring-no-properties
                (if all-data
                    (point-min)
