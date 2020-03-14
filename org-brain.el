@@ -128,6 +128,11 @@ Example:
   :group 'org-brain
   :type '(function))
 
+(defcustom org-brain-show-full-entry nil
+  "Always show entire entry contents?"
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-show-resources t
   "Should entry resources be shown in `org-brain-visualize'?"
   :group 'org-brain
@@ -534,8 +539,6 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 (defvar org-brain-pins nil "List of pinned org-brain entries.")
 
 (defvar org-brain-selected nil "List of selected org-brain entries.")
-
-(defvar org-brain-show-full-entry nil "Show the entire entry contents.")
 
 ;;;###autoload
 (defun org-brain-update-id-locations ()
