@@ -940,7 +940,7 @@ Only get the body text, unless ALL-DATA is t."
         (org-remove-indentation entry-text)
       (with-temp-buffer
         (insert (org-remove-indentation entry-text))
-        (goto-char (buffer-size))
+        (goto-char (if org-brain-show-full-entry (buffer-size) (org-brain-first-headline-position)))
         (if (re-search-backward org-brain-resources-start-re nil t)
             (progn
               (end-of-line)
