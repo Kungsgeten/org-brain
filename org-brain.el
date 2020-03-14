@@ -2268,7 +2268,8 @@ category icon in `org-agenda-category-icon-alist'."
 
 (defun org-brain-insert-visualize-button (entry &optional face category)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked.
-FACE is sent to `org-brain-display-face' and sets the face of the button."
+FACE is sent to `org-brain-display-face' and sets the face of the button.
+CATEGORY is used to set the `brain-category` text property."
   (let ((annotation (org-brain-get-edge-annotation org-brain--vis-entry
                                                    entry
                                                    org-brain--vis-entry-keywords)))
