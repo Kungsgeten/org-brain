@@ -2277,7 +2277,7 @@ FACE is sent to `org-brain-display-face' and sets the face of the button."
      'action (lambda (_x) (org-brain-visualize entry))
      'id (org-brain-entry-identifier entry)
      'follow-link t
-     'brain-type (or category 'default)
+     'brain-category (or category 'default)
      'help-echo annotation
      'aa2u-text t
      'face (org-brain-display-face entry face annotation))))
