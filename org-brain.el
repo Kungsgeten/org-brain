@@ -2768,7 +2768,7 @@ Helper function for `org-brain-visualize'."
   (if-let ((text (org-brain-text entry)))
       (progn
         (setq text (string-trim text))
-        (if (> (length text) 0)
+        (if (or (> (length text) 0) org-brain-show-full-entry)
             (progn
               (insert "\n\n--- Entry -------------------------------------\n\n")
               (run-hooks 'org-brain-after-visualize-hook)
