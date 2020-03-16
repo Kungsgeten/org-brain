@@ -6,8 +6,8 @@
 ;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
-;; Package-Requires: ((emacs "25.1") (org "9.2") (org-ql "0.3.2"))
-;; Version: 0.9
+;; Package-Requires: ((emacs "25.1") (org "9.2"))
+;; Version: 0.91
 
 ;;; Commentary:
 
@@ -36,7 +36,6 @@
 (require 'picture)
 (require 'subr-x)
 (require 'seq)
-(require 'org-ql)
 
 (defgroup org-brain nil
   "Org-mode concept mapping"
@@ -535,6 +534,9 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 
 (defvar org-brain-selected nil "List of selected org-brain entries.")
 
+(defvar org-brain-headline-cache (make-hash-table :test 'equal)
+  "Cache for headline entries. Updates when files have been saved.")
+
 ;;;###autoload
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
@@ -566,12 +568,6 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 (defun org-brain-filep (entry)
   "Return t if the ENTRY is a (potential) brain file."
   (stringp entry))
-
-(defvar org-brain--ql-query
-  '(and (property "ID")
-        (not (or (tags org-brain-exclude-tree-tag)
-                 (tags-inherited org-brain-exclude-children-tag))))
-  "Used by `org-ql' to query for org-brain entries.")
 
 (defun org-brain-save-data ()
   "Save data to `org-brain-data-file'."
@@ -667,10 +663,59 @@ visibility rendering/formatting in-buffer."
     (list (org-brain-path-entry-name buffer-file-name)
           (org-brain-headline-at (point)) id)))
 
+(defun org-brain-entry-at-point-excludedp ()
+  "Return t if the entry at point is tagged as being excluded from org-brain."
+  (let ((tags (org-get-tags)))
+    (or (member org-brain-exclude-tree-tag tags)
+        (and (member org-brain-exclude-children-tag tags)
+             (not (member org-brain-exclude-children-tag
+                          (org-get-tags nil t)))))))
+
+(defun org-brain-id-exclude-taggedp (id)
+  "Return t if ID is tagged as being excluded from org-brain."
+  (org-with-point-at (org-id-find id t)
+    (org-brain-entry-at-point-excludedp)))
+
+(defun org-brain--name-and-id-at-point ()
+  "Get name and id of headline entry at point.
+Respect excluded entries."
+  (unless (org-brain-entry-at-point-excludedp)
+    (when-let ((id (org-entry-get (point) "ID")))
+      (list (org-brain-headline-at (point)) id))))
+
+(defun org-brain-headline-entries-in-file (file &optional no-temp-buffer)
+  "Get a list of all headline entries in FILE.
+If the entries are cached in `org-brain-headline-cache', get  them from there.
+If NO-TEMP-BUFFER is non-nil, don't run the function in a temp buffer. "
+  (if no-temp-buffer
+      (let ((cached (gethash file org-brain-headline-cache nil)))
+        (if (or (not cached)
+                (not (eq (car cached)
+                         (car (file-attribute-modification-time
+                               (file-attributes file))))))
+            (let ((file-entry (org-brain-path-entry-name file)))
+              (insert-file-contents file nil nil nil 'replace)
+              (cdr (puthash file (cons (car (file-attribute-modification-time
+                                             (file-attributes file)))
+                                       (mapcar (lambda (entry) (cons file-entry entry))
+                                               (remove nil (org-map-entries
+                                                            #'org-brain--name-and-id-at-point))))
+                            org-brain-headline-cache)))
+          (cdr cached)))
+    (with-temp-buffer
+      (delay-mode-hooks
+        (org-mode)
+        (org-brain-headline-entries-in-file file t)))))
+
 (defun org-brain-headline-entries ()
   "Get all org-brain headline entries."
-  (org-ql-select (org-brain-files) org-brain--ql-query
-    :action #'org-brain--headline-entry-at-point))
+  (with-temp-buffer
+    (delay-mode-hooks
+      (org-mode)
+      (apply #'append
+             (mapcar
+              (lambda (file) (org-brain-headline-entries-in-file file t))
+              (org-brain-files))))))
 
 (defun org-brain-entry-from-id (id)
   "Get entry from ID."
@@ -723,7 +768,8 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
     (org-element-parse-buffer)))
 
 (defun org-brain--file-targets (file)
-  "Return alist of (name . entry-id) for all entries (including the file) in FILE."
+  "Return alist of (name . entry-id) for all entries (including the file) in FILE.
+Should only be used in a temp-buffer."
   (let* ((file-relative (org-brain-path-entry-name file))
          (file-entry-name (org-brain-entry-name file-relative)))
     (remove
@@ -731,19 +777,24 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
      (append
       (when org-brain-include-file-entries
         (list (cons file-entry-name file-relative)))
-      (org-ql-select file org-brain--ql-query
-	:action `(cons (format ,org-brain-headline-entry-name-format-string
-			       ,file-entry-name
-			       (org-brain-headline-at))
-		       (org-entry-get nil "ID")))))))
+      (mapcar
+       (lambda (x)
+         (cons (format org-brain-headline-entry-name-format-string
+                       file-entry-name
+                       (nth 1 x))
+               (nth 2 x)))
+       (org-brain-headline-entries-in-file file t))))))
 
 (defun org-brain--all-targets ()
   "Get an alist with (name . entry-id) of all targets in org-brain.
 `org-brain-include-file-entries' and `org-brain-scan-for-header-entries'
 affect the fetched targets."
   (if org-brain-scan-for-header-entries
-      (mapcan #'org-brain--file-targets
-              (org-brain-files))
+      (with-temp-buffer
+        (delay-mode-hooks
+          (org-mode)
+          (mapcan #'org-brain--file-targets
+                  (org-brain-files))))
     (mapcar (lambda (x) (cons (org-brain-entry-name x) x))
             (org-brain-files t))))
 
@@ -973,18 +1024,32 @@ Often you want the siblings too, then use `org-brain-siblings' instead."
    entry
    (if (org-brain-filep entry)
        ;; File entry
-       (org-ql-select (org-brain-entry-path entry)
-         `(and (level 1) ,org-brain--ql-query)
-         :action '(org-brain--headline-entry-at-point))
+       (with-temp-buffer
+         (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+         (org-element-map (org-element-parse-buffer 'headline) 'headline
+           (lambda (headline)
+             (when-let ((id (org-element-property :ID headline)))
+               (unless (org-brain-id-exclude-taggedp id)
+                 (org-brain-entry-from-id id))))
+           nil nil 'headline))
      ;; Headline entry
      (org-with-point-at (org-brain-entry-marker entry)
-       (org-narrow-to-subtree)
-       (let ((children (org-ql-select (current-buffer)
-                         `(and (level ,(1+ (org-current-level)))
-                               ,org-brain--ql-query)
-                         :action '(org-brain--headline-entry-at-point)
-                         :narrow t)))
-         (widen)
+       (let (children)
+         (deactivate-mark)
+         (org-mark-subtree)
+         (org-goto-first-child)
+         (setq children
+               (org-map-entries
+                (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
+                t 'region-start-level
+                (lambda ()
+                  (let ((id (org-entry-get nil "ID")))
+                    (when (or (not id)
+                              (org-brain-id-exclude-taggedp id))
+                      (save-excursion
+                        (outline-next-heading)
+                        (point)))))))
+         (deactivate-mark)
          children)))))
 
 (defun org-brain-descendants (entry)
@@ -1007,18 +1072,24 @@ Similar to `org-brain-descendants' but only for local children."
    entry
    (if (org-brain-filep entry)
        ;; File entry
-       (org-ql-select (org-brain-entry-path entry) org-brain--ql-query
-         :action '(org-brain--headline-entry-at-point))
+       (with-temp-buffer
+         (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+         (org-element-map (org-element-parse-buffer 'headline) 'headline
+           (lambda (headline)
+             (when-let ((id (org-element-property :ID headline)))
+               (unless (org-brain-id-exclude-taggedp id)
+                 (org-brain-entry-from-id id))))))
      ;; Headline entry
      (org-with-point-at (org-brain-entry-marker entry)
-       (let (descendants)
-         (org-narrow-to-subtree)
-         (let ((descendants (org-ql-select (current-buffer)
-                              `(and (level > ,(org-current-level)) ,org-brain--ql-query)
-                              :action '(org-brain--headline-entry-at-point)
-                              :narrow t)))
-           (widen)
-           descendants))))))
+       (org-map-entries
+        (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
+        t 'tree
+        (lambda ()
+          (let ((id (org-entry-get nil "ID")))
+            (when (or (not id)
+                      (org-brain-id-exclude-taggedp id))
+              (or (outline-next-heading)
+                  (point))))))))))
 
 (defun org-brain-siblings (entry)
   "Get siblings of ENTRY.
