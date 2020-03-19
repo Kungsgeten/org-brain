@@ -686,17 +686,18 @@ Respect excluded entries."
 (defun org-brain-headline-entries-in-file (file &optional no-temp-buffer)
   "Get a list of all headline entries in FILE.
 If the entries are cached in `org-brain-headline-cache', get  them from there.
-If NO-TEMP-BUFFER is non-nil, don't run the function in a temp buffer. "
+Else the FILE is inserted in a temp buffer and get scanned for entries.
+If NO-TEMP-BUFFER is non-nil, run the scanning in the current buffer instead."
   (if no-temp-buffer
       (let ((cached (gethash file org-brain-headline-cache nil)))
         (if (or (not cached)
-                (not (eq (car cached)
-                         (car (file-attribute-modification-time
-                               (file-attributes file))))))
+                (not (equal (car cached)
+                            (file-attribute-modification-time
+                             (file-attributes file)))))
             (let ((file-entry (org-brain-path-entry-name file)))
               (insert-file-contents file nil nil nil 'replace)
-              (cdr (puthash file (cons (car (file-attribute-modification-time
-                                             (file-attributes file)))
+              (cdr (puthash file (cons (file-attribute-modification-time
+                                        (file-attributes file))
                                        (mapcar (lambda (entry) (cons file-entry entry))
                                                (remove nil (org-map-entries
                                                             #'org-brain--name-and-id-at-point))))
