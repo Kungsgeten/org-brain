@@ -127,6 +127,11 @@ Example:
   :group 'org-brain
   :type '(function))
 
+(defcustom org-brain-show-full-entry nil
+  "Always show entire entry contents?"
+  :group 'org-brain
+  :type '(boolean))
+
 (defcustom org-brain-show-resources t
   "Should entry resources be shown in `org-brain-visualize'?"
   :group 'org-brain
@@ -953,7 +958,7 @@ Only get the body text, unless ALL-DATA is t."
             ;; File entry
             (with-temp-buffer
               (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-              (goto-char (org-brain-first-headline-position))
+              (goto-char (if org-brain-show-full-entry (buffer-size) (org-brain-first-headline-position)))
               (buffer-substring-no-properties
                (if all-data
                    (point-min)
@@ -987,7 +992,7 @@ Only get the body text, unless ALL-DATA is t."
         (org-remove-indentation entry-text)
       (with-temp-buffer
         (insert (org-remove-indentation entry-text))
-        (goto-char (org-brain-first-headline-position))
+        (goto-char (if org-brain-show-full-entry (buffer-size) (org-brain-first-headline-position)))
         (if (re-search-backward org-brain-resources-start-re nil t)
             (progn
               (end-of-line)
@@ -2837,7 +2842,7 @@ Helper function for `org-brain-visualize'."
   (if-let ((text (org-brain-text entry)))
       (progn
         (setq text (string-trim text))
-        (if (> (length text) 0)
+        (if (or (> (length text) 0) org-brain-show-full-entry)
             (progn
               (insert "\n\n--- Entry -------------------------------------\n\n")
               (run-hooks 'org-brain-after-visualize-hook)
