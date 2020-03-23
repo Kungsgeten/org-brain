@@ -1789,7 +1789,7 @@ If NOCONFIRM is nil, ask if we really want to delete."
           (delete-region (region-beginning) (region-end))))))
   (delete entry org-brain--vis-history)
   (org-save-all-org-buffers)
-  (org-brain--revert-if-visualizing))
+  (org-brain--revert-if-visualizing t))
 
 ;;;###autoload
 (defun org-brain-insert-relationships (entry &optional recursive)
@@ -2584,10 +2584,14 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
   "Revert function for `org-brain-visualize-mode'."
   (org-brain-visualize org-brain--vis-entry t))
 
-(defun org-brain--revert-if-visualizing ()
-  "Revert buffer if in `org-brain-visualize-mode'."
+(defun org-brain--revert-if-visualizing (&optional ignore-button-at-pt)
+  "Revert buffer if in `org-brain-visualize-mode'.
+Unless IGNORE-BUTTON-AT-PT is non nil, jump to the button at
+point before the buffer was reverted."
   (when (eq major-mode 'org-brain-visualize-mode)
-    (let ((button-entry (car (ignore-errors (org-brain-button-at-point)))))
+    (let ((button-entry
+           (unless ignore-button-at-pt
+             (car (ignore-errors (org-brain-button-at-point))))))
       (org-brain-stop-wandering)
       (revert-buffer)
       (when button-entry (org-brain-jump-to-visualize-button button-entry)))))
