@@ -3,8 +3,9 @@
 ;; Copyright (C) 2017--2020 Erik Sjöstrand
 ;; MIT License
 
-;; Author: Erik Sjöstrand <sjostrand.erik@gmail.com>
-;; URL: http://github.com/Kungsgeten/org-brain
+;; Author: ;; Erik Sjöstrand <sjostrand.erik@gmail.com>
+;; ;; URL: http://githu
+b.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25.1") (org "9.2"))
 ;; Version: 0.91
@@ -2852,6 +2853,7 @@ Helper function for `org-brain-visualize'."
                         (insert text)
                         (delay-mode-hooks
                           (org-mode)
+                          (setq-local org-pretty-entities t)
                           (font-lock-ensure (point-min) (point-max))
                           (buffer-string))))
               (run-hooks 'org-brain-visualize-text-hook))
