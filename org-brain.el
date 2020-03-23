@@ -958,7 +958,7 @@ Only get the body text, unless ALL-DATA is t."
             ;; File entry
             (with-temp-buffer
               (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-              (goto-char (if org-brain-show-full-entry (buffer-size) (org-brain-first-headline-position)))
+              (goto-char (org-brain-first-headline-position))
               (buffer-substring-no-properties
                (if all-data
                    (point-min)
@@ -968,7 +968,8 @@ Only get the body text, unless ALL-DATA is t."
                          (point)))
                      (point-min)))
                (if (let ((filetags (org-brain-get-tags entry)))
-                     (or (member org-brain-show-children-tag filetags)
+                     (or org-brain-show-full-entry
+                         (member org-brain-show-children-tag filetags)
                          (member org-brain-exclude-children-tag filetags)))
                    (point-max)
                  (point))))
@@ -982,7 +983,8 @@ Only get the body text, unless ALL-DATA is t."
                   (end-of-line))
                 (let (end)
                   (save-excursion
-                    (or (and (not (member org-brain-exclude-children-tag tags))
+                    (or (and (not org-brain-show-full-entry)
+                             (not (member org-brain-exclude-children-tag tags))
                              (not (member org-brain-show-children-tag tags))
                              (org-goto-first-child))
                         (org-end-of-subtree t))
@@ -992,7 +994,7 @@ Only get the body text, unless ALL-DATA is t."
         (org-remove-indentation entry-text)
       (with-temp-buffer
         (insert (org-remove-indentation entry-text))
-        (goto-char (if org-brain-show-full-entry (buffer-size) (org-brain-first-headline-position)))
+        (goto-char (org-brain-first-headline-position))
         (if (re-search-backward org-brain-resources-start-re nil t)
             (progn
               (end-of-line)
