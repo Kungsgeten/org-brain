@@ -867,6 +867,13 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                    (list entry-file (or (cadr id) (car id)) new-id))))
            entry-file))))))
 
+(defun org-brain-add-entry (title &optional verbose)
+  "Add an entry which title is TITLE."
+  (unless org-id-locations (org-id-locations-load))
+  (let ((entry (org-brain-return-entry title (org-brain--all-targets))))
+    (if verbose (message "Added '%s' entry."
+                         (org-brain-entry-name entry)))))
+
 (defun org-brain-choose-entry (prompt entries &optional predicate require-match initial-input hist def inherit-input-method)
   "PROMPT for an entry from ENTRIES and return it.
 ENTRIES can be 'all, which lists all headline and file entries.
