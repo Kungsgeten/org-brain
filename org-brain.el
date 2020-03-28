@@ -2381,7 +2381,7 @@ CATEGORY is used to set the `brain-category` text property."
   (insert-text-button
    (or (cdr resource) (car resource))
    'action (lambda (_x)
-             (org-open-link-from-string (car resource)))
+             (org-open-link-from-string (format "[[%s]]" (car resource))))
    'follow-link t
    'aa2u-text t))
 
