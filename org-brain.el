@@ -662,8 +662,10 @@ visibility rendering/formatting in-buffer."
         (org-brain-replace-links-with-visible-parts (org-entry-get pom "ITEM"))
       (org-entry-get pom "ITEM"))))
 
-(defun org-brain--headline-entry-at-point ()
-  "Get headline entry at point."
+(defun org-brain--headline-entry-at-point (&optional create-id)
+  "Get headline entry at point.
+If CREATE-ID is non-nil, call `org-id-get-create' first."
+  (if create-id (org-id-get-create))
   (when-let ((id (org-entry-get (point) "ID")))
     (list (org-brain-path-entry-name buffer-file-name)
           (org-brain-headline-at (point)) id)))
@@ -739,16 +741,17 @@ If ENTRY is file, then the identifier is the relative file name."
       (org-entry-protect-space entry)
     (nth 2 entry)))
 
-(defun org-brain-entry-at-pt ()
+(defun org-brain-entry-at-pt (&optional create-id)
   "Get current org-brain entry.
 In `org-mode' this is the current headline, or the file.
-In `org-brain-visualize' just return `org-brain--vis-entry'."
+In `org-brain-visualize' just return `org-brain--vis-entry'.
+CREATE-ID creates an ID of the headline at point if  there isn't  one already."
   (cond ((eq major-mode 'org-mode)
          (unless (string-prefix-p (expand-file-name org-brain-path)
                                   (expand-file-name (buffer-file-name)))
            (error "Not in a brain file"))
          (if (ignore-errors (org-get-heading))
-             (or (org-brain--headline-entry-at-point)
+             (or (org-brain--headline-entry-at-point create-id)
                  (error "Current headline has no ID"))
            (if org-brain-include-file-entries
                (org-brain-path-entry-name (buffer-file-name))
@@ -1158,7 +1161,7 @@ The car is the raw-link and the cdr is the description."
   "Choose and open a resource from ENTRY.
 If run with `\\[universal-argument]' then also choose from descendants of ENTRY.
 Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
-  (interactive (list (or (ignore-errors (org-brain-entry-at-pt))
+  (interactive (list (or (ignore-errors (org-brain-entry-at-pt t))
                          (org-brain-choose-entry "Resource from: " 'all))))
   (org-open-link-from-string (org-brain--choose-resource
                               (if current-prefix-arg
@@ -1272,7 +1275,7 @@ Several children can be added, by using `org-brain-entry-separator'.
 If VERBOSE is non-nil then display a message."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))
+                       (org-brain-entry-at-pt t))
                      (org-brain-choose-entries "Add child: " 'all)
                      t))
   (dolist (child-entry children)
@@ -1291,7 +1294,7 @@ Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY.
 If VERBOSE is non-nil then display a message."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))
+                       (org-brain-entry-at-pt t))
                      (read-string "Add child headline: ")
                      t))
   (dolist (child-name (split-string child-names org-brain-entry-separator))
@@ -1365,7 +1368,7 @@ Several parents can be added, by using `org-brain-entry-separator'.
 If VERBOSE is non-nil then display a message."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))
+                       (org-brain-entry-at-pt t))
                      (org-brain-choose-entries "Add parent: " 'all)
                      t))
   (dolist (parent parents)
@@ -1437,7 +1440,7 @@ Several friends can be added, by using `org-brain-entry-separator'.
 If VERBOSE is non-nil then display a message."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))
+                       (org-brain-entry-at-pt t))
                      (org-brain-choose-entries "Add friend: " 'all)
                      t))
   (dolist (friend-entry friends)
@@ -1673,7 +1676,7 @@ If PARENT is not supplied, it is prompted for
 among the list of ENTRY's linked parents.
 Returns the new refiled entry."
   (interactive)
-  (unless entry (setq entry (org-brain-entry-at-pt)))
+  (unless entry (setq entry (org-brain-entry-at-pt t)))
   (unless parent (let ((linked-parents (org-brain--linked-property-entries entry org-brain-parents-property-name)))
                    (cl-case (length linked-parents)
                      (0 (error "Entry \"%s\" has only one parent" (org-brain-title entry)))
@@ -1800,7 +1803,7 @@ If run interactively, get ENTRY from context.
 Normally the list is inserted at point, but if RECURSIVE is t
 insert at end of ENTRY.  Then recurse in the local (grand)children
 of ENTRY and insert there too."
-  (interactive (list (org-brain-entry-at-pt)))
+  (interactive (list (org-brain-entry-at-pt t)))
   (cl-flet ((list-to-items
              (list)
              (when list
@@ -1835,7 +1838,7 @@ of ENTRY and insert there too."
 If run interactively, get ENTRY from context.
 Before archiving, recursively run `org-brain-insert-relationships' on ENTRY.
 Remove external relationships from ENTRY, in order to clean up the brain."
-  (interactive (list (org-brain-entry-at-pt)))
+  (interactive (list (org-brain-entry-at-pt t)))
   (when (org-brain-filep entry)
     (user-error "Only headline entries can be archived"))
   (org-brain-insert-relationships entry t)
@@ -1856,7 +1859,7 @@ If STATUS is positive, pin the entry.  If negative, remove the pin.
 If STATUS is omitted, toggle between pinned / not pinned."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))))
+                       (org-brain-entry-at-pt t))))
   (cond ((eq status nil)
          (if (member entry org-brain-pins)
              (org-brain-pin entry -1)
@@ -1991,7 +1994,7 @@ Ignores selected entries that are not friends of ENTRY."
   "Set the name of ENTRY to TITLE.
 If run interactively, get ENTRY from context and prompt for TITLE."
   (interactive
-   (let* ((entry-at-pt (org-brain-entry-at-pt))
+   (let* ((entry-at-pt (org-brain-entry-at-pt t))
           (new-title (org-brain-title entry-at-pt)))
      (when (equal (length new-title) 0)
        (error "Title must be at least 1 character"))
@@ -2018,7 +2021,7 @@ If run interactively, get ENTRY from context and prompt for TITLE."
 Use `org-set-tags-command' on headline ENTRY.
 Instead sets #+FILETAGS on file ENTRY.
 If run interactively, get ENTRY from context."
-  (interactive (list (org-brain-entry-at-pt)))
+  (interactive (list (org-brain-entry-at-pt t)))
   (if (org-brain-filep entry)
       (org-with-point-at (org-brain-entry-marker entry)
         (let ((tag-str (read-string "FILETAGS: "
