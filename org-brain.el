@@ -79,6 +79,19 @@ Example: \"<--\" would add \"<--A\" in the example above."
   :type '(restricted-sexp :match-alternatives
            (integerp 't 'nil)))
 
+(defcustom org-brain-backlink-heading nil
+  "If the org file heading should be used when creating the backlink.
+
+Example: If you create a brain-link in A to B and A is an org file with the headings:
+* Parent header
+** Child
+[brain:linkToB]
+
+Setting this variable to t will create the following backlink in B:
+[[file:A.org::*Child][Parent header > Child]]."
+  :group 'org-brain
+  :type '(boolean))
+
 (make-obsolete-variable 'org-brain-suggest-stored-link-as-resource
                         "org-brain-suggest-stored-link-as-resource isn't needed because of `org-insert-link-global'."
                         "0.6")
@@ -3100,11 +3113,22 @@ LINK-TYPE will be \"brain\" by default."
                         (org-brain-title entry))
                 nil choice)
              (org-brain-add-resource
-              (concat "file:" (file-relative-name
+              (concatenate 'string
+			   "file:"
+			   (file-relative-name
                                (buffer-file-name)
-                               (file-name-directory (org-brain-entry-path choice))))
-              (concat (and (stringp org-brain-backlink) org-brain-backlink)
-                      (file-name-base))
+                               (file-name-directory (org-brain-entry-path choice)))
+			   (if (and org-brain-backlink-heading
+				     (ignore-errors (org-get-outline-path t)))
+				(concat "::* "
+					(nth 0 (last (org-get-outline-path t))))
+			      ))
+	      (concat (and (stringp org-brain-backlink) org-brain-backlink)
+		      (if (and org-brain-backlink-heading
+				(ignore-errors (org-get-outline-path t)))
+			(string-join (org-get-outline-path t) " > ")
+			(file-name-base))
+		)
               nil choice))))
     (concat link-type ":" (if (org-brain-filep choice) choice (nth 2 choice)))))
 
