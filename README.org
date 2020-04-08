@@ -250,6 +250,7 @@ available in =org-brain-visualize=:
 | f           | =org-brain-add-friendship= *         | Add an existing entry, or a new /file/, as a friend                                 |
 | F           | =org-brain-remove-friendship= *      | Remove one of the entry's friend relations                                        |
 | n           | =org-brain-pin= *                    | Toggle if the entry is pinned or not                                              |
+| N           | =org-brain-add-nickname=             | Add a nickname for the entry (you can have several names for the same entry)      |
 | s           | =org-brain-select-dwim=              | Select an entry for batch processing.                                             |
 | S           | =org-brain-select-map=               | Prefix key to do batch processing with selected entries.                          |
 | t           | =org-brain-set-title=                | Change the title of the entry.                                                    |
@@ -461,13 +462,15 @@ drawer of =org-mode= headlines:
 - =BRAIN_FRIENDS=
 - =BRAIN_EDGE_$IDENTIFIER=
 - =ID=
+- =NICKNAMES=
 
 These properties are also mirrored as file keywords at the top of file entries,
 for instance =#+BRAIN_CHILDREN: 00c0f06c-9bd4-4c31-aed0-15bb3361d9a2=.
 
-These properties/keywords are /not meant to be manipulated directly/! If you
-want to remove these properties, use the corresponding command instead
-(=org-brain-remove-child= or similar).
+These properties/keywords are /not meant to be manipulated directly/! If you want
+to remove these properties, use the corresponding command instead
+(=org-brain-remove-child= or similar). There's currently command to remove
+=NICKNAMES= though, so at the moment that has to be done manually.
 
 You might also see that =org-brain= inserts a =RESOURCES= drawer. It is okay to
 modify this drawer manually.

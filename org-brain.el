@@ -519,6 +519,9 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 ;; If a string, then the entry is a file.
 ;; If a list, then the entry is a headline:
 ;; ("file entry" "headline title" "ID")
+;; There's also a special entry type: Nicknames
+;; In the case of headline nicknames the car of the list is a symbol (instead of a string)
+;; ('alias "headline title" "ID")
 
 (defvar org-brain--vis-entry nil
   "The last entry argument to `org-brain-visualize'.")
@@ -690,8 +693,15 @@ Respect excluded entries."
     (when-let ((id (org-entry-get (point) "ID")))
       (list (org-brain-headline-at (point)) id))))
 
+(defun org-brain--nicknames-at-point ()
+  "Get  nicknames of the headline entry at point."
+  (when-let ((id (org-entry-get (point) "ID")))
+    (mapcar (lambda (nickname)
+              (list 'nickname nickname id))
+            (org-entry-get-multivalued-property (point) "NICKNAMES"))))
+
 (defun org-brain-headline-entries-in-file (file &optional no-temp-buffer)
-  "Get a list of all headline entries in FILE.
+  "Get a list of all headline (and nicknames) entries in FILE.
 If the entries are cached in `org-brain-headline-cache', get  them from there.
 Else the FILE is inserted in a temp buffer and get scanned for entries.
 If NO-TEMP-BUFFER is non-nil, run the scanning in the current buffer instead."
@@ -705,9 +715,11 @@ If NO-TEMP-BUFFER is non-nil, run the scanning in the current buffer instead."
               (insert-file-contents file nil nil nil 'replace)
               (cdr (puthash file (cons (file-attribute-modification-time
                                         (file-attributes file))
-                                       (mapcar (lambda (entry) (cons file-entry entry))
-                                               (remove nil (org-map-entries
-                                                            #'org-brain--name-and-id-at-point))))
+                                       (apply #'append
+                                              (mapcar (lambda (entry) (cons file-entry entry))
+                                                      (remove nil (org-map-entries
+                                                                   #'org-brain--name-and-id-at-point)))
+                                              (remove nil (org-map-entries #'org-brain--nicknames-at-point))))
                             org-brain-headline-cache)))
           (cdr cached)))
     (with-temp-buffer
@@ -715,14 +727,20 @@ If NO-TEMP-BUFFER is non-nil, run the scanning in the current buffer instead."
         (org-mode)
         (org-brain-headline-entries-in-file file t)))))
 
-(defun org-brain-headline-entries ()
-  "Get all org-brain headline entries."
+(defun org-brain-headline-entries (&optional include-nicknames)
+  "Get all org-brain headline entries.
+INCLUDE-NICKNAMES also return duplicates for headlines with NICKNAMES property."
   (with-temp-buffer
     (delay-mode-hooks
       (org-mode)
       (apply #'append
              (mapcar
-              (lambda (file) (org-brain-headline-entries-in-file file t))
+              (lambda (file)
+                (seq-filter
+                 (if include-nicknames
+                     #'identity
+                   (lambda (x) (stringp (car x))))
+                 (org-brain-headline-entries-in-file file t)))
               (org-brain-files))))))
 
 (defun org-brain-entry-from-id (id)
@@ -777,7 +795,8 @@ CREATE-ID creates an ID of the headline at point if  there isn't  one already."
     (org-element-parse-buffer)))
 
 (defun org-brain--file-targets (file)
-  "Return alist of (name . entry-id) for all entries (including the file) in FILE.
+  "Return alist of (name . entry-id) for all entries in FILE.
+The list also includes nicknames from the NICKNAMES keyword/properties.
 Should only be used in a temp-buffer."
   (let* ((file-relative (org-brain-path-entry-name file))
          (file-entry-name (org-brain-entry-name file-relative)))
@@ -785,7 +804,13 @@ Should only be used in a temp-buffer."
      nil
      (append
       (when org-brain-include-file-entries
-        (list (cons file-entry-name file-relative)))
+        (apply
+         #'append
+         (list (cons file-entry-name file-relative))
+         (mapcar (lambda (x)
+                   (list (cons (org-entry-restore-space x) file-relative)))
+                 (when-let ((nicknames (assoc "NICKNAMES" (org-brain-keywords file-relative))))
+                   (split-string (cdr nicknames) " " t)))))
       (mapcar
        (lambda (x)
          (cons (format org-brain-headline-entry-name-format-string
@@ -2045,6 +2070,24 @@ If run interactively, get ENTRY from context."
   (org-brain--revert-if-visualizing))
 
 ;;;###autoload
+(defun org-brain-add-nickname (entry nickname)
+  "ENTRY gets a new NICKNAME.
+If run interactively use `org-brain-entry-at-pt' and prompt for NICKNAME."
+  (interactive (list (org-brain-entry-at-pt)
+                     (read-string "Nickname: ")))
+  (if (org-brain-filep entry)
+      (let ((nickname (org-entry-protect-space nickname)))
+        (org-with-point-at (org-brain-entry-marker entry)
+          (goto-char (point-min))
+          (if (re-search-forward "^#\\+NICKNAMES:.*$" nil t)
+              (insert (concat " " nickname))
+            (insert (format "#+NICKNAMES: %s\n" nickname)))
+          (save-buffer)))
+    (org-entry-add-to-multivalued-property
+     (org-brain-entry-marker entry) "NICKNAMES" nickname)
+    (org-save-all-org-buffers)))
+
+;;;###autoload
 (defun org-brain-headline-to-file (entry)
   "Convert headline ENTRY to a file entry.
 Prompt for name of the new file.
@@ -2614,6 +2657,7 @@ point before the buffer was reverted."
 (define-key org-brain-visualize-mode-map "*" 'org-brain-add-child-headline)
 (define-key org-brain-visualize-mode-map "h" 'org-brain-add-child-headline)
 (define-key org-brain-visualize-mode-map "n" 'org-brain-pin)
+(define-key org-brain-visualize-mode-map "N" 'org-brain-add-nickname)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-set-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
 (define-key org-brain-visualize-mode-map "k" 'backward-button)
