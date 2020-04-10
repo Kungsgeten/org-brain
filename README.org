@@ -196,13 +196,7 @@ entries. =org-brain= passes two objects, the file and the headline, to the emacs
 [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Formatting-Strings.html][format]] function. By setting =org-brain-headline-entry-name-format-string= to
 ="%2$s"=, =org-brain= will only show the headline title.
 
-When trying to create entries which doesn't exist, =org-brain= will by default
-create a new file for these entries. For instance if you've set
-=org-brain-include-file-entries= to =nil=, run =org-brain-visualize= and type in
-=Cucumbers= (an entry which doesn't exist) =org-brain= will create a file named
-=Cucumbers.org= and insert a =Cucumbers= headline there. You can change this
-behaviour by setting =org-brain-file-from-input-function=, let's say if you want
-to fallback to a default file. Here's an example:
+Here's an example which may be suitable for a setup without file entries:
 
 #+BEGIN_SRC emacs-lisp
   (setq org-brain-include-file-entries nil)
@@ -210,9 +204,7 @@ to fallback to a default file. Here's an example:
   (setq org-brain-headline-entry-name-format-string "%2$s")
 
   (setq my/default-org-brain-file "brain")
-
-  (setq org-brain-file-from-input-function
-        (lambda (x) (if (cdr x) (car x) my/default-org-brain-file)))
+  (setq org-brain-default-file-parent my/default-org-brain-file)
 #+END_SRC
 
 ** Limiting =org-brain= to file entries
@@ -366,9 +358,14 @@ If you're browsing a file and want to add the file -- or the current line in the
 ** General information
 
 If you try to add a child/parent/friend to an entry which doesn't exist, that
-entry will be created. The name of a new entry can be written like this:
-=file::headline=. The =headline= will be created as a level one headline in
-=file=.
+entry will be created. The same is true for many other commands prompting for an
+entry, like =org-brain-visualize=. The name of a new entry can be written like
+this: =file::headline=. The =headline= will be created as a level one headline in
+=file=. If you create a new entry without the headline part, it will by default be
+created as a file entry. It is possible to change that though by setting the
+variable =org-brain-default-file-parent= to a default file. Let's say you set the
+variable to ="brain"= and then add the entry =Bananas= (a non-existent entry). That
+would be the same thing as writing =brain::Bananas=.
 
 When adding children, parents, or friends, multiple entries can be added at once
 by separating their titles with =org-brain-entry-separator= (which is =;= by

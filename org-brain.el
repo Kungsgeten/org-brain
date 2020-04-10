@@ -7,7 +7,7 @@
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25.1") (org "9.2"))
-;; Version: 0.91
+;; Version: 0.92
 
 ;;; Commentary:
 
@@ -107,25 +107,19 @@ Only headlines will be considered as entries when visualizing."
   :group 'org-brain
   :type '(boolean))
 
-(defcustom org-brain-file-from-input-function #'car
-  "Used when trying to get a file from user input.
-This function is called when the user input a file entry, or try
-to create a new entry, using `org-brain-choose-entries'.
+(make-obsolete-variable
+ 'org-brain-file-from-input-function
+ "`org-brain-default-file-parent' can be used as a better alternative."
+ "0.92")
 
-The function should return the file part of an entry. The
-function will be called with one argument: a list. The `car' of
-the argument is the file part of the entry input, while the
-`cadr' of the input is the headline part if one is specified.
-
-Example:
-
-   User input: \"programming::emacs\"
-   Function argument: (\"programming\" \"emacs\")
-
-   User input:  \"programming\"
-   Function argument: (\"programming\")"
+(defcustom org-brain-default-file-parent nil
+  "Where to store new entries with unspecified local parent.
+For instance if creating a new entry with `org-brain-visualize'.
+If nil, create the new entry as a file entry relative to `org-brain-path'.
+If set to a string it should be a file entry. That entry will be used as the
+local parent and the new entry will be a headline."
   :group 'org-brain
-  :type '(function))
+  :type '(choice string (const nil)))
 
 (defcustom org-brain-show-full-entry nil
   "Always show entire entry contents?"
@@ -859,13 +853,14 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                  ;; File entry
                  (progn
                    (setq id (split-string id "::" t))
-                   (let* ((entry-path (org-brain-entry-path
-                                       (funcall org-brain-file-from-input-function id)
-                                       t))
+                   (let* ((entry-path (org-brain-entry-path #'car t))
                           (entry-file (org-brain-path-entry-name entry-path)))
                      (unless (file-exists-p entry-path)
-                       (make-directory (file-name-directory entry-path) t)
-                       (write-region "" nil entry-path))
+                       (if (and org-brain-default-file-parent (equal (length id) 1))
+                           (setq entry-file org-brain-default-file-parent
+                                 id `(,org-brain-default-file-parent ,(car id)))
+                         (make-directory (file-name-directory entry-path) t)
+                         (write-region "" nil entry-path)))
                      (if (or (not org-brain-include-file-entries)
                              (equal (length id) 2)
                              (not (equal (car id) entry-file)))
