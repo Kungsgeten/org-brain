@@ -853,7 +853,7 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                  ;; File entry
                  (progn
                    (setq id (split-string id "::" t))
-                   (let* ((entry-path (org-brain-entry-path #'car t))
+                   (let* ((entry-path (org-brain-entry-path (car id) t))
                           (entry-file (org-brain-path-entry-name entry-path)))
                      (unless (file-exists-p entry-path)
                        (if (and org-brain-default-file-parent (equal (length id) 1))
