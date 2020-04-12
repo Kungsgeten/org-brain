@@ -1517,8 +1517,8 @@ If ENTRY isn't specified, ask for the ENTRY.
 Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the entry."
   (interactive)
   (org-brain-stop-wandering)
-  (unless entry (setq entry (org-brain-choose-entry "Goto entry: " 'all nil t)))
-  (when org-brain-quit-after-goto
+  (unless entry (setq entry (org-brain-choose-entry "Goto entry: " 'all)))
+  (when (and org-brain-quit-after-goto (eq 'major-mode 'org-brain-visualize-mode))
     (org-brain-visualize-quit))
   (let ((marker (org-brain-entry-marker entry)))
     (apply (or goto-file-func #'pop-to-buffer-same-window)
