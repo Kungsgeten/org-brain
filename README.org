@@ -98,6 +98,7 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
     :config
     (setq org-id-track-globally t)
     (setq org-id-locations-file "~/.emacs.d/.org-id-locations")
+    (add-hook 'before-save-hook #'org-brain-ensure-ids-in-buffer)
     (push '("b" "Brain" plain (function org-brain-goto-end)
             "* %i%?" :empty-lines 1)
           org-capture-templates)
@@ -117,8 +118,12 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
 3. If you're an [[https://github.com/emacs-evil/evil][evil]] user, you'll want to add =(evil-set-initial-state
    'org-brain-visualize-mode 'emacs)= to your =org-brain= configuration.
 4. =org-brain= use =org-id= in order to speed things up. Because of this, the
-   variable =org-id-track-globally= should be =t= (which it already is by
-   default). You may want to modify =org-id-locations-file= too.
+   variable =org-id-track-globally= should be =t= (which it already is by default).
+   You may want to modify =org-id-locations-file= too. If you add entries to
+   =org-brain= directly from =org-mode= you must assign headliens an ID. A
+   comfortable way to do this is with the command
+   =org-brain-ensure-ids-in-buffer=. Even more comfortable is to add that to
+   =before-save-hook=, so that it runs when saving.
 5. You might want to add information at the end of an entry, without visiting
    the file. A way to do this is to use a [[http://orgmode.org/manual/Capture.html][capture]] template, such as the one
    presented above.

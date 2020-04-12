@@ -2141,6 +2141,17 @@ If interactive, also prompt for ENTRY."
         (org-brain-pin new-entry 1)))))
 
 ;;;###autoload
+(defun org-brain-ensure-ids-in-buffer ()
+  "Run `org-id-get-create' on all headlines in current buffer.
+Only works if in an `org-mode' buffer inside `org-brain-path'.
+Suitable for use with `before-save-hook'."
+  (interactive)
+  (and (eq major-mode 'org-mode)
+       (string-prefix-p (expand-file-name org-brain-path)
+                        (expand-file-name (buffer-file-name)))
+       (org-map-entries #'org-id-get-create t 'file)))
+
+;;;###autoload
 (defun org-brain-agenda ()
   "Like `org-agenda', but only for `org-brain-files'."
   (interactive)
