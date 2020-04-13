@@ -287,6 +287,11 @@ Only applies to headline entries."
   :group 'org-brain
   :type '(string))
 
+(defcustom org-brain-exclude-local-parent-tag "nolocalparent"
+  "`org-mode' tag which prevents this node to be displayed as a local parent."
+  :group 'org-brain
+  :type '(string))
+
 (defcustom org-brain-each-child-on-own-line-tag "ownline"
   "`org-mode' tag which makes each child of the headline entry be listed on its own line."
   :group 'org-brain
@@ -1040,7 +1045,10 @@ Often you want the siblings too, then use `org-brain-siblings' instead."
                 (if (and (org-up-heading-safe)
                          (org-entry-get nil "ID"))
                     (org-brain-entry-from-id (org-entry-get nil "ID"))
-                  (when org-brain-include-file-entries (car entry)))))))
+                  (when (and org-brain-include-file-entries
+                             (not (member org-brain-exclude-local-parent-tag
+                                          (org-brain-get-tags (car entry)))))
+                    (car entry)))))))
       (list parent)))
 
 (defun org-brain-children (entry)
