@@ -737,24 +737,15 @@ ecosystem around Org-mode where possible. Eventually, we hope to further
 introduce features enabled by the Emacs ecosystem.
 #+END_QUOTE
 
+** [[https://github.com/l3kn/org-zettelkasten][Org Zettelkasten]]
+
+#+begin_quote
+An opinionated setup for managing large collections of interlinked org files.
+#+end_quote
+
 ** [[https://github.com/caiorss/org-wiki][org-wiki]]
 
 #+BEGIN_QUOTE
 Org-wiki is a org-mode extension that provides tools to manage and build
 personal wiki or desktop wiki where each wiki page is a org-mode file.
 #+END_QUOTE
-
-** [[https://github.com/gregdetre/emacs-freex][emacs-freex]]
-
-Emacs freex is a Pymacs/SQLite/Elisp system that implements a transcluding wiki.
-Emacs-freex is not compatible at this time with org-mode. Despite this,
-emacs-freex is an impressive system for maintaining a wiki. Further, because the
-data is stored both in files on disk and in an SQLite database, it opens the
-possibility for implementing something like =org-brain='s visualize interface
-(ala TheBrain's "plex") by talking with SQLite, via Pymacs, to return the
-relationships between nodes. This would consistute a lot of work to implement
-but would be very impressive. If someone was to also add LaTeX rendering inside
-=emacs-freex= =nuggets= also, those two additional features would make
-=emacs-freex= more compelling. As it is, practically speaking, you may think of
-=org-brain= as implementing many of the features of =emacs-freex=, but with all
-of =org-mode='s goodness included.
