@@ -551,6 +551,16 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
   (org-id-update-id-locations (org-brain-files)))
 
 ;;;###autoload
+(defun org-brain-get-id ()
+  "Get ID of headline at point, creating one if it doesn't exist.
+Run `org-brain-new-entry-hook' if a new ID is created."
+  (interactive)
+  (or (org-id-get)
+      (progn
+        (run-hooks 'org-brain-new-entry-hook)
+        (org-id-get nil t))))
+
+;;;###autoload
 (defun org-brain-switch-brain (directory)
   "Choose another DIRECTORY to be your `org-brain-path'."
   (interactive "D")
@@ -676,8 +686,8 @@ visibility rendering/formatting in-buffer."
 
 (defun org-brain--headline-entry-at-point (&optional create-id)
   "Get headline entry at point.
-If CREATE-ID is non-nil, call `org-id-get-create' first."
-  (if create-id (org-id-get-create))
+If CREATE-ID is non-nil, call `org-brain-get-id' first."
+  (if create-id (org-brain-get-id))
   (when-let ((id (org-entry-get (point) "ID")))
     (list (org-brain-path-entry-name buffer-file-name)
           (org-brain-headline-at (point)) id)))
@@ -892,8 +902,7 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                                (org-brain-entry-at-pt)
                              (goto-char (point-max))
                              (insert (concat "\n* " (or (cadr id) (car id))))
-                             (let ((new-id (org-id-get-create)))
-                               (run-hooks 'org-brain-new-entry-hook)
+                             (let ((new-id (org-brain-get-id)))
                                (save-buffer)
                                (list entry-file (or (cadr id) (car id)) new-id))))
                        entry-file))))))
@@ -1344,8 +1353,7 @@ If VERBOSE is non-nil then display a message."
           (goto-char (org-brain-first-headline-position))
           (open-line 1)
           (insert (concat "* " child-name))
-          (org-id-get-create)
-          (run-hooks 'org-brain-new-entry-hook)
+          (org-brain-get-id)
           (save-buffer))
       ;; Headline entry
       (org-with-point-at (org-brain-entry-marker entry)
@@ -1355,8 +1363,7 @@ If VERBOSE is non-nil then display a message."
         (org-insert-heading nil t)
         (org-do-demote)
         (insert child-name)
-        (org-id-get-create)
-        (run-hooks 'org-brain-new-entry-hook)
+        (org-brain-get-id)
         (save-buffer)))
     (if verbose (message "Added '%s' as a child of '%s'."
                          child-name
@@ -1646,7 +1653,7 @@ After refiling, all headlines will be given an id."
   (let ((org-refile-targets `((org-brain-files . (:maxlevel . ,max-level))))
         (org-after-refile-insert-hook org-after-refile-insert-hook))
     (add-hook 'org-after-refile-insert-hook
-              (lambda () (org-map-tree 'org-id-get-create)))
+              (lambda () (org-map-tree 'org-brain-get-id)))
     (if (eq major-mode 'org-brain-visualize-mode)
         (if (org-brain-filep org-brain--vis-entry)
             (user-error "Only headline entries can be refiled")
@@ -2160,14 +2167,14 @@ If interactive, also prompt for ENTRY."
 
 ;;;###autoload
 (defun org-brain-ensure-ids-in-buffer ()
-  "Run `org-id-get-create' on all headlines in current buffer.
+  "Run `org-brain-get-id' on all headlines in current buffer.
 Only works if in an `org-mode' buffer inside `org-brain-path'.
 Suitable for use with `before-save-hook'."
   (interactive)
   (and (eq major-mode 'org-mode)
        (string-prefix-p (expand-file-name org-brain-path)
                         (expand-file-name (buffer-file-name)))
-       (org-map-entries #'org-id-get-create t 'file)))
+       (org-map-entries #'org-brain-get-id t 'file)))
 
 ;;;###autoload
 (defun org-brain-agenda ()

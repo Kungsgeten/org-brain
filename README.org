@@ -315,12 +315,14 @@ is bound to =S s=.
 
 ** Editing from =org-mode=
 
-You can edit =org-brain= entries directly from =org-mode=. You can use the
-default =org-mode= outline structure to define parent/children relationships,
-but keep in mind that only entries with an =ID= property will be considered as
-entries to =org-brain=; use =M-x org-id-get-create= to create an =ID=
-property to the current =org-mode= headline. Another alternative is to use =M-x
-org-brain-refile= which will create the ids for you.
+You can edit =org-brain= entries directly from =org-mode=. You can use the default
+=org-mode= outline structure to define parent/children relationships, but keep in
+mind that only entries with an =ID= property will be considered as entries to
+=org-brain=; use =M-x org-brain-get-id= to create an =ID= property to the current
+=org-mode= headline. Another alternative is to use =M-x org-brain-refile= which will
+create the ids for you. You can also create IDs for all headlines in the buffer
+with =M-x org-brain-ensure-ids-in-buffer=, and you might find it useful to add
+this to =before-save-hook=.
 
 Most of the commands available in =org-brain-visualize= can also be used in
 =org-mode= directly, in which case they will operate on the "entry at point". In
