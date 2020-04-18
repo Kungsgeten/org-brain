@@ -558,11 +558,11 @@ chronological order.
   (defun org-expiry-created-comp (a b)
     "Compare `org-expiry-created-property-name' properties of A and B."
     (let ((ta (ignore-errors
-                (org-agenda--timestamp-to-absolute
+                (org-time-string-to-seconds
                  (org-entry-get (get-text-property 0 'org-marker a)
                                 org-expiry-created-property-name))))
           (tb (ignore-errors
-                (org-agenda--timestamp-to-absolute
+                (org-time-string-to-seconds
                  (org-entry-get (get-text-property 0 'org-marker b)
                                 org-expiry-created-property-name)))))
       (cond ((if ta (and tb (< ta tb)) tb) -1)
