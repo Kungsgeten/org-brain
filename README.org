@@ -543,7 +543,7 @@ experience. Below are some suggestions (feel free to create an issue or send a
 pull request if you have more examples), all of them should be available on
 MELPA.
 
-* Chronological entries with =org-expiry=
+** Chronological entries with =org-expiry=
 
 =org-brain= doesn't add any information on when entries are created, so it is hard
 get a list of your entries in chronological order. I've managed to use
