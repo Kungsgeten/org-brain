@@ -629,19 +629,29 @@ Ignores \"dotfiles\"."
       (directory-files
        org-brain-path t (format "^[^.].*\\.%s$" org-brain-files-extension)))))
 
+(defvar org-brain-link-re
+  "\\[\\[\\(\\(?:[^][\\]\\|\\\\\\(?:\\\\\\\\\\)*[][]\\|\\\\+[^][]\\)+\\)]\\(?:\\[\\(\\(?:.\\|\\)+?\\)]\\)?]"
+  "Regex matching an `org-mode' link.
+The first match is the URI, the second is the (optional) desciption.
+
+This variable should be the same as `org-link-bracket-re'.
+However the implementation changed in `org-mode' 9.3 and
+the old `org-bracket-link-regexp' had different match groups.
+The purpose of `org-brain-link-re' is protection against future changes.")
+
 (defun org-brain-replace-links-with-visible-parts (raw-str)
   "Get RAW-STR with its links replaced by their descriptions."
   (let ((ret-str "")
         (start 0)
         match-start)
-    (while (setq match-start (string-match org-bracket-link-regexp raw-str start))
+    (while (setq match-start (string-match org-brain-link-re raw-str start))
       (setq ret-str
             (concat ret-str
                     ;; Include everything not part of the string.
                     (substring-no-properties raw-str start match-start)
                     ;; Include either the link description, or the link
                     ;; destination.
-                    (or (match-string-no-properties 3 raw-str)
+                    (or (match-string-no-properties 2 raw-str)
                         (match-string-no-properties 1 raw-str))))
       (setq start (match-end 0)))
     (concat ret-str (substring-no-properties raw-str start nil))))
