@@ -722,6 +722,21 @@ even when you're not online, or when the site hosting them goes down.
 
 The Emacs Wiki has an article about [[https://www.emacswiki.org/emacs/WikiModes][wiki modes in Emacs]].
 
+** [[https://github.com/jethrokuan/org-roam][org-roam]]
+
+#+BEGIN_QUOTE
+Org-roam is a Roam replica built on top of the all-powerful Org-mode.
+
+Org-roam is a solution for effortless non-hierarchical note-taking with
+Org-mode. With Org-roam, notes flow naturally, making note-taking fun and easy.
+Org-roam should also work as a plug-and-play solution for anyone already using
+Org-mode for their personal wiki.
+
+Org-roam aims to implement the core features of Roam, leveraging the mature
+ecosystem around Org-mode where possible. Eventually, we hope to further
+introduce features enabled by the Emacs ecosystem.
+#+END_QUOTE
+
 ** [[https://github.com/caiorss/org-wiki][org-wiki]]
 
 #+BEGIN_QUOTE
