@@ -543,6 +543,47 @@ experience. Below are some suggestions (feel free to create an issue or send a
 pull request if you have more examples), all of them should be available on
 MELPA.
 
+* Chronological entries with =org-expiry=
+
+=org-brain= doesn't add any information on when entries are created, so it is hard
+get a list of your entries in chronological order. I've managed to use
+=org-expiry= (part of =org-plus-contrib=) to add a =CREATED= property to all =org-brain=
+headline entries. Then we can use =org-agenda= to show the entries in
+chronological order.
+
+#+BEGIN_SRC emacs-lisp
+  ;; Setup org-expiry and define a org-agenda function to compare timestamps
+  (require 'org-expiry)
+  (setq org-expiry-inactive-timestamps t)
+  (defun org-expiry-created-comp (a b)
+    "Compare `org-expiry-created-property-name' properties of A and B."
+    (let ((ta (ignore-errors
+                (org-agenda--timestamp-to-absolute
+                 (org-entry-get (get-text-property 0 'org-marker a)
+                                org-expiry-created-property-name))))
+          (tb (ignore-errors
+                (org-agenda--timestamp-to-absolute
+                 (org-entry-get (get-text-property 0 'org-marker b)
+                                org-expiry-created-property-name)))))
+      (cond ((if ta (and tb (< ta tb)) tb) -1)
+            ((if tb (and ta (< tb ta)) ta) +1))))
+
+  ;; Add CREATED property when adding a new org-brain headline entry
+  (add-hook 'org-brain-new-entry-hook #'org-expiry-insert-created)
+
+  ;; Finally add a function which lets us watch the entries chronologically
+  (defun org-brain-timeline ()
+    "List all org-brain headlines in chronological order."
+    (interactive)
+    (let ((org-agenda-files (org-brain-files))
+          (org-agenda-cmp-user-defined #'org-expiry-created-comp)
+          (org-agenda-sorting-strategy '(user-defined-down)))
+      (org-tags-view nil (format "+%s>\"\"" org-expiry-created-property-name))))
+#+END_SRC
+
+Now we can use =org-brain-timeline= to view entries in chronological order (newest
+first).
+
 ** [[https://github.com/rexim/org-cliplink][org-cliplink]]
 
 #+BEGIN_QUOTE
