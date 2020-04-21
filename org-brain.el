@@ -3003,7 +3003,7 @@ Return the position of ENTRY in the buffer."
   (insert "FRIENDS:")
   (dolist (friend (sort (org-brain-friends entry) org-brain-visualize-sort-function))
     (insert "  ")
-    (org-brain-insert-visualize-button friend 'org-brain-friend (if (> max-level 0) 'stranger 'friend)))
+    (org-brain-insert-visualize-button friend 'org-brain-friend 'friend))
   (insert "\n\n")
   (let ((indent (1- (org-brain-tree-depth (org-brain-recursive-parents entry parent-max-level))))
         (entry-pos))
