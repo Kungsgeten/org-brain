@@ -3118,11 +3118,9 @@ LINK-TYPE will be \"brain\" by default."
 			   (file-relative-name
                                (buffer-file-name)
                                (file-name-directory (org-brain-entry-path choice)))
-			   (if (and org-brain-backlink-heading
-				     (ignore-errors (org-get-outline-path t)))
+			   (if-let ((b org-brain-backlink-heading) (outline-path (ignore-errors (org-get-outline-path t))))
 				(concat "::* "
-					(nth 0 (last (org-get-outline-path t))))
-			      ))
+					(nth 0 (last outline-path)))))
 	      (concat (and (stringp org-brain-backlink) org-brain-backlink)
 		      (if (and org-brain-backlink-heading
 				(ignore-errors (org-get-outline-path t)))
