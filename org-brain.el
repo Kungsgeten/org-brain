@@ -895,10 +895,10 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                                     (or
                                      ;; Search heading without tags
                                      (save-excursion
-                                       (re-search-forward (concat "\n\\* +" (car id) "[ \t]*$") nil t))
+                                       (re-search-forward (concat "\n\\* +" (regexp-quote (car id)) "[ \t]*$") nil t))
                                      ;; Search heading with tags
                                      (save-excursion
-                                       (re-search-forward (concat "\n\\* +" (car id) "[ \t]+:.*:$") nil t))))
+                                       (re-search-forward (concat "\n\\* +" (regexp-quote (car id)) "[ \t]+:.*:$") nil t))))
                                (org-brain-entry-at-pt)
                              (goto-char (point-max))
                              (insert (concat "\n* " (or (cadr id) (car id))))
@@ -1284,7 +1284,7 @@ PROPERTY could for instance be `org-brain-children-property-name'."
         (goto-char (point-min))
         (re-search-forward (concat "^#\\+" org-brain-children-property-name ":.*$"))
         (beginning-of-line)
-        (re-search-forward (concat " " (org-brain-entry-identifier child)))
+        (re-search-forward (concat " " (regexp-quote (org-brain-entry-identifier child))))
         (replace-match "")
         (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-children-property-name ":[[:space:]]*$"))
         (org-brain-remove-line-if-matching "^[[:space:]]*$")
@@ -1299,7 +1299,7 @@ PROPERTY could for instance be `org-brain-children-property-name'."
         (goto-char (point-min))
         (re-search-forward (concat "^#\\+" org-brain-parents-property-name ":.*$"))
         (beginning-of-line)
-        (re-search-forward (concat " " (org-brain-entry-identifier parent)))
+        (re-search-forward (concat " " (regexp-quote (org-brain-entry-identifier parent))))
         (replace-match "")
         (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-parents-property-name ":[[:space:]]*$"))
         (org-brain-remove-line-if-matching "^[[:space:]]*$")
@@ -1517,7 +1517,7 @@ If VERBOSE is non-nil then display a message."
           (goto-char (point-min))
           (re-search-forward (concat "^#\\+" org-brain-friends-property-name ":.*$"))
           (beginning-of-line)
-          (re-search-forward (concat " " (org-brain-entry-identifier entry2)))
+          (re-search-forward (concat " " (regexp-quote (org-brain-entry-identifier entry2))))
           (replace-match "")
           (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-friends-property-name ":[[:space:]]*$"))
           (org-brain-remove-line-if-matching "^[[:space:]]*$")
