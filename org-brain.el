@@ -1456,8 +1456,13 @@ Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY."
                                                               (org-brain-title entry))
                                                       linked-parents))))
           (org-brain-remove-relationship parent (org-brain-change-local-parent entry new-parent))
-        (error "%s is %s's only parent, it can't be removed"
-               (org-brain-title parent) (org-brain-title entry)))
+        (if (and org-brain-default-file-parent
+                 (y-or-n-p (format "%s has no more parents, move it to %s? "
+                                   (org-brain-title entry) org-brain-default-file-parent)))
+            (org-brain-remove-relationship
+             parent (org-brain-change-local-parent entry org-brain-default-file-parent))
+          (error "%s is %s's only parent, it can't be removed"
+                 (org-brain-title parent) (org-brain-title entry))))
     (org-brain-remove-relationship parent entry))
   (if verbose (message "'%s' is no longer a parent of '%s'."
                        (org-brain-entry-name parent)
