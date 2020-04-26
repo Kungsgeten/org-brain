@@ -79,10 +79,10 @@ Example: \"<--\" would add \"<--A\" in the example above."
   :type '(restricted-sexp :match-alternatives
            (integerp 't 'nil)))
 
-(defcustom org-brain-backlink-heading nil
-  "If the org file heading should be used when creating the backlink.
+(defcustom org-brain-backlink-heading t
+  "If the org heading should be used when creating a backlink.
 
-Example: If you create a brain-link in A to B and A is an org file with the headings:
+Example: Creating a brain-link in A to B and A is an org file with the headings:
 * Parent header
 ** Child
 [brain:linkToB]
@@ -3113,20 +3113,20 @@ LINK-TYPE will be \"brain\" by default."
                         (org-brain-title entry))
                 nil choice)
              (org-brain-add-resource
-              (concatenate 'string
-			   "file:"
-			   (file-relative-name
+              (cl-concatenate 'string
+                              "file:"
+                              (file-relative-name
                                (buffer-file-name)
                                (file-name-directory (org-brain-entry-path choice)))
-			   (if-let ((b org-brain-backlink-heading) (outline-path (ignore-errors (org-get-outline-path t))))
-				(concat "::* "
-					(nth 0 (last outline-path)))))
+                              (if-let ((outline-path
+                                        (and org-brain-backlink-heading
+                                             (ignore-errors (org-get-outline-path t)))))
+                                  (concat "::* " (nth 0 (last outline-path)))))
 	      (concat (and (stringp org-brain-backlink) org-brain-backlink)
 		      (if (and org-brain-backlink-heading
-				(ignore-errors (org-get-outline-path t)))
-			(string-join (org-get-outline-path t) " > ")
-			(file-name-base))
-		)
+                               (ignore-errors (org-get-outline-path t)))
+                          (string-join (org-get-outline-path t) " > ")
+			(file-name-base)))
               nil choice))))
     (concat link-type ":" (if (org-brain-filep choice) choice (nth 2 choice)))))
 
