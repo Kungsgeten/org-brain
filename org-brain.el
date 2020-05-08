@@ -3127,13 +3127,17 @@ LINK-TYPE will be \"brain\" by default."
                                         (and org-brain-backlink-heading
                                              (ignore-errors (org-get-outline-path t)))))
                                   (concat "::* " (nth 0 (last outline-path)))))
-	      (concat (and (stringp org-brain-backlink) org-brain-backlink)
+              (concat (and (stringp org-brain-backlink) org-brain-backlink)
 		      (if (and org-brain-backlink-heading
                                (ignore-errors (org-get-outline-path t)))
                           (string-join (org-get-outline-path t) " > ")
-			(file-name-base)))
+                        (file-name-base)))
               nil choice))))
-    (concat link-type ":" (if (org-brain-filep choice) choice (nth 2 choice)))))
+    (let ((link (concat link-type ":"
+                        (if (org-brain-filep choice) choice (nth 2 choice)))))
+      (push link org-link--insert-history)
+      (push `(,link ,(org-brain-title choice)) org-stored-links)
+      link)))
 
 (defun org-brain-link-store ()
   "Store a brain: type link from an `org-brain-visualize-mode' buffer."
