@@ -7,7 +7,7 @@
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25.1") (org "9.2"))
-;; Version: 0.92
+;; Version: 0.93
 
 ;;; Commentary:
 
@@ -1043,47 +1043,60 @@ Only works on headline entries."
         (concat (substring title 0 (1- org-brain-title-max-length)) "…")
       title)))
 
+(defun org-brain-text-positions (entry &optional all-data)
+  "Get the beginning and end position of the ENTRY text.
+Only get the body text, unless ALL-DATA is t."
+  (if (org-brain-filep entry)
+      ;; File entry
+      (with-temp-buffer
+        (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+        (goto-char (org-brain-first-headline-position))
+        (list
+         (if all-data
+             (point-min)
+           (or (save-excursion
+                 (when (re-search-backward org-brain-keyword-regex nil t)
+                   (end-of-line)
+                   (point)))
+               (point-min)))
+         (if (let ((filetags (org-brain-get-tags entry)))
+               (or org-brain-show-full-entry
+                   (member org-brain-show-children-tag filetags)
+                   (member org-brain-exclude-children-tag filetags)))
+             (point-max)
+           (point))))
+    ;; Headline entry
+    (org-with-point-at (org-brain-entry-marker entry)
+      (let ((tags (org-get-tags nil t)))
+        (unless (and (member org-brain-exclude-text-tag tags)
+                     (not all-data))
+          (unless all-data
+            (goto-char (cdr (org-get-property-block)))
+            (end-of-line))
+          (let (end)
+            (save-excursion
+              (or (and (not org-brain-show-full-entry)
+                       (not (member org-brain-exclude-children-tag tags))
+                       (not (member org-brain-show-children-tag tags))
+                       (org-goto-first-child))
+                  (org-end-of-subtree t))
+              (setq end (point)))
+            (list (point) end)))))))
+
 (defun org-brain-text (entry &optional all-data)
   "Get the text of ENTRY as string.
 Only get the body text, unless ALL-DATA is t."
-  (when-let
-      ((entry-text
-        (if (org-brain-filep entry)
-            ;; File entry
-            (with-temp-buffer
-              (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-              (goto-char (org-brain-first-headline-position))
-              (buffer-substring-no-properties
-               (if all-data
-                   (point-min)
-                 (or (save-excursion
-                       (when (re-search-backward org-brain-keyword-regex nil t)
-                         (end-of-line)
-                         (point)))
-                     (point-min)))
-               (if (let ((filetags (org-brain-get-tags entry)))
-                     (or org-brain-show-full-entry
-                         (member org-brain-show-children-tag filetags)
-                         (member org-brain-exclude-children-tag filetags)))
-                   (point-max)
-                 (point))))
-          ;; Headline entry
-          (org-with-point-at (org-brain-entry-marker entry)
-            (let ((tags (org-get-tags nil t)))
-              (unless (and (member org-brain-exclude-text-tag tags)
-                           (not all-data))
-                (unless all-data
-                  (goto-char (cdr (org-get-property-block)))
-                  (end-of-line))
-                (let (end)
-                  (save-excursion
-                    (or (and (not org-brain-show-full-entry)
-                             (not (member org-brain-exclude-children-tag tags))
-                             (not (member org-brain-show-children-tag tags))
-                             (org-goto-first-child))
-                        (org-end-of-subtree t))
-                    (setq end (point)))
-                  (buffer-substring-no-properties (point) end))))))))
+  (when-let ((entry-text
+              (if (org-brain-filep entry)
+                  ;; File entry
+                  (with-temp-buffer
+                    (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+                    (apply #'buffer-substring-no-properties
+                           (org-brain-text-positions entry all-data)))
+                ;; Headline entry
+                (org-with-point-at (org-brain-entry-marker entry)
+                  (apply #'buffer-substring-no-properties
+                         (org-brain-text-positions entry all-data))))))
     (if all-data
         (org-remove-indentation entry-text)
       (with-temp-buffer
@@ -2980,6 +2993,9 @@ Helper function for `org-brain-visualize'."
     (insert "\n\n--- Resources ---------------------------------\n")
     (mapc #'org-brain-insert-resource-button resources)))
 
+(defvar org-brain--vis-entry-text-marker 0
+  "Marker to where `org-brain-text' begins in `org-brain-visualize-mode'.")
+
 (defun org-brain--vis-text (entry)
   "Insert text of ENTRY.
 Helper function for `org-brain-visualize'."
@@ -2988,7 +3004,9 @@ Helper function for `org-brain-visualize'."
         (setq text (string-trim text))
         (if (or (> (length text) 0) org-brain-show-full-entry)
             (progn
-              (insert "\n\n--- Entry -------------------------------------\n\n")
+              (insert "\n\n")
+              (setq org-brain--vis-entry-text-marker (point-marker))
+              (insert "--- Entry -------------------------------------\n\n")
               (run-hooks 'org-brain-after-visualize-hook)
               (insert (with-temp-buffer
                         (insert text)
