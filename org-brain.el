@@ -414,6 +414,16 @@ Must be set before `org-brain' is loaded."
   :group 'org-brain
   :type '(boolean))
 
+(defcustom org-brain-completion-system 'default
+  "The completion system to be used by `org-brain'."
+  :group 'org-brain
+  :type '(radio
+          (const :tag "Ido" ido)
+          (const :tag "Helm" helm)
+          (const :tag "Ivy" ivy)
+          (const :tag "Default" default)
+          (function :tag "Custom function")))
+
 ;;;;; Faces and face helper functions
 
 (defface org-brain-title
@@ -864,6 +874,17 @@ affect the fetched targets."
     (mapcar (lambda (x) (cons (org-brain-entry-name x) x))
             (org-brain-files t))))
 
+(defun org-brain-completing-read (prompt choices &optional predicate require-match initial-input hist def inherit-input)
+  "A version of `completing-read' which is tailored to `org-brain-completion-system'."
+  (let ((args (list prompt choices predicate require-match initial-input hist def inherit-input)))
+    (or (pcase org-brain-completion-system
+          ('default (apply #'completing-read args))
+          ('ido (apply #'ido-completing-read args))
+          ('ivy (apply #'ivy-completing-read args))
+          ('helm (apply #'helm-completing-read-default-1
+                        (append args '("org-brain" "*org-brain-helm*")))))
+        (funcall org-brain-completion-system prompt choices))))
+
 (defun org-brain-get-entry-from-title (title &optional targets)
   "Search for TITLE in TARGETS and return an entry. Create it if non-existing.
 TARGETS is an alist of (title . entry-id).
@@ -929,8 +950,8 @@ INHERIT-INPUT-METHOD see `completing-read'."
                                         x
                                       (nth 2 x))))
                             entries)))
-         (choices (completing-read prompt targets
-                                   predicate require-match initial-input hist def inherit-input-method)))
+         (choices (org-brain-completing-read prompt targets
+                                             predicate require-match initial-input hist def inherit-input-method)))
     (mapcar (lambda (title) (org-brain-get-entry-from-title title targets))
             (if org-brain-entry-separator
                 (split-string choices org-brain-entry-separator)
@@ -1227,7 +1248,7 @@ The car is the raw-link and the cdr is the description."
                     entries)))
     (if (equal (length resources) 1)
         (cdar resources)
-      (cdr (assoc (completing-read "Resource: " resources nil t) resources)))))
+      (cdr (assoc (org-brain-completing-read "Resource: " resources nil t) resources)))))
 
 ;;;###autoload
 (defun org-brain-open-resource (entry)
