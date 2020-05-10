@@ -98,6 +98,7 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
     :config
     (setq org-id-track-globally t)
     (setq org-id-locations-file "~/.emacs.d/.org-id-locations")
+    (add-hook 'before-save-hook #'org-brain-ensure-ids-in-buffer)
     (push '("b" "Brain" plain (function org-brain-goto-end)
             "* %i%?" :empty-lines 1)
           org-capture-templates)
@@ -117,8 +118,12 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
 3. If you're an [[https://github.com/emacs-evil/evil][evil]] user, you'll want to add =(evil-set-initial-state
    'org-brain-visualize-mode 'emacs)= to your =org-brain= configuration.
 4. =org-brain= use =org-id= in order to speed things up. Because of this, the
-   variable =org-id-track-globally= should be =t= (which it already is by
-   default). You may want to modify =org-id-locations-file= too.
+   variable =org-id-track-globally= should be =t= (which it already is by default).
+   You may want to modify =org-id-locations-file= too. If you add entries to
+   =org-brain= directly from =org-mode= you must assign headliens an ID. A
+   comfortable way to do this is with the command
+   =org-brain-ensure-ids-in-buffer=. Even more comfortable is to add that to
+   =before-save-hook=, so that it runs when saving.
 5. You might want to add information at the end of an entry, without visiting
    the file. A way to do this is to use a [[http://orgmode.org/manual/Capture.html][capture]] template, such as the one
    presented above.
@@ -196,13 +201,7 @@ entries. =org-brain= passes two objects, the file and the headline, to the emacs
 [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Formatting-Strings.html][format]] function. By setting =org-brain-headline-entry-name-format-string= to
 ="%2$s"=, =org-brain= will only show the headline title.
 
-When trying to create entries which doesn't exist, =org-brain= will by default
-create a new file for these entries. For instance if you've set
-=org-brain-include-file-entries= to =nil=, run =org-brain-visualize= and type in
-=Cucumbers= (an entry which doesn't exist) =org-brain= will create a file named
-=Cucumbers.org= and insert a =Cucumbers= headline there. You can change this
-behaviour by setting =org-brain-file-from-input-function=, let's say if you want
-to fallback to a default file. Here's an example:
+Here's an example which may be suitable for a setup without file entries:
 
 #+BEGIN_SRC emacs-lisp
   (setq org-brain-include-file-entries nil)
@@ -210,9 +209,7 @@ to fallback to a default file. Here's an example:
   (setq org-brain-headline-entry-name-format-string "%2$s")
 
   (setq my/default-org-brain-file "brain")
-
-  (setq org-brain-file-from-input-function
-        (lambda (x) (if (cdr x) (car x) my/default-org-brain-file)))
+  (setq org-brain-default-file-parent my/default-org-brain-file)
 #+END_SRC
 
 ** Limiting =org-brain= to file entries
@@ -223,6 +220,12 @@ headline entries, but they will be excluded from most searches when choosing
 among entries.
 
 * Usage
+
+You can create new entries by =M-x org-brain-visualize= and then typing the name
+of a non-existing entry. You could also use =M-x org-brain-add-entry= if you do
+not want to visualize the new entry. Also commands which add children, parents
+and friends, or links to entries, can create new entries in the same way. Se
+/General information/ below.
 
 If you find that =org-brain= is missing entries, or list entries which doesn't
 exist, try using =M-x org-brain-update-id-locations=, which syncs the
@@ -250,6 +253,7 @@ available in =org-brain-visualize=:
 | f           | =org-brain-add-friendship= *         | Add an existing entry, or a new /file/, as a friend                                 |
 | F           | =org-brain-remove-friendship= *      | Remove one of the entry's friend relations                                        |
 | n           | =org-brain-pin= *                    | Toggle if the entry is pinned or not                                              |
+| N           | =org-brain-add-nickname=             | Add a nickname for the entry (you can have several names for the same entry)      |
 | s           | =org-brain-select-dwim=              | Select an entry for batch processing.                                             |
 | S           | =org-brain-select-map=               | Prefix key to do batch processing with selected entries.                          |
 | t           | =org-brain-set-title=                | Change the title of the entry.                                                    |
@@ -317,12 +321,14 @@ is bound to =S s=.
 
 ** Editing from =org-mode=
 
-You can edit =org-brain= entries directly from =org-mode=. You can use the
-default =org-mode= outline structure to define parent/children relationships,
-but keep in mind that only entries with an =ID= property will be considered as
-entries to =org-brain=; use =M-x org-id-get-create= to create an =ID=
-property to the current =org-mode= headline. Another alternative is to use =M-x
-org-brain-refile= which will create the ids for you.
+You can edit =org-brain= entries directly from =org-mode=. You can use the default
+=org-mode= outline structure to define parent/children relationships, but keep in
+mind that only entries with an =ID= property will be considered as entries to
+=org-brain=; use =M-x org-brain-get-id= to create an =ID= property to the current
+=org-mode= headline. Another alternative is to use =M-x org-brain-refile= which will
+create the ids for you. You can also create IDs for all headlines in the buffer
+with =M-x org-brain-ensure-ids-in-buffer=, and you might find it useful to add
+this to =before-save-hook=.
 
 Most of the commands available in =org-brain-visualize= can also be used in
 =org-mode= directly, in which case they will operate on the "entry at point". In
@@ -365,9 +371,14 @@ If you're browsing a file and want to add the file -- or the current line in the
 ** General information
 
 If you try to add a child/parent/friend to an entry which doesn't exist, that
-entry will be created. The name of a new entry can be written like this:
-=file::headline=. The =headline= will be created as a level one headline in
-=file=.
+entry will be created. The same is true for many other commands prompting for an
+entry, like =org-brain-visualize=. The name of a new entry can be written like
+this: =file::headline=. The =headline= will be created as a level one headline in
+=file=. If you create a new entry without the headline part, it will by default be
+created as a file entry. It is possible to change that though by setting the
+variable =org-brain-default-file-parent= to a default file. Let's say you set the
+variable to ="brain"= and then add the entry =Bananas= (a non-existent entry). That
+would be the same thing as writing =brain::Bananas=.
 
 When adding children, parents, or friends, multiple entries can be added at once
 by separating their titles with =org-brain-entry-separator= (which is =;= by
@@ -426,6 +437,8 @@ is visualized:
      the tag name by modifying =org-brain-show-children-tag=. Works on file
      entries.
 - =:nosiblings:= :: You may have an entry with lots of children, and when you visualize one of these children you might not want to see the siblings from this parent. A good example would be if you have an =index= entry or similar. By tagging the parent with =nosiblings= the parent's children will not show siblings from that parent. You can change the tag name by modifying =org-brain-exclude-siblings-tag=.
+- :nolocalparent: :: This is similar to =:nosiblings:= but the tagged parent will
+     not be shown at all when one of its local children are visualized.
 
 The following tags modify the way how information is shown when an
 entry is visualized.
@@ -461,13 +474,15 @@ drawer of =org-mode= headlines:
 - =BRAIN_FRIENDS=
 - =BRAIN_EDGE_$IDENTIFIER=
 - =ID=
+- =NICKNAMES=
 
 These properties are also mirrored as file keywords at the top of file entries,
 for instance =#+BRAIN_CHILDREN: 00c0f06c-9bd4-4c31-aed0-15bb3361d9a2=.
 
-These properties/keywords are /not meant to be manipulated directly/! If you
-want to remove these properties, use the corresponding command instead
-(=org-brain-remove-child= or similar).
+These properties/keywords are /not meant to be manipulated directly/! If you want
+to remove these properties, use the corresponding command instead
+(=org-brain-remove-child= or similar). There's currently command to remove
+=NICKNAMES= though, so at the moment that has to be done manually.
 
 You might also see that =org-brain= inserts a =RESOURCES= drawer. It is okay to
 modify this drawer manually.
@@ -533,6 +548,47 @@ However there are other packages which might improve your =org-brain=
 experience. Below are some suggestions (feel free to create an issue or send a
 pull request if you have more examples), all of them should be available on
 MELPA.
+
+** Chronological entries with =org-expiry=
+
+=org-brain= doesn't add any information on when entries are created, so it is hard
+get a list of your entries in chronological order. I've managed to use
+=org-expiry= (part of =org-plus-contrib=) to add a =CREATED= property to all =org-brain=
+headline entries. Then we can use =org-agenda= to show the entries in
+chronological order.
+
+#+BEGIN_SRC emacs-lisp
+  ;; Setup org-expiry and define a org-agenda function to compare timestamps
+  (require 'org-expiry)
+  (setq org-expiry-inactive-timestamps t)
+  (defun org-expiry-created-comp (a b)
+    "Compare `org-expiry-created-property-name' properties of A and B."
+    (let ((ta (ignore-errors
+                (org-time-string-to-seconds
+                 (org-entry-get (get-text-property 0 'org-marker a)
+                                org-expiry-created-property-name))))
+          (tb (ignore-errors
+                (org-time-string-to-seconds
+                 (org-entry-get (get-text-property 0 'org-marker b)
+                                org-expiry-created-property-name)))))
+      (cond ((if ta (and tb (< ta tb)) tb) -1)
+            ((if tb (and ta (< tb ta)) ta) +1))))
+
+  ;; Add CREATED property when adding a new org-brain headline entry
+  (add-hook 'org-brain-new-entry-hook #'org-expiry-insert-created)
+
+  ;; Finally add a function which lets us watch the entries chronologically
+  (defun org-brain-timeline ()
+    "List all org-brain headlines in chronological order."
+    (interactive)
+    (let ((org-agenda-files (org-brain-files))
+          (org-agenda-cmp-user-defined #'org-expiry-created-comp)
+          (org-agenda-sorting-strategy '(user-defined-down)))
+      (org-tags-view nil (format "+%s>\"\"" org-expiry-created-property-name))))
+#+END_SRC
+
+Now we can use =org-brain-timeline= to view entries in chronological order (newest
+first).
 
 ** [[https://github.com/rexim/org-cliplink][org-cliplink]]
 
@@ -715,24 +771,30 @@ even when you're not online, or when the site hosting them goes down.
 
 The Emacs Wiki has an article about [[https://www.emacswiki.org/emacs/WikiModes][wiki modes in Emacs]].
 
+** [[https://github.com/jethrokuan/org-roam][org-roam]]
+
+#+BEGIN_QUOTE
+Org-roam is a Roam replica built on top of the all-powerful Org-mode.
+
+Org-roam is a solution for effortless non-hierarchical note-taking with
+Org-mode. With Org-roam, notes flow naturally, making note-taking fun and easy.
+Org-roam should also work as a plug-and-play solution for anyone already using
+Org-mode for their personal wiki.
+
+Org-roam aims to implement the core features of Roam, leveraging the mature
+ecosystem around Org-mode where possible. Eventually, we hope to further
+introduce features enabled by the Emacs ecosystem.
+#+END_QUOTE
+
+** [[https://github.com/l3kn/org-zettelkasten][Org Zettelkasten]]
+
+#+begin_quote
+An opinionated setup for managing large collections of interlinked org files.
+#+end_quote
+
 ** [[https://github.com/caiorss/org-wiki][org-wiki]]
 
 #+BEGIN_QUOTE
 Org-wiki is a org-mode extension that provides tools to manage and build
 personal wiki or desktop wiki where each wiki page is a org-mode file.
 #+END_QUOTE
-
-** [[https://github.com/gregdetre/emacs-freex][emacs-freex]]
-
-Emacs freex is a Pymacs/SQLite/Elisp system that implements a transcluding wiki.
-Emacs-freex is not compatible at this time with org-mode. Despite this,
-emacs-freex is an impressive system for maintaining a wiki. Further, because the
-data is stored both in files on disk and in an SQLite database, it opens the
-possibility for implementing something like =org-brain='s visualize interface
-(ala TheBrain's "plex") by talking with SQLite, via Pymacs, to return the
-relationships between nodes. This would consistute a lot of work to implement
-but would be very impressive. If someone was to also add LaTeX rendering inside
-=emacs-freex= =nuggets= also, those two additional features would make
-=emacs-freex= more compelling. As it is, practically speaking, you may think of
-=org-brain= as implementing many of the features of =emacs-freex=, but with all
-of =org-mode='s goodness included.

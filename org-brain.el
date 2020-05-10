@@ -7,7 +7,7 @@
 ;; URL: http://github.com/Kungsgeten/org-brain
 ;; Keywords: outlines hypermedia
 ;; Package-Requires: ((emacs "25.1") (org "9.2"))
-;; Version: 0.91
+;; Version: 0.92
 
 ;;; Commentary:
 
@@ -79,6 +79,19 @@ Example: \"<--\" would add \"<--A\" in the example above."
   :type '(restricted-sexp :match-alternatives
            (integerp 't 'nil)))
 
+(defcustom org-brain-backlink-heading t
+  "If the org heading should be used when creating a backlink.
+
+Example: Creating a brain-link in A to B and A is an org file with the headings:
+* Parent header
+** Child
+[brain:linkToB]
+
+Setting this variable to t will create the following backlink in B:
+[[file:A.org::*Child][Parent header > Child]]."
+  :group 'org-brain
+  :type '(boolean))
+
 (make-obsolete-variable 'org-brain-suggest-stored-link-as-resource
                         "org-brain-suggest-stored-link-as-resource isn't needed because of `org-insert-link-global'."
                         "0.6")
@@ -107,25 +120,19 @@ Only headlines will be considered as entries when visualizing."
   :group 'org-brain
   :type '(boolean))
 
-(defcustom org-brain-file-from-input-function #'car
-  "Used when trying to get a file from user input.
-This function is called when the user input a file entry, or try
-to create a new entry, using `org-brain-choose-entries'.
+(make-obsolete-variable
+ 'org-brain-file-from-input-function
+ "`org-brain-default-file-parent' can be used as a better alternative."
+ "0.92")
 
-The function should return the file part of an entry. The
-function will be called with one argument: a list. The `car' of
-the argument is the file part of the entry input, while the
-`cadr' of the input is the headline part if one is specified.
-
-Example:
-
-   User input: \"programming::emacs\"
-   Function argument: (\"programming\" \"emacs\")
-
-   User input:  \"programming\"
-   Function argument: (\"programming\")"
+(defcustom org-brain-default-file-parent nil
+  "Where to store new entries with unspecified local parent.
+For instance if creating a new entry with `org-brain-visualize'.
+If nil, create the new entry as a file entry relative to `org-brain-path'.
+If set to a string it should be a file entry. That entry will be used as the
+local parent and the new entry will be a headline."
   :group 'org-brain
-  :type '(function))
+  :type '(choice string (const nil)))
 
 (defcustom org-brain-show-full-entry nil
   "Always show entire entry contents?"
@@ -290,6 +297,11 @@ Only applies to headline entries."
 
 (defcustom org-brain-exclude-siblings-tag "nosiblings"
   "`org-mode' tag which prevents the siblings of children of this node from being displayed."
+  :group 'org-brain
+  :type '(string))
+
+(defcustom org-brain-exclude-local-parent-tag "nolocalparent"
+  "`org-mode' tag which prevents this node to be displayed as a local parent."
   :group 'org-brain
   :type '(string))
 
@@ -529,6 +541,9 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 ;; If a string, then the entry is a file.
 ;; If a list, then the entry is a headline:
 ;; ("file entry" "headline title" "ID")
+;; There's also a special entry type: Nicknames
+;; In the case of headline nicknames the car of the list is a symbol (instead of a string)
+;; ('alias "headline title" "ID")
 
 (defvar org-brain--vis-entry nil
   "The last entry argument to `org-brain-visualize'.")
@@ -557,6 +572,16 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
   "Scan `org-brain-files' using `org-id-update-id-locations'."
   (interactive)
   (org-id-update-id-locations (org-brain-files)))
+
+;;;###autoload
+(defun org-brain-get-id ()
+  "Get ID of headline at point, creating one if it doesn't exist.
+Run `org-brain-new-entry-hook' if a new ID is created."
+  (interactive)
+  (or (org-id-get)
+      (progn
+        (run-hooks 'org-brain-new-entry-hook)
+        (org-id-get nil t))))
 
 ;;;###autoload
 (defun org-brain-switch-brain (directory)
@@ -637,19 +662,29 @@ Ignores \"dotfiles\"."
       (directory-files
        org-brain-path t (format "^[^.].*\\.%s$" org-brain-files-extension)))))
 
+(defvar org-brain-link-re
+  "\\[\\[\\(\\(?:[^][\\]\\|\\\\\\(?:\\\\\\\\\\)*[][]\\|\\\\+[^][]\\)+\\)]\\(?:\\[\\(\\(?:.\\|\\)+?\\)]\\)?]"
+  "Regex matching an `org-mode' link.
+The first match is the URI, the second is the (optional) desciption.
+
+This variable should be the same as `org-link-bracket-re'.
+However the implementation changed in `org-mode' 9.3 and
+the old `org-bracket-link-regexp' had different match groups.
+The purpose of `org-brain-link-re' is protection against future changes.")
+
 (defun org-brain-replace-links-with-visible-parts (raw-str)
   "Get RAW-STR with its links replaced by their descriptions."
   (let ((ret-str "")
         (start 0)
         match-start)
-    (while (setq match-start (string-match org-bracket-link-regexp raw-str start))
+    (while (setq match-start (string-match org-brain-link-re raw-str start))
       (setq ret-str
             (concat ret-str
                     ;; Include everything not part of the string.
                     (substring-no-properties raw-str start match-start)
                     ;; Include either the link description, or the link
                     ;; destination.
-                    (or (match-string-no-properties 3 raw-str)
+                    (or (match-string-no-properties 2 raw-str)
                         (match-string-no-properties 1 raw-str))))
       (setq start (match-end 0)))
     (concat ret-str (substring-no-properties raw-str start nil))))
@@ -672,8 +707,10 @@ visibility rendering/formatting in-buffer."
         (org-brain-replace-links-with-visible-parts (org-entry-get pom "ITEM"))
       (org-entry-get pom "ITEM"))))
 
-(defun org-brain--headline-entry-at-point ()
-  "Get headline entry at point."
+(defun org-brain--headline-entry-at-point (&optional create-id)
+  "Get headline entry at point.
+If CREATE-ID is non-nil, call `org-brain-get-id' first."
+  (if create-id (org-brain-get-id))
   (when-let ((id (org-entry-get (point) "ID")))
     (list (org-brain-path-entry-name buffer-file-name)
           (org-brain-headline-at (point)) id)))
@@ -698,8 +735,15 @@ Respect excluded entries."
     (when-let ((id (org-entry-get (point) "ID")))
       (list (org-brain-headline-at (point)) id))))
 
+(defun org-brain--nicknames-at-point ()
+  "Get  nicknames of the headline entry at point."
+  (when-let ((id (org-entry-get (point) "ID")))
+    (mapcar (lambda (nickname)
+              (list 'nickname nickname id))
+            (org-entry-get-multivalued-property (point) "NICKNAMES"))))
+
 (defun org-brain-headline-entries-in-file (file &optional no-temp-buffer)
-  "Get a list of all headline entries in FILE.
+  "Get a list of all headline (and nicknames) entries in FILE.
 If the entries are cached in `org-brain-headline-cache', get  them from there.
 Else the FILE is inserted in a temp buffer and get scanned for entries.
 If NO-TEMP-BUFFER is non-nil, run the scanning in the current buffer instead."
@@ -713,9 +757,11 @@ If NO-TEMP-BUFFER is non-nil, run the scanning in the current buffer instead."
               (insert-file-contents file nil nil nil 'replace)
               (cdr (puthash file (cons (file-attribute-modification-time
                                         (file-attributes file))
-                                       (mapcar (lambda (entry) (cons file-entry entry))
-                                               (remove nil (org-map-entries
-                                                            #'org-brain--name-and-id-at-point))))
+                                       (apply #'append
+                                              (mapcar (lambda (entry) (cons file-entry entry))
+                                                      (remove nil (org-map-entries
+                                                                   #'org-brain--name-and-id-at-point)))
+                                              (remove nil (org-map-entries #'org-brain--nicknames-at-point))))
                             org-brain-headline-cache)))
           (cdr cached)))
     (with-temp-buffer
@@ -723,14 +769,20 @@ If NO-TEMP-BUFFER is non-nil, run the scanning in the current buffer instead."
         (org-mode)
         (org-brain-headline-entries-in-file file t)))))
 
-(defun org-brain-headline-entries ()
-  "Get all org-brain headline entries."
+(defun org-brain-headline-entries (&optional include-nicknames)
+  "Get all org-brain headline entries.
+INCLUDE-NICKNAMES also return duplicates for headlines with NICKNAMES property."
   (with-temp-buffer
     (delay-mode-hooks
       (org-mode)
       (apply #'append
              (mapcar
-              (lambda (file) (org-brain-headline-entries-in-file file t))
+              (lambda (file)
+                (seq-filter
+                 (if include-nicknames
+                     #'identity
+                   (lambda (x) (stringp (car x))))
+                 (org-brain-headline-entries-in-file file t)))
               (org-brain-files))))))
 
 (defun org-brain-entry-from-id (id)
@@ -749,16 +801,17 @@ If ENTRY is file, then the identifier is the relative file name."
       (org-entry-protect-space entry)
     (nth 2 entry)))
 
-(defun org-brain-entry-at-pt ()
+(defun org-brain-entry-at-pt (&optional create-id)
   "Get current org-brain entry.
 In `org-mode' this is the current headline, or the file.
-In `org-brain-visualize' just return `org-brain--vis-entry'."
+In `org-brain-visualize' just return `org-brain--vis-entry'.
+CREATE-ID creates an ID of the headline at point if  there isn't  one already."
   (cond ((eq major-mode 'org-mode)
          (unless (string-prefix-p (expand-file-name org-brain-path)
                                   (expand-file-name (buffer-file-name)))
            (error "Not in a brain file"))
          (if (ignore-errors (org-get-heading))
-             (or (org-brain--headline-entry-at-point)
+             (or (org-brain--headline-entry-at-point create-id)
                  (error "Current headline has no ID"))
            (if org-brain-include-file-entries
                (org-brain-path-entry-name (buffer-file-name))
@@ -784,7 +837,8 @@ In `org-brain-visualize' just return `org-brain--vis-entry'."
     (org-element-parse-buffer)))
 
 (defun org-brain--file-targets (file)
-  "Return alist of (name . entry-id) for all entries (including the file) in FILE.
+  "Return alist of (name . entry-id) for all entries in FILE.
+The list also includes nicknames from the NICKNAMES keyword/properties.
 Should only be used in a temp-buffer."
   (let* ((file-relative (org-brain-path-entry-name file))
          (file-entry-name (org-brain-entry-name file-relative)))
@@ -792,7 +846,13 @@ Should only be used in a temp-buffer."
      nil
      (append
       (when org-brain-include-file-entries
-        (list (cons file-entry-name file-relative)))
+        (apply
+         #'append
+         (list (cons file-entry-name file-relative))
+         (mapcar (lambda (x)
+                   (list (cons (org-entry-restore-space x) file-relative)))
+                 (when-let ((nicknames (assoc "NICKNAMES" (org-brain-keywords file-relative))))
+                   (split-string (cdr nicknames) " " t)))))
       (mapcar
        (lambda (x)
          (cons (format org-brain-headline-entry-name-format-string
@@ -818,15 +878,64 @@ affect the fetched targets."
   "A version of `completing-read' which is tailored to `org-brain-completion-system'"
   (cond
    ((eq org-brain-completion-system 'ido)
-	(ido-completing-read prompt choices predicate require-match initial-input hist def inherit-input))
+    (ido-completing-read prompt choices predicate require-match initial-input hist def inherit-input))
    ((eq org-brain-completion-system 'ivy)
-	(ivy-completing-read prompt choices predicate require-match initial-input hist def inherit-input))
+    (ivy-completing-read prompt choices predicate require-match initial-input hist def inherit-input))
    ((eq org-brain-completion-system 'helm)
-	(helm-completing-read-default-1 prompt choices predicate require-match initial-input hist def inherit-input "org-brain" "*org-brain-helm*"))
+    (helm-completing-read-default-1 prompt choices predicate require-match initial-input hist def inherit-input "org-brain" "*org-brain-helm*"))
    ((eq org-brain-completion-system 'default)
-	(completing-read prompt choices predicate require-match initial-input hist def inherit-input))
+    (completing-read prompt choices predicate require-match initial-input hist def inherit-input))
    (t
-	(funcall org-brain-completion-system prompt choices))))
+    (funcall org-brain-completion-system prompt choices))))
+
+(defun org-brain-get-entry-from-title (title &optional targets)
+  "Search for TITLE in TARGETS and return an entry. Create it if non-existing.
+TARGETS is an alist of (title . entry-id).
+If TARGETS is nil then use `org-brain--all-targets'."
+  (unless org-id-locations (org-id-locations-load))
+  (let* ((targets (or targets (org-brain--all-targets)))
+         (id (or (cdr (assoc title targets)) title)))
+    (or
+     ;; Headline entry exists, return it
+     (org-brain-entry-from-id id)
+     ;; File entry
+     (progn
+       (setq id (split-string id "::" t))
+       (let* ((entry-path (org-brain-entry-path (car id) t))
+              (entry-file (org-brain-path-entry-name entry-path)))
+         (unless (file-exists-p entry-path)
+           (if (and org-brain-default-file-parent (equal (length id) 1))
+               (setq entry-file org-brain-default-file-parent
+                     id `(,org-brain-default-file-parent ,(car id)))
+             (make-directory (file-name-directory entry-path) t)
+             (write-region "" nil entry-path)))
+         (if (or (not org-brain-include-file-entries)
+                 (equal (length id) 2)
+                 (not (equal (car id) entry-file)))
+             ;; Create new headline entry in file
+             (org-with-point-at (org-brain-entry-marker entry-file)
+               (if (and (not org-brain-include-file-entries)
+                        (or
+                         ;; Search heading without tags
+                         (save-excursion
+                           (re-search-forward (concat "\n\\* +" (regexp-quote (car id)) "[ \t]*$") nil t))
+                         ;; Search heading with tags
+                         (save-excursion
+                           (re-search-forward (concat "\n\\* +" (regexp-quote (car id)) "[ \t]+:.*:$") nil t))))
+                   (org-brain-entry-at-pt)
+                 (goto-char (point-max))
+                 (insert (concat "\n* " (or (cadr id) (car id))))
+                 (let ((new-id (org-brain-get-id)))
+                   (save-buffer)
+                   (list entry-file (or (cadr id) (car id)) new-id))))
+           entry-file))))))
+
+;;;###autoload
+(defun org-brain-add-entry (title)
+  "Add a new entry named TITLE."
+  (interactive "sNew entry: ")
+  (message "Added new entry: '%s'"
+           (org-brain-entry-name (org-brain-get-entry-from-title title))))
 
 (defun org-brain-choose-entries (prompt entries &optional predicate require-match initial-input hist def inherit-input-method)
   "PROMPT for one or more ENTRIES, separated by `org-brain-entry-separator'.
@@ -834,8 +943,8 @@ ENTRIES can be a list, or 'all which lists all headline and file entries.
 Return the prompted entries in a list.
 Very similar to `org-brain-choose-entry', but can return several entries.
 
-For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD see `completing-read'."
-  (unless org-id-locations (org-id-locations-load))
+For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and
+INHERIT-INPUT-METHOD see `completing-read'."
   (let* ((targets (if (eq entries 'all)
                       (org-brain--all-targets)
                     (mapcar (lambda (x)
@@ -845,44 +954,8 @@ For PREDICATE, REQUIRE-MATCH, INITIAL-INPUT, HIST, DEF and INHERIT-INPUT-METOD s
                                       (nth 2 x))))
                             entries)))
          (choices (org-brain-completing-read prompt targets
-                                   predicate require-match initial-input hist def inherit-input-method)))
-    (mapcar (lambda (title)
-              (let ((id (or (cdr (assoc title targets))
-                            title)))
-                (or
-                 ;; Headline entry exists, return it
-                 (org-brain-entry-from-id id)
-                 ;; File entry
-                 (progn
-                   (setq id (split-string id "::" t))
-                   (let* ((entry-path (org-brain-entry-path
-                                       (funcall org-brain-file-from-input-function id)
-                                       t))
-                          (entry-file (org-brain-path-entry-name entry-path)))
-                     (unless (file-exists-p entry-path)
-                       (make-directory (file-name-directory entry-path) t)
-                       (write-region "" nil entry-path))
-                     (if (or (not org-brain-include-file-entries)
-                             (equal (length id) 2)
-                             (not (equal (car id) entry-file)))
-                         ;; Create new headline entry in file
-                         (org-with-point-at (org-brain-entry-marker entry-file)
-                           (if (and (not org-brain-include-file-entries)
-                                    (or
-                                     ;; Search heading without tags
-                                     (save-excursion
-                                       (re-search-forward (concat "\n\\* +" (car id) "[ \t]*$") nil t))
-                                     ;; Search heading with tags
-                                     (save-excursion
-                                       (re-search-forward (concat "\n\\* +" (car id) "[ \t]+:.*:$") nil t))))
-                               (org-brain-entry-at-pt)
-                             (goto-char (point-max))
-                             (insert (concat "\n* " (or (cadr id) (car id))))
-                             (let ((new-id (org-id-get-create)))
-                               (run-hooks 'org-brain-new-entry-hook)
-                               (save-buffer)
-                               (list entry-file (or (cadr id) (car id)) new-id))))
-                       entry-file))))))
+                                             predicate require-match initial-input hist def inherit-input-method)))
+    (mapcar (lambda (title) (org-brain-get-entry-from-title title targets))
             (if org-brain-entry-separator
                 (split-string choices org-brain-entry-separator)
               (list choices)))))
@@ -1041,7 +1114,10 @@ Often you want the siblings too, then use `org-brain-siblings' instead."
                 (if (and (org-up-heading-safe)
                          (org-entry-get nil "ID"))
                     (org-brain-entry-from-id (org-entry-get nil "ID"))
-                  (when org-brain-include-file-entries (car entry)))))))
+                  (when (and org-brain-include-file-entries
+                             (not (member org-brain-exclude-local-parent-tag
+                                          (org-brain-get-tags (car entry)))))
+                    (car entry)))))))
       (list parent)))
 
 (defun org-brain-children (entry)
@@ -1182,7 +1258,7 @@ The car is the raw-link and the cdr is the description."
   "Choose and open a resource from ENTRY.
 If run with `\\[universal-argument]' then also choose from descendants of ENTRY.
 Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
-  (interactive (list (or (ignore-errors (org-brain-entry-at-pt))
+  (interactive (list (or (ignore-errors (org-brain-entry-at-pt t))
                          (org-brain-choose-entry "Resource from: " 'all))))
   (org-open-link-from-string (org-brain--choose-resource
                               (if current-prefix-arg
@@ -1258,7 +1334,7 @@ PROPERTY could for instance be `org-brain-children-property-name'."
         (goto-char (point-min))
         (re-search-forward (concat "^#\\+" org-brain-children-property-name ":.*$"))
         (beginning-of-line)
-        (re-search-forward (concat " " (org-brain-entry-identifier child)))
+        (re-search-forward (concat " " (regexp-quote (org-brain-entry-identifier child))))
         (replace-match "")
         (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-children-property-name ":[[:space:]]*$"))
         (org-brain-remove-line-if-matching "^[[:space:]]*$")
@@ -1273,7 +1349,7 @@ PROPERTY could for instance be `org-brain-children-property-name'."
         (goto-char (point-min))
         (re-search-forward (concat "^#\\+" org-brain-parents-property-name ":.*$"))
         (beginning-of-line)
-        (re-search-forward (concat " " (org-brain-entry-identifier parent)))
+        (re-search-forward (concat " " (regexp-quote (org-brain-entry-identifier parent))))
         (replace-match "")
         (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-parents-property-name ":[[:space:]]*$"))
         (org-brain-remove-line-if-matching "^[[:space:]]*$")
@@ -1296,7 +1372,7 @@ Several children can be added, by using `org-brain-entry-separator'.
 If VERBOSE is non-nil then display a message."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))
+                       (org-brain-entry-at-pt t))
                      (org-brain-choose-entries "Add child: " 'all)
                      t))
   (dolist (child-entry children)
@@ -1315,7 +1391,7 @@ Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY.
 If VERBOSE is non-nil then display a message."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))
+                       (org-brain-entry-at-pt t))
                      (read-string "Add child headline: ")
                      t))
   (dolist (child-name (split-string child-names org-brain-entry-separator))
@@ -1327,8 +1403,7 @@ If VERBOSE is non-nil then display a message."
           (goto-char (org-brain-first-headline-position))
           (open-line 1)
           (insert (concat "* " child-name))
-          (org-id-get-create)
-          (run-hooks 'org-brain-new-entry-hook)
+          (org-brain-get-id)
           (save-buffer))
       ;; Headline entry
       (org-with-point-at (org-brain-entry-marker entry)
@@ -1338,8 +1413,7 @@ If VERBOSE is non-nil then display a message."
         (org-insert-heading nil t)
         (org-do-demote)
         (insert child-name)
-        (org-id-get-create)
-        (run-hooks 'org-brain-new-entry-hook)
+        (org-brain-get-id)
         (save-buffer)))
     (if verbose (message "Added '%s' as a child of '%s'."
                          child-name
@@ -1389,7 +1463,7 @@ Several parents can be added, by using `org-brain-entry-separator'.
 If VERBOSE is non-nil then display a message."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))
+                       (org-brain-entry-at-pt t))
                      (org-brain-choose-entries "Add parent: " 'all)
                      t))
   (dolist (parent parents)
@@ -1419,8 +1493,13 @@ Using `\\[universal-argument]' will use `org-brain-button-at-point' as ENTRY."
                                                               (org-brain-title entry))
                                                       linked-parents))))
           (org-brain-remove-relationship parent (org-brain-change-local-parent entry new-parent))
-        (error "%s is %s's only parent, it can't be removed"
-               (org-brain-title parent) (org-brain-title entry)))
+        (if (and org-brain-default-file-parent
+                 (y-or-n-p (format "%s has no more parents, move it to %s? "
+                                   (org-brain-title entry) org-brain-default-file-parent)))
+            (org-brain-remove-relationship
+             parent (org-brain-change-local-parent entry org-brain-default-file-parent))
+          (error "%s is %s's only parent, it can't be removed"
+                 (org-brain-title parent) (org-brain-title entry))))
     (org-brain-remove-relationship parent entry))
   (if verbose (message "'%s' is no longer a parent of '%s'."
                        (org-brain-entry-name parent)
@@ -1461,7 +1540,7 @@ Several friends can be added, by using `org-brain-entry-separator'.
 If VERBOSE is non-nil then display a message."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))
+                       (org-brain-entry-at-pt t))
                      (org-brain-choose-entries "Add friend: " 'all)
                      t))
   (dolist (friend-entry friends)
@@ -1493,7 +1572,7 @@ If VERBOSE is non-nil then display a message."
           (goto-char (point-min))
           (re-search-forward (concat "^#\\+" org-brain-friends-property-name ":.*$"))
           (beginning-of-line)
-          (re-search-forward (concat " " (org-brain-entry-identifier entry2)))
+          (re-search-forward (concat " " (regexp-quote (org-brain-entry-identifier entry2))))
           (replace-match "")
           (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-friends-property-name ":[[:space:]]*$"))
           (org-brain-remove-line-if-matching "^[[:space:]]*$")
@@ -1518,8 +1597,8 @@ If ENTRY isn't specified, ask for the ENTRY.
 Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the entry."
   (interactive)
   (org-brain-stop-wandering)
-  (unless entry (setq entry (org-brain-choose-entry "Goto entry: " 'all nil t)))
-  (when org-brain-quit-after-goto
+  (unless entry (setq entry (org-brain-choose-entry "Goto entry: " 'all)))
+  (when (and org-brain-quit-after-goto (eq 'major-mode 'org-brain-visualize-mode))
     (org-brain-visualize-quit))
   (let ((marker (org-brain-entry-marker entry)))
     (apply (or goto-file-func #'pop-to-buffer-same-window)
@@ -1629,7 +1708,7 @@ After refiling, all headlines will be given an id."
   (let ((org-refile-targets `((org-brain-files . (:maxlevel . ,max-level))))
         (org-after-refile-insert-hook org-after-refile-insert-hook))
     (add-hook 'org-after-refile-insert-hook
-              (lambda () (org-map-tree 'org-id-get-create)))
+              (lambda () (org-map-tree 'org-brain-get-id)))
     (if (eq major-mode 'org-brain-visualize-mode)
         (if (org-brain-filep org-brain--vis-entry)
             (user-error "Only headline entries can be refiled")
@@ -1697,7 +1776,7 @@ If PARENT is not supplied, it is prompted for
 among the list of ENTRY's linked parents.
 Returns the new refiled entry."
   (interactive)
-  (unless entry (setq entry (org-brain-entry-at-pt)))
+  (unless entry (setq entry (org-brain-entry-at-pt t)))
   (unless parent (let ((linked-parents (org-brain--linked-property-entries entry org-brain-parents-property-name)))
                    (cl-case (length linked-parents)
                      (0 (error "Entry \"%s\" has only one parent" (org-brain-title entry)))
@@ -1824,7 +1903,7 @@ If run interactively, get ENTRY from context.
 Normally the list is inserted at point, but if RECURSIVE is t
 insert at end of ENTRY.  Then recurse in the local (grand)children
 of ENTRY and insert there too."
-  (interactive (list (org-brain-entry-at-pt)))
+  (interactive (list (org-brain-entry-at-pt t)))
   (cl-flet ((list-to-items
              (list)
              (when list
@@ -1859,7 +1938,7 @@ of ENTRY and insert there too."
 If run interactively, get ENTRY from context.
 Before archiving, recursively run `org-brain-insert-relationships' on ENTRY.
 Remove external relationships from ENTRY, in order to clean up the brain."
-  (interactive (list (org-brain-entry-at-pt)))
+  (interactive (list (org-brain-entry-at-pt t)))
   (when (org-brain-filep entry)
     (user-error "Only headline entries can be archived"))
   (org-brain-insert-relationships entry t)
@@ -1880,7 +1959,7 @@ If STATUS is positive, pin the entry.  If negative, remove the pin.
 If STATUS is omitted, toggle between pinned / not pinned."
   (interactive (list (if current-prefix-arg
                          (car (org-brain-button-at-point))
-                       (org-brain-entry-at-pt))))
+                       (org-brain-entry-at-pt t))))
   (cond ((eq status nil)
          (if (member entry org-brain-pins)
              (org-brain-pin entry -1)
@@ -2015,7 +2094,7 @@ Ignores selected entries that are not friends of ENTRY."
   "Set the name of ENTRY to TITLE.
 If run interactively, get ENTRY from context and prompt for TITLE."
   (interactive
-   (let* ((entry-at-pt (org-brain-entry-at-pt))
+   (let* ((entry-at-pt (org-brain-entry-at-pt t))
           (new-title (org-brain-title entry-at-pt)))
      (when (equal (length new-title) 0)
        (error "Title must be at least 1 character"))
@@ -2042,7 +2121,7 @@ If run interactively, get ENTRY from context and prompt for TITLE."
 Use `org-set-tags-command' on headline ENTRY.
 Instead sets #+FILETAGS on file ENTRY.
 If run interactively, get ENTRY from context."
-  (interactive (list (org-brain-entry-at-pt)))
+  (interactive (list (org-brain-entry-at-pt t)))
   (if (org-brain-filep entry)
       (org-with-point-at (org-brain-entry-marker entry)
         (let ((tag-str (read-string "FILETAGS: "
@@ -2064,6 +2143,24 @@ If run interactively, get ENTRY from context."
       (org-set-tags-command)
       (save-buffer)))
   (org-brain--revert-if-visualizing))
+
+;;;###autoload
+(defun org-brain-add-nickname (entry nickname)
+  "ENTRY gets a new NICKNAME.
+If run interactively use `org-brain-entry-at-pt' and prompt for NICKNAME."
+  (interactive (list (org-brain-entry-at-pt)
+                     (read-string "Nickname: ")))
+  (if (org-brain-filep entry)
+      (let ((nickname (org-entry-protect-space nickname)))
+        (org-with-point-at (org-brain-entry-marker entry)
+          (goto-char (point-min))
+          (if (re-search-forward "^#\\+NICKNAMES:.*$" nil t)
+              (insert (concat " " nickname))
+            (insert (format "#+NICKNAMES: %s\n" nickname)))
+          (save-buffer)))
+    (org-entry-add-to-multivalued-property
+     (org-brain-entry-marker entry) "NICKNAMES" nickname)
+    (org-save-all-org-buffers)))
 
 ;;;###autoload
 (defun org-brain-headline-to-file (entry)
@@ -2122,6 +2219,17 @@ If interactive, also prompt for ENTRY."
       (when (member entry org-brain-pins)
         (org-brain-pin entry -1)
         (org-brain-pin new-entry 1)))))
+
+;;;###autoload
+(defun org-brain-ensure-ids-in-buffer ()
+  "Run `org-brain-get-id' on all headlines in current buffer.
+Only works if in an `org-mode' buffer inside `org-brain-path'.
+Suitable for use with `before-save-hook'."
+  (interactive)
+  (and (eq major-mode 'org-mode)
+       (string-prefix-p (expand-file-name org-brain-path)
+                        (expand-file-name (buffer-file-name)))
+       (org-map-entries #'org-brain-get-id t 'file)))
 
 ;;;###autoload
 (defun org-brain-agenda ()
@@ -2273,9 +2381,9 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
       (when org-brain--visualize-follow
         (org-brain-goto-current)
         (run-hooks 'org-brain-visualize-follow-hook))
-      (if org-brain-open-same-window
-	  (pop-to-buffer "*org-brain*")
-	(pop-to-buffer-same-window "*org-brain*")))))
+      (if (or org-brain--visualize-follow org-brain-open-same-window)
+          (pop-to-buffer "*org-brain*")
+        (pop-to-buffer-same-window "*org-brain*")))))
 
 ;;;###autoload
 (defun org-brain-visualize-entry-at-pt ()
@@ -2405,7 +2513,7 @@ CATEGORY is used to set the `brain-category` text property."
   (insert-text-button
    (or (cdr resource) (car resource))
    'action (lambda (_x)
-             (org-open-link-from-string (car resource)))
+             (org-open-link-from-string (format "[[%s]]" (car resource))))
    'follow-link t
    'aa2u-text t))
 
@@ -2635,6 +2743,7 @@ point before the buffer was reverted."
 (define-key org-brain-visualize-mode-map "*" 'org-brain-add-child-headline)
 (define-key org-brain-visualize-mode-map "h" 'org-brain-add-child-headline)
 (define-key org-brain-visualize-mode-map "n" 'org-brain-pin)
+(define-key org-brain-visualize-mode-map "N" 'org-brain-add-nickname)
 (define-key org-brain-visualize-mode-map "t" 'org-brain-set-title)
 (define-key org-brain-visualize-mode-map "j" 'forward-button)
 (define-key org-brain-visualize-mode-map "k" 'backward-button)
@@ -2949,7 +3058,7 @@ Return the position of ENTRY in the buffer."
   (insert "FRIENDS:")
   (dolist (friend (sort (org-brain-friends entry) org-brain-visualize-sort-function))
     (insert "  ")
-    (org-brain-insert-visualize-button friend 'org-brain-friend (if (> max-level 0) 'stranger 'friend)))
+    (org-brain-insert-visualize-button friend 'org-brain-friend 'friend))
   (insert "\n\n")
   (let ((indent (1- (org-brain-tree-depth (org-brain-recursive-parents entry parent-max-level))))
         (entry-pos))
@@ -3046,13 +3155,26 @@ LINK-TYPE will be \"brain\" by default."
                         (org-brain-title entry))
                 nil choice)
              (org-brain-add-resource
-              (concat "file:" (file-relative-name
+              (cl-concatenate 'string
+                              "file:"
+                              (file-relative-name
                                (buffer-file-name)
-                               (file-name-directory (org-brain-entry-path choice))))
+                               (file-name-directory (org-brain-entry-path choice)))
+                              (if-let ((outline-path
+                                        (and org-brain-backlink-heading
+                                             (ignore-errors (org-get-outline-path t)))))
+                                  (concat "::* " (nth 0 (last outline-path)))))
               (concat (and (stringp org-brain-backlink) org-brain-backlink)
-                      (file-name-base))
+		      (if (and org-brain-backlink-heading
+                               (ignore-errors (org-get-outline-path t)))
+                          (string-join (org-get-outline-path t) " > ")
+                        (file-name-base)))
               nil choice))))
-    (concat link-type ":" (if (org-brain-filep choice) choice (nth 2 choice)))))
+    (let ((link (concat link-type ":"
+                        (if (org-brain-filep choice) choice (nth 2 choice)))))
+      (push link org-link--insert-history)
+      (push `(,link ,(org-brain-title choice)) org-stored-links)
+      link)))
 
 (defun org-brain-link-store ()
   "Store a brain: type link from an `org-brain-visualize-mode' buffer."
