@@ -221,6 +221,12 @@ among entries.
 
 * Usage
 
+You can create new entries by =M-x org-brain-visualize= and then typing the name
+of a non-existing entry. You could also use =M-x org-brain-add-entry= if you do
+not want to visualize the new entry. Also commands which add children, parents
+and friends, or links to entries, can create new entries in the same way. Se
+/General information/ below.
+
 If you find that =org-brain= is missing entries, or list entries which doesn't
 exist, try using =M-x org-brain-update-id-locations=, which syncs the
 =org-brain= entries with the =org-id= caching system.
