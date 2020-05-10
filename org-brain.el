@@ -2795,6 +2795,14 @@ point before the buffer was reverted."
 
 (define-key org-brain-visualize-mode-map "M" 'org-brain-move-map)
 
+(let ((map (define-prefix-command 'org-brain-prefix-map)))
+  (set-keymap-parent map org-brain-visualize-mode-map)
+  (mapc (lambda (x) (define-key map x nil))
+        '("j" "k" "g" [?\t] [backtab] "o" "b" "u" "V" "T" "q"
+          "m" "+" "-" "z" "Z" "e" "?" "\C-c\C-w" "\C-c\C-x\C-v"
+          "" " " "<" ">" "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"
+          [33554464])))
+
 ;;;;; Drawing helpers
 
 (defun org-brain--vis-pinned ()

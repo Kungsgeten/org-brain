@@ -96,6 +96,7 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
     (with-eval-after-load 'evil
       (evil-set-initial-state 'org-brain-visualize-mode 'emacs))
     :config
+    (bind-key "C-c b" 'org-brain-prefix-map org-mode-map)
     (setq org-id-track-globally t)
     (setq org-id-locations-file "~/.emacs.d/.org-id-locations")
     (add-hook 'before-save-hook #'org-brain-ensure-ids-in-buffer)
@@ -124,25 +125,28 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
    comfortable way to do this is with the command
    =org-brain-ensure-ids-in-buffer=. Even more comfortable is to add that to
    =before-save-hook=, so that it runs when saving.
-5. You might want to add information at the end of an entry, without visiting
+5. =org-brain-prefix-map= can be bound to a key to make =org-brain= commands more
+   accessable if you edit entries from =org-mode=. See /Editing from org-mode/ under
+   /Usage/ below.
+6. You might want to add information at the end of an entry, without visiting
    the file. A way to do this is to use a [[http://orgmode.org/manual/Capture.html][capture]] template, such as the one
    presented above.
-6. If you have a lot of entries, it might take some time to gather information
+7. If you have a lot of entries, it might take some time to gather information
    about all entries when using =org-brain-visualize=. You could change the
    value of =org-brain-visualize-default-choices= (which is ='all= by default)
    to only include files, or even just files in the direct root of
    =org-brain-path=.
-7. If you feel that =org-brain-visualize= is too cluttered, you may want to set
+8. If you feel that =org-brain-visualize= is too cluttered, you may want to set
    =org-brain-show-resources= and/or =org-brain-show-text= to =nil=.
-8. If you have very long entry names, =org-brain-visualize= may take a lot of
+9. If you have very long entry names, =org-brain-visualize= may take a lot of
    horizontal space. You can cap the shown length of entry titles, by setting
    =org-brain-title-max-length=.
-9. Some users find it confusing having both /headline/ entries and /file/ entries
-   (see below). It may be preferable to only use headline entries, by setting
-   =org-brain-include-file-entries= to =nil=. If doing this, you should probably
-   also set =org-brain-file-entries-use-title= to =nil=. Another possibility is if
-   you're only using file entries, in which case you can set
-   =org-brain-scan-for-header-entries= to =nil=.
+10. Some users find it confusing having both /headline/ entries and /file/ entries
+    (see below). It may be preferable to only use headline entries, by setting
+    =org-brain-include-file-entries= to =nil=. If doing this, you should probably
+    also set =org-brain-file-entries-use-title= to =nil=. Another possibility is if
+    you're only using file entries, in which case you can set
+    =org-brain-scan-for-header-entries= to =nil=.
 
 ** Category icons
 
@@ -335,6 +339,12 @@ Most of the commands available in =org-brain-visualize= can also be used in
 other words you can use =M-x org-brain-add-child= directly from =org-mode= in
 order to add a child to the =org-brain= entry at point. You may also want to use
 the commands =org-brain-goto-<relationsship>= to navigate between entries.
+
+Most of the commands available in =org-brain-visualize-mode= is also bound to the
+prefix keymap =org-brain-prefix-map=. You can bind this to a key in =org-mode=, for
+instance =C-c b=, and you could then type =C-c b p= to add a parent to the current
+entry. Example config: =(define-key org-mode-map (kbd "C-c b")
+'org-brain-prefix-map)=.
 
 You may want to create a link to an =org-brain= entry in an =org-mode= file (not
 necessarily an =org-brain= file itself). =org-brain= provides several link types
