@@ -875,18 +875,15 @@ affect the fetched targets."
             (org-brain-files t))))
 
 (defun org-brain-completing-read (prompt choices &optional predicate require-match initial-input hist def inherit-input)
-  "A version of `completing-read' which is tailored to `org-brain-completion-system'"
-  (cond
-   ((eq org-brain-completion-system 'ido)
-    (ido-completing-read prompt choices predicate require-match initial-input hist def inherit-input))
-   ((eq org-brain-completion-system 'ivy)
-    (ivy-completing-read prompt choices predicate require-match initial-input hist def inherit-input))
-   ((eq org-brain-completion-system 'helm)
-    (helm-completing-read-default-1 prompt choices predicate require-match initial-input hist def inherit-input "org-brain" "*org-brain-helm*"))
-   ((eq org-brain-completion-system 'default)
-    (completing-read prompt choices predicate require-match initial-input hist def inherit-input))
-   (t
-    (funcall org-brain-completion-system prompt choices))))
+  "A version of `completing-read' which is tailored to `org-brain-completion-system'."
+  (let ((args (list prompt choices predicate require-match initial-input hist def inherit-input)))
+    (or (pcase org-brain-completion-system
+          ('default (apply #'completing-read args))
+          ('ido (apply #'ido-completing-read args))
+          ('ivy (apply #'ivy-completing-read args))
+          ('helm (apply #'helm-completing-read-default-1
+                        (append args '("org-brain" "*org-brain-helm*")))))
+        (funcall org-brain-completion-system prompt choices))))
 
 (defun org-brain-get-entry-from-title (title &optional targets)
   "Search for TITLE in TARGETS and return an entry. Create it if non-existing.
