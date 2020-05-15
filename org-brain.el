@@ -3199,6 +3199,7 @@ LINK-TYPE will be \"brain\" by default."
         (push link org-insert-link-history)
         (push link org-link--insert-history)
         )
+      (if (version< (org-release) "9.3")
       (push `(,link ,(org-brain-title choice)) org-stored-links)
       link)))
 
