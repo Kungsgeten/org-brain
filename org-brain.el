@@ -3195,7 +3195,10 @@ LINK-TYPE will be \"brain\" by default."
               nil choice))))
     (let ((link (concat link-type ":"
                         (if (org-brain-filep choice) choice (nth 2 choice)))))
-      (push link org-link--insert-history)
+      (if (version-list-< (version-to-list (org-release)) '(9 3))
+        (push link org-insert-link-history)
+        (push link org-link--insert-history)
+        )
       (push `(,link ,(org-brain-title choice)) org-stored-links)
       link)))
 
