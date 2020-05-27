@@ -803,19 +803,36 @@ If ENTRY is file, then the identifier is the relative file name."
 
 (defun org-brain-entry-at-pt (&optional create-id)
   "Get current org-brain entry.
-In `org-mode' this is the current headline, or the file.
-In `org-brain-visualize' just return `org-brain--vis-entry'.
-CREATE-ID creates an ID of the headline at point if  there isn't  one already."
+CREATE-ID asks to create an ID öif  there isn't  one already."
   (cond ((eq major-mode 'org-mode)
          (unless (string-prefix-p (expand-file-name org-brain-path)
                                   (expand-file-name (buffer-file-name)))
            (error "Not in a brain file"))
-         (if (ignore-errors (org-get-heading))
-             (or (org-brain--headline-entry-at-point create-id)
-                 (error "Current headline has no ID"))
-           (if org-brain-include-file-entries
-               (org-brain-path-entry-name (buffer-file-name))
-             (error "Not under an org headline, and org-brain-include-file-entries is nil"))))
+         (if org-brain-scan-for-header-entries
+             (if (ignore-errors (org-get-heading))
+                 (or (org-brain--headline-entry-at-point)
+                     (when create-id
+                       (let ((closest-parent
+                              (save-excursion
+                                (let ((e))
+                                  (while (and (not e) (org-up-heading-safe))
+                                    (setq e (org-brain--headline-entry-at-point)))
+                                  (or e
+                                      (when org-brain-include-file-entries
+                                        (org-brain-path-entry-name (buffer-file-name))))))))
+                         (if (y-or-n-p
+                              (format "'%s' has no ID, create one%s? "
+                                      (org-brain-headline-at)
+                                      (if closest-parent
+                                          (format " [else use local parent '%s']"
+                                                  (org-brain-title closest-parent))
+                                        "")))
+                             (org-brain--headline-entry-at-point t)
+                           (or (org-brain-entry-at-pt) (error "No entry at pt"))))))
+               (if org-brain-include-file-entries
+                   (org-brain-path-entry-name (buffer-file-name))
+                 (error "Not under an org headline, and org-brain-include-file-entries is nil")))
+           (org-brain-path-entry-name (buffer-file-name))))
         ((eq major-mode 'org-brain-visualize-mode)
          org-brain--vis-entry)
         (t
@@ -2557,10 +2574,12 @@ If PROMPT is non nil, let user edit the resource even if run non-interactively."
                      (setq link (match-string 1 link))))
                  (setq description (read-string "Link description: " description)))
                (concat "- " (org-make-link-string link description)))
-           (when-let ((l (with-temp-buffer
-                           (org-insert-link-global)
-                           (buffer-string))))
-             (concat "- " l)))))
+           (let ((bfn (buffer-file-name)))
+             (when-let ((l (with-temp-buffer
+                             (let ((buffer-file-name bfn))
+                               (org-insert-link-global)
+                               (buffer-string)))))
+               (concat "- " l))))))
     (if (org-brain-filep entry)
         ;; File entry
         (org-with-point-at (org-brain-entry-marker entry)
@@ -3162,8 +3181,14 @@ Return the position of ENTRY in the buffer."
   "Create an org-link target string to a file in `org-brain-path'.
 LINK-TYPE will be \"brain\" by default."
   (setq link-type (or link-type "brain"))
-  (let ((entry (ignore-errors (org-brain-entry-at-pt)))
-        (choice (org-brain-choose-entry "Entry: " 'all)))
+  (let* ((entry (ignore-errors (org-brain-entry-at-pt t)))
+         (choice (if (and (not entry)
+                          (member link-type
+                                  (list org-brain-child-link-name
+                                        org-brain-parent-link-name
+                                        org-brain-friend-link-name)))
+                     (error "No entry  at point")
+                   (org-brain-choose-entry "Entry: " 'all))))
     (cond ((string-equal link-type org-brain-child-link-name)
            (org-brain-add-relationship entry choice))
           ((string-equal link-type org-brain-parent-link-name)
