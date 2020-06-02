@@ -1245,14 +1245,18 @@ A link can be either an org link or an org attachment.
 The car is the raw-link and the cdr is the description."
   (let ((links
          (delete-dups
-          (org-element-map (org-brain-entry-data entry) 'link
-            (lambda (link)
-              (unless (member (org-element-property :type link)
-                              org-brain-ignored-resource-links)
-                (cons (org-element-property :raw-link link)
-                      (when-let ((desc (car (org-element-contents link))))
-                        (replace-regexp-in-string "[ \t\n\r]+" " " desc)))))
-            nil nil t))))
+          (with-temp-buffer
+            (insert-file-contents (org-brain-entry-path entry))
+            (org-element-map (org-brain-entry-data entry) 'link
+              (lambda (link)
+                (unless (member (org-element-property :type link)
+                                org-brain-ignored-resource-links)
+                  (cons (org-element-property :raw-link link)
+                        (when-let ((beg (org-element-property :contents-begin link))
+                                   (end (org-element-property :contents-end link)))
+                          (replace-regexp-in-string
+                           "[ \t\n\r]+" " " (buffer-substring beg end))))))
+              nil nil t)))))
     (if (org-brain-filep entry)
         links
       ;; Headline entry
