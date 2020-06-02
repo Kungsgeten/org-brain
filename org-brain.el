@@ -1246,7 +1246,7 @@ The car is the raw-link and the cdr is the description."
   (let ((links
          (delete-dups
           (with-temp-buffer
-            (insert-file-contents (org-brain-entry-path entry))
+            (insert (org-brain-text entry t))
             (org-element-map (org-brain-entry-data entry) 'link
               (lambda (link)
                 (unless (member (org-element-property :type link)
