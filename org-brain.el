@@ -3026,7 +3026,7 @@ Helper function for `org-brain-visualize'."
   (if-let ((text (org-brain-text entry)))
       (progn
         (setq text (string-trim text))
-        (if (or (boundp org-brain-polymode)
+        (if (or (boundp 'org-brain-polymode)
                 org-brain-show-full-entry
                 (> (length text) 0))
             (progn
