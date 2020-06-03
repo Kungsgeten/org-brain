@@ -83,10 +83,10 @@ annotated connection.
 * Setup and requirements
 
 The easiest way is to get =org-brain= from MELPA. If you do not want to do that,
-clone this git repository or download =org-brain.el= and add it to your
-load-path. The example below is using [[https://github.com/jwiegley/use-package][use-package]] and assumes that you're using
-MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
-=use-package= instead.
+clone this git repository or download =org-brain.el= and add it to your load-path.
+The example below is using [[https://github.com/jwiegley/use-package][use-package]] and assumes that you're using MELPA, but
+you could use =(require 'org-brain)= or add a =:load-path= to =use-package= instead.
+Most of the configuration below isn't necessary, but showcases some options.
 
 #+BEGIN_SRC emacs-lisp
   (use-package org-brain :ensure t
@@ -107,6 +107,11 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
     (setq org-brain-title-max-length 12)
     (setq org-brain-include-file-entries nil
           org-brain-file-entries-use-title nil))
+
+  ;; Allows you to edit entries directly from org-brain-visualize
+  (use-package polymode
+    :config
+    (add-hook 'org-brain-visualize-mode-hook #'org-brain-polymode))
 #+END_SRC
 
 1. =org-brain= requires Emacs 25 and org-mode 9. These need to be part of your
@@ -147,6 +152,10 @@ MELPA, but you could use =(require 'org-brain)= or add a =:load-path= to
     also set =org-brain-file-entries-use-title= to =nil=. Another possibility is if
     you're only using file entries, in which case you can set
     =org-brain-scan-for-header-entries= to =nil=.
+11. =polymode= is a package (available on MELPA) which allows for several
+    major-modes in the same buffer. If you have required the package you can use
+    =M-x org-brain-polymode= inside =org-brain-visualize=, or (as in the example
+    above) add =org-brain-polymode= to =org-brain-visualize-mode-hook=.
 
 ** Category icons
 
@@ -322,6 +331,10 @@ instance use =S c= to add all selected entries as children to the visualized
 entry, or =S P= to remove the parent relationship of the selected entries. When
 you're done and wish to clear the selection use =org-brain-clear-selected=, which
 is bound to =S s=.
+
+** Editing text from =org-brain-visualize-mode=
+
+If you have the =polymode= package installed you can edit your entries directly from =org-brain-visualize-mode=. Run =M-x org-brain-polymode= or add =org-brain-polymode= to =org-brain-visualize-mode-hook=. After editing you can use =C-x C-s= (bound to =org-brain-polymode-save=) to save your changes.
 
 ** Editing from =org-mode=
 
