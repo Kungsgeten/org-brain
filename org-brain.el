@@ -77,7 +77,7 @@ If this variable is a string it will be added as a prefix in the backlink.
 Example: \"<--\" would add \"<--A\" in the example above."
   :group 'org-brain
   :type '(restricted-sexp :match-alternatives
-           (integerp 't 'nil)))
+           (stringp 't 'nil)))
 
 (defcustom org-brain-backlink-heading t
   "If the org heading should be used when creating a backlink.
