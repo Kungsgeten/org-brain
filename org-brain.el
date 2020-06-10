@@ -1307,7 +1307,7 @@ PROPERTY could for instance be `org-brain-children-property-name'."
               (mapcar #'org-entry-restore-space
                       (when-let ((kw-values (cdr (assoc property
                                                         (org-brain-keywords entry)))))
-                        (org-split-string kw-values "[ \t]"))))
+                        (org-split-string kw-values "[ \t]+"))))
            ;; Headline entry
            (mapcar
             (lambda (x) (or (org-brain-entry-from-id x) x))
