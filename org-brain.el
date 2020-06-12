@@ -2478,7 +2478,8 @@ category icon in `org-agenda-category-icon-alist'."
   (when (and org-brain-show-icons
              org-agenda-category-icon-alist)
     (org-with-point-at (org-brain-entry-marker entry)
-      (when-let ((icon (org-agenda-get-category-icon (org-get-category))))
+      (when-let* ((category (org-get-category))
+                  (icon (org-agenda-get-category-icon category)))
         (propertize (make-string org-brain-category-icon-width ? ) 'display icon)))))
 
 (defun org-brain-vis-title (entry)
