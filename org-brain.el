@@ -1291,10 +1291,11 @@ If run with `\\[universal-argument]' then also choose from descendants of ENTRY.
 Uses `org-brain-entry-at-pt' for ENTRY, or asks for it if none at point."
   (interactive (list (or (ignore-errors (org-brain-entry-at-pt t))
                          (org-brain-choose-entry "Resource from: " 'all))))
-  (org-open-link-from-string (org-brain--choose-resource
-                              (if current-prefix-arg
-                                  (org-brain-descendants entry)
-                                (list entry)))))
+  (org-open-link-from-string
+   (format "[[%s]]" (org-brain--choose-resource
+                     (if current-prefix-arg
+                         (org-brain-descendants entry)
+                       (list entry))))))
 
 (defun org-brain--linked-property-entries (entry property)
   "Get list of entries linked to in ENTRY by PROPERTY.
