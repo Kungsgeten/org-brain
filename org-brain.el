@@ -2490,11 +2490,11 @@ category icon in `org-agenda-category-icon-alist'."
                 (list
                  ;; Prepend stuff to the title
                  (mapconcat (lambda (func) (funcall func entry))
-                            org-brain-vis-title-prepend-functions
+                            (delete-dups org-brain-vis-title-prepend-functions)
                             " ")
                  (if (eq org-brain--vis-entry entry)
                      (mapconcat (lambda (func) (funcall func entry))
-                                org-brain-vis-current-title-prepend-functions
+                                (delete-dups org-brain-vis-current-title-prepend-functions)
                                 " ")
                    "")
                  ;; The title itself
@@ -2502,11 +2502,11 @@ category icon in `org-agenda-category-icon-alist'."
                                             org-brain-cap-mind-map-titles))
                  ;; Append stuff to the title
                  (mapconcat (lambda (func) (funcall func entry))
-                            org-brain-vis-title-append-functions
+                            (delete-dups org-brain-vis-title-append-functions)
                             " ")
                  (if (eq org-brain--vis-entry entry)
                      (mapconcat (lambda (func) (funcall func entry))
-                                org-brain-vis-current-title-append-functions
+                                (delete-dups org-brain-vis-current-title-append-functions)
                                 " ")
                    "")))
                " "))
