@@ -424,6 +424,16 @@ Must be set before `org-brain' is loaded."
           (const :tag "Default" default)
           (function :tag "Custom function")))
 
+(defcustom org-brain-category-face-alist nil
+  "Alist of category face to be displayed in agenda views.
+Each entry should have the following format:
+
+(CATEGORY-NAME (:FACE-ATTRIBUTE1 VALUE1 :FACE-ATTRIBUTE1 VALUE2 ...))"
+  :group 'org-brain
+  :type '(alist
+          :key-type (string :tag "Category name")
+	  :value-type (list :tag "Category face definition" sexp)))
+
 ;;;;; Faces and face helper functions
 
 (defface org-brain-title
@@ -519,17 +529,31 @@ Applies the attributes in `org-brain-edge-annotation-face-template',
 `org-brain-selected-face-template', and `org-brain-file-face-template'
 as appropriate.
 EDGE determines if `org-brain-edge-annotation-face-template' should be used."
-  (let ((selected-face-attrs
-         (when (member entry org-brain-selected)
-           (org-brain-specified-face-attrs 'org-brain-selected-face-template)))
-        (file-face-attrs
-         (when (org-brain-filep entry)
-           (org-brain-specified-face-attrs 'org-brain-file-face-template))))
-    (append (list :inherit (or face 'org-brain-button))
-            selected-face-attrs
-            file-face-attrs
-            (when edge
-              (org-brain-specified-face-attrs 'org-brain-edge-annotation-face-template)))))
+  (let* ((category (org-brain-get-category entry))
+         (category-face (cadr (or (assoc category org-brain-category-face-alist)
+                                  (assoc t org-brain-category-face-alist))))
+         (selected-face-attrs
+          (when (member entry org-brain-selected)
+            (org-brain-specified-face-attrs 'org-brain-selected-face-template)))
+         (file-face-attrs
+          (when (org-brain-filep entry)
+            (org-brain-specified-face-attrs 'org-brain-file-face-template)))
+         (entry-face
+          (append (list :inherit (or face 'org-brain-button))
+                  selected-face-attrs
+                  file-face-attrs
+                  (when edge
+                    (org-brain-specified-face-attrs 'org-brain-edge-annotation-face-template)))))
+    (if (and (listp category-face)
+             (memq face '(org-brain-local-child
+                          org-brain-child
+                          org-brain-local-sibling
+                          org-brain-sibling
+                          org-brain-local-parent
+                          ;; org-brain-parent
+                          org-brain-friend)))
+        (append entry-face category-face)
+      entry-face)))
 
 (defface org-brain-selected-face-template
   `((t . ,(org-brain-specified-face-attrs 'highlight)))
@@ -1048,6 +1072,16 @@ Only works on headline entries."
               (org-brain--missing-id-error entry))))
     (or (org-id-find (nth 2 entry) t)
         (org-brain--missing-id-error entry))))
+
+(defun org-brain-get-category (entry)
+  "Get category of ENTRY."
+  (if (org-brain-filep entry)
+      (ignore-errors
+        (cdr (assoc "CATEGORY" (org-brain-keywords entry))))
+    (org-with-point-at (org-brain-entry-marker entry)
+      (let* ((local (org--property-local-values "CATEGORY" nil))
+	     (value (and local (mapconcat #'identity (delq nil local) " "))))
+	(org-not-nil value)))))
 
 (defun org-brain-title (entry &optional capped)
   "Get title of ENTRY.  If CAPPED is t, max length is `org-brain-title-max-length'."
@@ -2109,6 +2143,18 @@ Ignores selected entries that are not friends of ENTRY."
   (dolist (selected org-brain-selected)
     (ignore-errors (org-brain-remove-friendship entry selected))))
 
+(defun org-brain-set-selected-category (category)
+  "Set the category of the selected entries to CATEGORY.
+If run interactively, get ENTRY from context.
+
+When ENTRY is in the selected list, it is ignored."
+  (interactive (list (completing-read
+                      "Category: "
+                      (remove t (mapcar #'car org-brain-category-face-alist)))))
+  (dolist (entry org-brain-selected)
+    (ignore-errors (org-brain-set-category entry category)))
+  (org-brain-clear-selected))
+
 (defun org-brain-delete-selected-entries ()
   "Delete all of the selected entries."
   (interactive)
@@ -2173,6 +2219,34 @@ If run interactively, get ENTRY from context."
         (save-buffer))
     (org-with-point-at (org-brain-entry-marker entry)
       (org-set-tags-command)
+      (save-buffer)))
+  (org-brain--revert-if-visualizing))
+
+;;;###autoload
+(defun org-brain-set-category (entry category)
+  "ENTRY set a new CATEGORY.
+If run interactively use `org-brain-entry-at-pt' and prompt for CATEGORY."
+  (interactive
+   (let* ((entry-at-pt (org-brain-entry-at-pt t))
+          (new-category (org-brain-get-category entry-at-pt)))
+     (list entry-at-pt (completing-read
+                        "CATEGORY: " `(,new-category
+                                       ,@(remove t (mapcar #'car org-brain-category-face-alist)))))))
+  (if (org-brain-filep entry)
+      ;; File entry
+      (org-with-point-at (org-brain-entry-marker entry)
+        (goto-char (point-min))
+        (when (assoc "CATEGORY" (org-brain-keywords entry))
+          (re-search-forward "^#\\+CATEGORY:")
+          (kill-whole-line))
+        (insert (format "#+CATEGORY: %s\n" category))
+        (save-buffer))
+    ;; Headline entry
+    (org-with-point-at
+        (org-brain-entry-marker entry)
+      (org-entry-put
+       (org-brain-entry-marker entry)
+       "CATEGORY" category)
       (save-buffer)))
   (org-brain--revert-if-visualizing))
 
@@ -2298,7 +2372,21 @@ function."
 Case is significant."
   (string< (org-brain-title entry1) (org-brain-title entry2)))
 
-(defvar org-brain-visualize-sort-function 'org-brain-title<
+(defun org-brain-category-and-title< (entry1 entry2)
+  "Return non-nil if category of ENTRY1 is less than ENTRY2 in `org-brain-category-face-alist' order.
+Case is significant."
+  (let* ((category1 (or (org-brain-get-category entry1) ""))
+         (category2 (or (org-brain-get-category entry2) ""))
+         (categories (mapcar #'car org-brain-category-face-alist))
+         (num (+ (length colors) 1))
+         (pos1 (or (cl-position category1 categories :test #'equal) num))
+         (pos2 (or (cl-position category2 categories :test #'equal) num)))
+    (cond ((< pos1 pos2) t)
+          ((= pos1 pos2)
+           (org-brain-title< entry1 entry2))
+          (t nil))))
+
+(defvar org-brain-visualize-sort-function 'org-brain-category-and-title<
   "How to sort lists of relationships when visualizing.
 Should be a function which accepts two entries as arguments.
 The function returns t if the first entry is smaller than the second.
@@ -2519,7 +2607,8 @@ CATEGORY is used to set the `brain-category` text property."
                                                    entry
                                                    org-brain--vis-entry-keywords)))
     (insert-text-button
-     (if (numberp max-width)
+     (if (and (numberp max-width)
+              org-brain-category-face-alist)
          (format (concat "%-" (number-to-string max-width) "s") (org-brain-vis-title entry))
        (org-brain-vis-title entry))
      'action (lambda (_x) (org-brain-visualize entry))
@@ -2802,6 +2891,7 @@ point before the buffer was reverted."
 (define-key org-brain-visualize-mode-map "b" 'org-brain-visualize-back)
 (define-key org-brain-visualize-mode-map "\C-y" 'org-brain-visualize-paste-resource)
 (define-key org-brain-visualize-mode-map "T" 'org-brain-set-tags)
+(define-key org-brain-visualize-mode-map "G" 'org-brain-set-category)
 (define-key org-brain-visualize-mode-map "q" 'org-brain-visualize-quit)
 (define-key org-brain-visualize-mode-map "w" 'org-brain-visualize-random)
 (define-key org-brain-visualize-mode-map "W" 'org-brain-visualize-wander)
@@ -2822,6 +2912,7 @@ point before the buffer was reverted."
 (define-key org-brain-select-map "P" 'org-brain-remove-selected-parents)
 (define-key org-brain-select-map "f" 'org-brain-add-selected-friendships)
 (define-key org-brain-select-map "F" 'org-brain-remove-selected-friendships)
+(define-key org-brain-select-map "G" 'org-brain-set-selected-category)
 (define-key org-brain-select-map "s" 'org-brain-clear-selected)
 (define-key org-brain-select-map "S" 'org-brain-clear-selected)
 (define-key org-brain-select-map "d" 'org-brain-delete-selected-entries)
@@ -2999,10 +3090,11 @@ Helper function for `org-brain-visualize'."
               (face (if (member entry (org-brain-local-parent child))
                         'org-brain-local-child
                       'org-brain-child)))
-          (if (<= (+ (current-column) (length child-title)) fill-col)
-              (org-brain-insert-visualize-button child face 'child)
-            (insert "\n")
-            (org-brain-insert-visualize-button child face 'child title-max-width))
+          (when (> (+ (current-column) (length child-title)) fill-col)
+            (insert "\n"))
+          (if (< fill-col title-max-width)
+              (org-brain-insert-visualize-button child face 'child title-max-width)
+            (org-brain-insert-visualize-button child face 'child))
           (insert "  "))))))
 
 (defun org-brain--vis-friends (entry)
