@@ -2511,7 +2511,7 @@ category icon in `org-agenda-category-icon-alist'."
                    "")))
                " "))
 
-(defun org-brain-insert-visualize-button (entry &optional face category)
+(defun org-brain-insert-visualize-button (entry &optional face category max-width)
   "Insert a button, running `org-brain-visualize' on ENTRY when clicked.
 FACE is sent to `org-brain-display-face' and sets the face of the button.
 CATEGORY is used to set the `brain-category` text property."
@@ -2519,7 +2519,9 @@ CATEGORY is used to set the `brain-category` text property."
                                                    entry
                                                    org-brain--vis-entry-keywords)))
     (insert-text-button
-     (org-brain-vis-title entry)
+     (if (numberp max-width)
+         (format (concat "%-" (number-to-string max-width) "s") (org-brain-vis-title entry))
+       (org-brain-vis-title entry))
      'action (lambda (_x) (org-brain-visualize entry))
      'id (org-brain-entry-identifier entry)
      'follow-link t
@@ -2907,7 +2909,8 @@ Helper function for `org-brain-visualize'."
                (sibling-middle (ceiling (/ (length children-links) 2.0)))
                (base-line (if org-brain-show-history 5 4))
                (col-start (+ 3 max-width))
-               (parent-width (string-width (org-brain-vis-title (car parent)))))
+               (parent-width (string-width (org-brain-vis-title (car parent))))
+               (title-max-width (org-brain-title-max-width children-links)))
           (org-goto-line base-line)
           (mapc
            (lambda (child)
@@ -2918,7 +2921,8 @@ Helper function for `org-brain-visualize'."
               (if (and (member (car parent) (org-brain-local-parent child))
                        (member (car parent) (org-brain-local-parent entry)))
                   'org-brain-local-sibling
-                'org-brain-sibling) 'sibling)
+                'org-brain-sibling)
+              'sibling title-max-width)
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
            (if (member org-brain-no-sort-children-tag parent-tags)
@@ -2985,7 +2989,8 @@ Helper function for `org-brain-visualize'."
                (fill-col (if (member org-brain-each-child-on-own-line-tag
                                      (org-brain-get-tags entry))
                              0
-                           (eval org-brain-child-linebreak-sexp))))
+                           (eval org-brain-child-linebreak-sexp)))
+               (title-max-width (org-brain-title-max-width children)))
       (insert "\n\n")
       (dolist (child (if (member org-brain-no-sort-children-tag tags)
                          children
@@ -2994,23 +2999,35 @@ Helper function for `org-brain-visualize'."
               (face (if (member entry (org-brain-local-parent child))
                         'org-brain-local-child
                       'org-brain-child)))
-          (when (> (+ (current-column) (length child-title)) fill-col)
-            (insert "\n"))
-          (org-brain-insert-visualize-button child face 'child)
+          (if (<= (+ (current-column) (length child-title)) fill-col)
+              (org-brain-insert-visualize-button child face 'child)
+            (insert "\n")
+            (org-brain-insert-visualize-button child face 'child title-max-width))
           (insert "  "))))))
 
 (defun org-brain--vis-friends (entry)
   "Insert friends of ENTRY.
 Helper function for `org-brain-visualize'."
-  (when-let ((friends (org-brain-friends entry)))
+  (when-let ((friends (org-brain-friends entry))
+             (title-max-width (org-brain-title-max-width friends)))
     (org-brain--insert-wire " <-> ")
     (dolist (friend (sort friends org-brain-visualize-sort-function))
       (let ((column (current-column)))
-        (org-brain-insert-visualize-button friend 'org-brain-friend 'friend)
+        (org-brain-insert-visualize-button friend 'org-brain-friend 'friend title-max-width)
         (picture-move-down 1)
         (move-to-column column t)))
     (kill-whole-line)
     (backward-char 1)))
+
+(defun org-brain-title-max-width (entries)
+  "Get max title width of ENTRIES."
+  (let ((titles (mapcar
+                 #'(lambda (entry)
+                     (string-width (org-brain-vis-title entry)))
+                 entries)))
+    (if titles
+        (apply #'max titles)
+      0)))
 
 (defun org-brain--vis-resources (resources)
   "Insert links to RESOURCES.
