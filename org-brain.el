@@ -2534,7 +2534,10 @@ CATEGORY is used to set the `brain-category` text property."
     (let ((start-pos (point))
           (entry-id (org-brain-entry-identifier entry)))
       (goto-char (point-min))
-      (search-forward "\n\n" nil t)
+      (org-goto-line
+       (if org-brain-visualizing-mind-map
+           (if org-brain-show-history 5 4)
+         (if org-brain-show-history 4 3)))
       (while (and (or (ignore-errors (forward-button 1))
                       (and (goto-char start-pos) nil))
                   (not (equal (button-get (button-at (point)) 'id)
