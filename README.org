@@ -521,14 +521,16 @@ adjusted manually.
 ** =org-brain= is slow!
 
 If you feel that =org-brain= is slow while indexing your entries (for instance when running =M-x org-brain-visualize=) you can customize =org-brain-file-entries-use-title=, and set it to =nil=. This will display file names when indexing, instead of the file entry's title, which is faster.
+* FAQ
+** Wrong number of arguments: (0 . 0), 2
 
+You are probably using the version of =org-mode= that came with your Emacs install, which has a lower version than 9.2. Check the version of org you have installed with =M-x org-version=. See [[https://github.com/Kungsgeten/org-brain/issues/278][Github issue #278]].
 * Export to other formats
 
 =org-brain= has no built-in functionality for exporting to other formats. I've
 started experimenting with another package named [[https://github.com/Kungsgeten/org-brain-export][org-brain-export]] which might be
 merged into =org-brain= in the future. =org-brain-export= is in VERY early stages of
 development.
-
 * Helm and Ivy
 
 If you use [[https://github.com/emacs-helm/helm][Helm]] or [[https://oremacs.com/swiper/][Ivy]] you can use the commands =helm-brain= or =counsel-brain= respectively. These allow for visualizing entries, and adding parents/children/friends to the entry at point. They also allow selecting multiple entries.
