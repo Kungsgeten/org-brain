@@ -525,6 +525,14 @@ adjusted manually.
 ** =org-brain= is slow!
 
 If you feel that =org-brain= is slow while indexing your entries (for instance when running =M-x org-brain-visualize=) you can customize =org-brain-file-entries-use-title=, and set it to =nil=. This will display file names when indexing, instead of the file entry's title, which is faster.
+
+Should only the first call of =org-brain-visualsze= be slow, an option may be to try persistent caching of the variable =org-brain-headline-cache=. Choose a [[https://www.emacswiki.org/emacs/SessionManagement][session management solution]] that works for you [[https://github.com/thierryvolpiatto/psession][(an option for helm users)]]. A simple and built-in method is to use the savehist package. To do so, you may add the following configuration:
+
+#+begin_src emacs-lisp
+(savehist-mode 1)
+(setq savehist-additional-variables '(org-brain-headline-cache))
+#+end_src
+
 * FAQ
 ** Wrong number of arguments: (0 . 0), 2
 
