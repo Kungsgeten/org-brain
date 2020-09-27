@@ -44,7 +44,7 @@
 
 ;;;; Custom vars
 
-(defcustom org-brain-path (file-truename "brain" org-directory)
+(defcustom org-brain-path (file-truename (expand-file-name "brain" org-directory))
   "The root directory of your org-brain.
 
 `org-mode' files placed in this directory, or its subdirectories,
@@ -96,7 +96,7 @@ Setting this variable to t will create the following backlink in B:
                         "org-brain-suggest-stored-link-as-resource isn't needed because of `org-insert-link-global'."
                         "0.6")
 
-(defcustom org-brain-data-file (file-truename ".org-brain-data.el" org-brain-path)
+(defcustom org-brain-data-file (file-truename (expand-file-name ".org-brain-data.el" org-brain-path))
   "Where org-brain data is saved."
   :group 'org-brain
   :type '(directory))
@@ -590,7 +590,7 @@ Run `org-brain-new-entry-hook' if a new ID is created."
   (if (file-equal-p directory org-brain-path)
       (message "Current brain already is %s, no switch" directory)
     (setq org-brain-path directory)
-    (setq org-brain-data-file (file-truename ".org-brain-data.el" org-brain-path))
+    (setq org-brain-data-file (file-truename (expand-file-name ".org-brain-data.el" org-brain-path)))
     (unless (file-exists-p org-brain-data-file)
       (org-brain-save-data))
     (setq org-brain-pins nil)
@@ -602,7 +602,7 @@ Run `org-brain-new-entry-hook' if a new ID is created."
 (defun org-brain-maybe-switch-brain ()
   "Switch brain to `default-directory' if a file named \".org-brain-data.el\" exists there."
   (when (and (not (file-equal-p default-directory org-brain-path))
-             (file-exists-p (file-truename ".org-brain-data.el" default-directory)))
+             (file-exists-p (file-truename (expand-file-name ".org-brain-data.el" default-directory))))
     (org-brain-switch-brain default-directory)))
 
 (defun org-brain-filep (entry)
@@ -646,8 +646,8 @@ If CHECK-TITLE is non-nil, consider that ENTRY might be a file entry title."
                                            (org-brain-files t)))))
                       entry)
                 (car entry))))
-    (file-truename (org-link-unescape (format "%s.%s" name org-brain-files-extension))
-                      org-brain-path)))
+    (file-truename (expand-file-name (org-link-unescape (format "%s.%s" name org-brain-files-extension))
+                      org-brain-path))))
 
 (defun org-brain-files (&optional relative)
   "Get all org files (recursively) in `org-brain-path'.
@@ -1268,7 +1268,7 @@ The car is the raw-link and the cdr is the description."
                     (mapcar (lambda (attachment)
                               (cons (format "file:%s"
                                             (org-link-escape
-                                             (file-truename attachment attach-dir)))
+                                             (file-truename (expand-file-name attachment attach-dir))))
                                     attachment))
                             (org-attach-file-list attach-dir)))))))))
 
