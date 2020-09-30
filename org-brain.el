@@ -2321,6 +2321,9 @@ If run interactively, toggle following on/off."
                "Enabled following visualized entry."
              "Disabled following visualized entry.")))
 
+(defvar-local org-brain--visualize-header-end-pos 0
+  "Buffer position at end of headers (history etc) in `org-brain-visualize'.")
+
 ;;;###autoload
 (defun org-brain-visualize (entry &optional nofocus nohistory wander)
   "View a concept map with ENTRY at the center.
@@ -2387,6 +2390,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
       (when org-brain-show-history (org-brain--vis-history))
       (if org-brain-visualizing-mind-map
           (setq entry-pos (org-brain-mind-map org-brain--vis-entry org-brain-mind-map-parent-level org-brain-mind-map-child-level))
+        (setq-local org-brain--visualize-header-end-pos (point))
         (insert "\n\n")
         (org-brain--vis-parents-siblings entry)
         ;; Insert entry title
@@ -2533,8 +2537,7 @@ CATEGORY is used to set the `brain-category` text property."
   (when (eq major-mode 'org-brain-visualize-mode)
     (let ((start-pos (point))
           (entry-id (org-brain-entry-identifier entry)))
-      (goto-char (point-min))
-      (search-forward "\n\n" nil t)
+      (goto-char org-brain--visualize-header-end-pos)
       (while (and (or (ignore-errors (forward-button 1))
                       (and (goto-char start-pos) nil))
                   (not (equal (button-get (button-at (point)) 'id)
@@ -3110,6 +3113,7 @@ Return the position of ENTRY in the buffer."
   (dolist (friend (sort (org-brain-friends entry) org-brain-visualize-sort-function))
     (insert "  ")
     (org-brain-insert-visualize-button friend 'org-brain-friend 'friend))
+  (setq-local org-brain--visualize-header-end-pos (point))
   (insert "\n\n")
   (let ((indent (1- (org-brain-tree-depth (org-brain-recursive-parents entry parent-max-level))))
         (entry-pos))
