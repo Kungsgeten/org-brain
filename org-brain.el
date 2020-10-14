@@ -2706,6 +2706,53 @@ See `org-brain-add-resource'."
 
 (defalias 'org-brain-visualize-paste-resource #'org-brain-paste-resource)
 
+;;;; Capture Templates
+
+(defvar org-brain-visualize-use-capture-templates nil
+  "Add useful capture templates to your org-brain setup.
+This variable is nil by default, since we are modifying
+`org-capture-templates' which can have undesirable effects.
+Set this to t to activate org-brain related capture templates.
+These templates only work in the `org-brain-visualize-mode' and
+are keyed off `org-brain-visualize-capture-prefix-key'.")
+
+(defvar org-brain-visualize-capture-prefix-key "b"
+  "The default prefix key for org-brain capture templates.
+Change this value if you already use 'b' for a different capture template.")
+
+(defvar org-brain-visualize--capture-templates-registered-p nil
+  "A helper var.
+Track if we've added the necessary org-brain capture templates to
+`org-capture'.")
+
+(defun org-brain-visualize--register-capture-templates ()
+  "A helper function.
+Set up the capture templates we need in `org-brain-visualize-mode'."
+  (with-eval-after-load 'org-capture
+    (progn
+      (when (and org-brain-visualize-use-capture-templates
+                 (not org-brain-visualize--capture-templates-registered-p))
+        (push `(,org-brain-visualize-capture-prefix-key
+                "Templates when working with org-brain")
+              org-capture-templates)
+        (push `(,(concat org-brain-visualize-capture-prefix-key "b")
+                "Brain Note"
+                plain
+                (function org-brain-goto-end)
+                "* %i%?"
+                :empty-lines 1)
+              org-capture-templates)
+        (push `(,(concat org-brain-visualize-capture-prefix-key "t")
+                "Brain Todo"
+                entry
+                (function org-brain-goto-current)
+                "* TODO %?\n%U\n%i"
+                :clock-keep t)
+              org-capture-templates)
+        (push '("b" ((in-mode . "org-brain-visualize-mode")))
+              org-capture-templates-contexts)
+        (setq org-brain-visualize--capture-templates-registered-p t)))))
+
 ;;;###autoload
 (defun org-brain-select-button ()
   "Toggle selection of the entry linked to by the button at point."
@@ -2813,7 +2860,8 @@ Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
   "Major mode for `org-brain-visualize'.
 \\{org-brain-visualize-mode-map}"
   (setq-local revert-buffer-function #'org-brain-visualize-revert)
-  (setq-local bookmark-make-record-function #'org-brain-make-bookmark-record))
+  (setq-local bookmark-make-record-function #'org-brain-make-bookmark-record)
+  (org-brain-visualize--register-capture-templates))
 
 ;;;;; Keybindings
 
