@@ -2785,6 +2785,29 @@ If called interactively, select ENTRY with
       (org-brain-add-todo (org-brain-entry-at-pt))
     (user-error "Not in org-brain-visualize")))
 
+(defun org-brain-add-note (entry)
+  "Add a note to the ENTRY.
+If called interactively, select ENTRY with
+`org-brain-choose-entry', give a preference to
+`org-brain-entry-at-pt', if any."
+  (interactive
+   (let ((def-choice (ignore-errors
+                       (org-brain-entry-name (org-brain-entry-at-pt)))))
+     (list (org-brain-choose-entry "Add a note to: " 'all nil nil def-choice))))
+  (if (org-brain-filep entry)
+      ;; Entry = File
+      (user-error "Only headline entries support adding a note")
+    ;; Entry = Headline
+    (org-with-point-at (org-brain-entry-marker entry)
+      (org-add-note))))
+
+(defun org-brain-visualize-add-note ()
+  "Add a note to the currently active entry."
+  (interactive)
+  (if (eq major-mode 'org-brain-visualize-mode)
+      (org-brain-add-note (org-brain-entry-at-pt))
+    (user-error "Not in org-brain-visualize")))
+
 ;;;###autoload
 (defun org-brain-select-button ()
   "Toggle selection of the entry linked to by the button at point."
@@ -2937,6 +2960,8 @@ Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
 (define-key org-brain-visualize-mode-map "\C-c\C-w" 'org-brain-refile)
 (define-key org-brain-visualize-mode-map "\C-c\C-x\C-v" 'org-toggle-inline-images)
 (define-key org-brain-visualize-mode-map (kbd "C-c t") 'org-brain-visualize-add-todo)
+(define-key org-brain-visualize-mode-map (kbd "C-c z") 'org-brain-visualize-add-note)
+(define-key org-brain-visualize-mode-map (kbd "C-c C-z") 'org-brain-visualize-add-note)
 
 (define-prefix-command 'org-brain-select-map)
 (define-key org-brain-select-map "s" 'org-brain-clear-selected)
