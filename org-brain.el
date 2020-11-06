@@ -1349,11 +1349,15 @@ PROPERTY could for instance be `org-brain-children-property-name'."
                                              (org-brain-entry-identifier parent)))
     (org-save-all-org-buffers)))
 
-(defun org-brain-remove-line-if-matching (regex)
-  "Delete current line, if matching REGEX."
-  (when (string-match regex (buffer-substring (line-beginning-position)
-                                              (line-end-position)))
-    (ignore-errors (kill-whole-line))))
+(defun org-brain-delete-current-line (&optional match-regex)
+  "Delete whole line at `point', and the newline.
+Optionally only delete if matching MATCH-REGEX."
+  (when (or (not match-regex)
+            (string-match match-regex (buffer-substring
+                                       (line-beginning-position)
+                                       (line-end-position))))
+    (delete-region (line-beginning-position)
+                   (progn (forward-line 1) (point)))))
 
 (defun org-brain-remove-relationship (parent child)
   "Remove external relationship between PARENT and CHILD."
@@ -1368,8 +1372,8 @@ PROPERTY could for instance be `org-brain-children-property-name'."
         (beginning-of-line)
         (re-search-forward (concat " " (regexp-quote (org-brain-entry-identifier child))))
         (replace-match "")
-        (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-children-property-name ":[[:space:]]*$"))
-        (org-brain-remove-line-if-matching "^[[:space:]]*$")
+        (org-brain-delete-current-line (concat "^#\\+" org-brain-children-property-name ":[[:space:]]*$"))
+        (org-brain-delete-current-line "^[[:space:]]*$")
         (save-buffer))
     ;; Parent = Headline
     (org-entry-remove-from-multivalued-property (org-brain-entry-marker parent)
@@ -1383,8 +1387,8 @@ PROPERTY could for instance be `org-brain-children-property-name'."
         (beginning-of-line)
         (re-search-forward (concat " " (regexp-quote (org-brain-entry-identifier parent))))
         (replace-match "")
-        (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-parents-property-name ":[[:space:]]*$"))
-        (org-brain-remove-line-if-matching "^[[:space:]]*$")
+        (org-brain-delete-current-line (concat "^#\\+" org-brain-parents-property-name ":[[:space:]]*$"))
+        (org-brain-delete-current-line "^[[:space:]]*$")
         (save-buffer))
     ;; Child = Headline
     (org-entry-remove-from-multivalued-property (org-brain-entry-marker child)
@@ -1606,8 +1610,8 @@ If VERBOSE is non-nil then display a message."
           (beginning-of-line)
           (re-search-forward (concat " " (regexp-quote (org-brain-entry-identifier entry2))))
           (replace-match "")
-          (org-brain-remove-line-if-matching (concat "^#\\+" org-brain-friends-property-name ":[[:space:]]*$"))
-          (org-brain-remove-line-if-matching "^[[:space:]]*$")
+          (org-brain-delete-current-line (concat "^#\\+" org-brain-friends-property-name ":[[:space:]]*$"))
+          (org-brain-delete-current-line "^[[:space:]]*$")
           (save-buffer))
       ;; Entry2 = Headline
       (org-entry-remove-from-multivalued-property (org-brain-entry-marker entry1)
@@ -1777,7 +1781,7 @@ to account for the change in ENTRY's local parent."
             (org-cut-subtree)
             (pop kill-ring)
             (forward-line -1)
-            (org-brain-remove-line-if-matching "^[[:space:]]*$")))
+            (org-brain-delete-current-line "^[[:space:]]*$")))
       ;; Parent is a headline entry
       (let ((id (org-brain-entry-identifier parent)))
         (pcase (org-id-find id)
@@ -2137,7 +2141,7 @@ If run interactively, get ENTRY from context and prompt for TITLE."
         (goto-char (point-min))
         (when (assoc "TITLE" (org-brain-keywords entry))
           (re-search-forward "^#\\+TITLE:")
-          (kill-whole-line))
+          (org-brain-delete-current-line))
         (insert (format "#+TITLE: %s\n" title))
         (save-buffer))
     ;; Headline entry
@@ -2161,7 +2165,7 @@ If run interactively, get ENTRY from context."
           (goto-char (point-min))
           (when (assoc "FILETAGS" (org-brain-keywords entry))
             (re-search-forward "^#\\+FILETAGS:")
-            (kill-whole-line))
+            (org-brain-delete-current-line))
           (insert (format "#+FILETAGS: %s\n" tag-str)))
         ;; From org.el
         (let ((org-inhibit-startup-visibility-stuff t)
@@ -2727,7 +2731,7 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
                                 (org-brain-edge-prop-name target))))
         (org-with-point-at (org-brain-entry-marker entry)
           (if (re-search-forward edge-regex nil t)
-              (org-brain-remove-line-if-matching edge-regex)
+              (org-brain-delete-current-line edge-regex)
             (goto-char (point-min)))
           (when (> (length annotation) 0)
             (insert "#+" (org-brain-edge-prop-name target) ": " annotation "\n"))
@@ -3012,7 +3016,7 @@ Helper function for `org-brain-visualize'."
         (org-brain-insert-visualize-button friend 'org-brain-friend 'friend)
         (picture-move-down 1)
         (move-to-column column t)))
-    (kill-whole-line)
+    (org-brain-delete-current-line)
     (backward-char 1)))
 
 (defun org-brain--vis-resources (resources)
