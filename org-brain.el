@@ -1928,7 +1928,13 @@ If NOCONFIRM is nil, ask if we really want to delete."
           (delete-region (region-beginning) (region-end))))))
   (delete entry org-brain--vis-history)
   (org-save-all-org-buffers)
-  (org-brain--revert-if-visualizing t))
+  (if (equal entry org-brain--vis-entry)
+      (when-let ((brain-buffer (get-buffer "*org-brain*")))
+        (if (ignore-errors (org-brain-visualize-back))
+            (message "Deleted visualized entry, going back in history.")
+          (kill-buffer brain-buffer)
+          (message "Deleted visualized entry. No history, hence killing org-brain buffer.")))
+    (org-brain--revert-if-visualizing t)))
 
 ;;;###autoload
 (defun org-brain-insert-relationships (entry &optional recursive)
