@@ -3427,10 +3427,12 @@ Provides actions for visualizing, adding/removing relations, etc."
     (let ((targets (org-brain--all-targets)))
       (ivy-read "Org-brain: "
                 targets
-                :require-match t
                 :action (lambda (x)
-                          (org-brain-visualize (or (org-brain-entry-from-id (cdr x))
-                                                   (cdr x))))
+                          (org-brain-visualize
+                           (if (stringp x)
+                               (org-brain-get-entry-from-title x)
+                             (or (org-brain-entry-from-id (cdr x))
+                                 (cdr x)))))
                 :preselect (ignore-errors
                              (org-brain-entry-name
                               (org-brain-entry-at-pt)))
