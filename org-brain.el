@@ -1926,7 +1926,7 @@ If NOCONFIRM is nil, ask if we really want to delete."
         (org-with-point-at (org-brain-entry-marker entry)
           (org-mark-subtree)
           (delete-region (region-beginning) (region-end))))))
-  (delete entry org-brain--vis-history)
+  (setq org-brain--vis-history (delete entry org-brain--vis-history))
   (org-save-all-org-buffers)
   (if (equal entry org-brain--vis-entry)
       (when-let ((brain-buffer (get-buffer "*org-brain*")))
@@ -1987,7 +1987,7 @@ Remove external relationships from ENTRY, in order to clean up the brain."
   (org-brain--remove-relationships entry t)
   (org-with-point-at (org-brain-entry-marker entry)
     (org-archive-subtree-default))
-  (delete entry org-brain--vis-history)
+  (setq org-brain--vis-history (delete entry org-brain--vis-history))
   (org-save-all-org-buffers)
   (org-brain--revert-if-visualizing))
 
