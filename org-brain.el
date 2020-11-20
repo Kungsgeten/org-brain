@@ -3390,17 +3390,26 @@ ENTRY should be a string; an id in the case of an headline entry."
      "Select" 'helm-brain--select
      "Unselect" 'helm-brain--unselect))
 
-  (defun helm-brain--source ()
+  (defvar helm-brain--source
     (helm-build-sync-source "Brain"
-                            :candidates (org-brain--all-targets)
-                            :action 'helm-brain--actions))
+      :candidates #'org-brain--all-targets
+      :action 'helm-brain--actions))
+
+  (defvar helm-brain--fallback-source
+    (helm-build-dummy-source "New entry"
+      :action (helm-make-actions
+               "Visualize" (lambda (x)
+                             (org-brain-visualize (org-brain-get-entry-from-title x)))
+               "Add children" 'helm-brain--add-children
+               "Add parents" 'helm-brain--add-parents
+               "Add friends" 'helm-brain--add-friends)))
 
   (defun helm-brain ()
     "Use `helm' to choose among your org-brain entries.
 Provides actions for visualizing, adding/removing relations, etc.
 Supports selecting multiple entries at once."
     (interactive)
-    (helm :sources (helm-brain--source))))
+    (helm :sources '(helm-brain--source helm-brain--fallback-source))))
 
 ;;;; Ivy integration
 
