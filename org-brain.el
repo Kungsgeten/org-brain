@@ -3397,12 +3397,12 @@ ENTRY should be a string; an id in the case of an headline entry."
      "Unselect" 'helm-brain--unselect))
 
   (defvar helm-brain--source
-    (helm-build-sync-source "Brain"
+    (helm-make-source "Brain" 'helm-source-sync
       :candidates #'org-brain--all-targets
       :action 'helm-brain--actions))
 
   (defvar helm-brain--fallback-source
-    (helm-build-dummy-source "New entry"
+    (helm-make-source "New entry" 'helm-source-dummy
       :action (helm-make-actions
                "Visualize" (lambda (x)
                              (org-brain-visualize (org-brain-get-entry-from-title x)))
