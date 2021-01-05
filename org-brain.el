@@ -2334,6 +2334,12 @@ If run interactively, toggle following on/off."
 (defvar-local org-brain--visualize-header-end-pos 0
   "Buffer position at end of headers (history etc) in `org-brain-visualize'.")
 
+(defun check-org-brain-exist-p ()
+  "check `*org-brain* exist or not."
+  (save-window-excursion
+    (switch-to-buffer "*org-brain*")
+    (derived-mode-p 'fundamental-mode)))
+
 ;;;###autoload
 (defun org-brain-visualize (entry &optional nofocus nohistory wander)
   "View a concept map with ENTRY at the center.
@@ -2355,26 +2361,31 @@ Setting NOFOCUS to t implies also having NOHISTORY as t.
 Unless WANDER is t, `org-brain-stop-wandering' will be run."
   (interactive
    (progn
-     (org-brain-maybe-switch-brain)
-     (let ((choices (cond ((equal current-prefix-arg '(4)) 'all)
-                          ((equal current-prefix-arg '(16)) 'files)
-                          ((equal current-prefix-arg '(64)) 'root)
-                          (t org-brain-visualize-default-choices)))
-           (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
-                         (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
-       (org-brain-stop-wandering)
-       (list
-        (org-brain-choose-entry
-         "Entry: "
-         (cond ((equal choices 'all)
-                'all)
-               ((equal choices 'files)
-                (org-brain-files t))
-               ((equal choices 'root)
-                (make-directory org-brain-path t)
-                (mapcar #'org-brain-path-entry-name
-                        (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
-         nil nil def-choice)))))
+       (if (and (not (check-org-brain-exist-p))
+                (not (eq major-mode 'org-brain-visualize-mode)))
+           (progn (pop-to-buffer-same-window "*org-brain*")
+                   (signal 'quit nil)))
+       (org-brain-maybe-switch-brain)
+      (let ((choices (cond ((equal current-prefix-arg '(4)) 'all)
+                           ((equal current-prefix-arg '(16)) 'files)
+                           ((equal current-prefix-arg '(64)) 'root)
+                           (t org-brain-visualize-default-choices)))
+            (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
+                          (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
+        (org-brain-stop-wandering)
+        (and )
+        (list
+         (org-brain-choose-entry
+          "Entry: "
+          (cond ((equal choices 'all)
+                 'all)
+                ((equal choices 'files)
+                 (org-brain-files t))
+                ((equal choices 'root)
+                 (make-directory org-brain-path t)
+                 (mapcar #'org-brain-path-entry-name
+                         (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
+          nil nil def-choice)))))
   (unless wander (org-brain-stop-wandering))
   (with-current-buffer (get-buffer-create "*org-brain*")
     (setq-local indent-tabs-mode nil)
