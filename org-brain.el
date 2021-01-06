@@ -2334,7 +2334,7 @@ If run interactively, toggle following on/off."
 (defvar-local org-brain--visualize-header-end-pos 0
   "Buffer position at end of headers (history etc) in `org-brain-visualize'.")
 
-(defun check-org-brain-exist-p ()
+(defun org-brain-visualize-buffer-exists-p ()
   "Check `*org-brain*' exists or not."
   (save-window-excursion
     (switch-to-buffer "*org-brain*")
@@ -2361,7 +2361,7 @@ Setting NOFOCUS to t implies also having NOHISTORY as t.
 Unless WANDER is t, `org-brain-stop-wandering' will be run."
   (interactive
    (progn
-     (if (and (not (check-org-brain-exist-p))
+     (if (and (not (org-brain-visualize-buffer-exists-p))
               (not (eq major-mode 'org-brain-visualize-mode)))
          (progn (pop-to-buffer-same-window "*org-brain*")
                 (signal 'quit nil)))
