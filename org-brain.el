@@ -2355,10 +2355,10 @@ Setting NOFOCUS to t implies also having NOHISTORY as t.
 Unless WANDER is t, `org-brain-stop-wandering' will be run."
   (interactive
    (progn
-     (if (and (get-buffer "*org-brain*")
-              (not (eq major-mode 'org-brain-visualize-mode)))
-         (progn (pop-to-buffer-same-window "*org-brain*")
-                (signal 'quit nil)))
+     (when (and (get-buffer "*org-brain*")
+                (not (eq major-mode 'org-brain-visualize-mode)))
+       (progn (pop-to-buffer-same-window "*org-brain*")
+              (signal 'quit nil)))
      (org-brain-maybe-switch-brain)
      (let ((choices (cond ((equal current-prefix-arg '(4)) 'all)
                           ((equal current-prefix-arg '(16)) 'files)
