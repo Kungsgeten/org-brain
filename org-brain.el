@@ -2373,7 +2373,6 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
            (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
                          (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
        (org-brain-stop-wandering)
-       (and )
        (list
         (org-brain-choose-entry
          "Entry: "
