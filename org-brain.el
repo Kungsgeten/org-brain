@@ -2335,7 +2335,7 @@ If run interactively, toggle following on/off."
   "Buffer position at end of headers (history etc) in `org-brain-visualize'.")
 
 (defun check-org-brain-exist-p ()
-  "check `*org-brain* exist or not."
+  "Check `*org-brain*' exists or not."
   (save-window-excursion
     (switch-to-buffer "*org-brain*")
     (derived-mode-p 'fundamental-mode)))
