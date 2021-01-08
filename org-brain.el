@@ -2433,6 +2433,19 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
         (pop-to-buffer-same-window "*org-brain*")))))
 
 ;;;###autoload
+(defun org-brain-visualize-dwim ()
+  "Switch to the *org-brain* buffer.
+If there's no such buffer, or if already there, run `org-brain-visualize'."
+  (interactive)
+  (if (and (not (org-brain-maybe-switch-brain))
+           (not (eq major-mode 'org-brain-visualize-mode))
+           (get-buffer "*org-brain*"))
+      (if org-brain-open-same-window
+          (pop-to-buffer "*org-brain*")
+        (pop-to-buffer-same-window "*org-brain*"))
+    (call-interactively #'org-brain-visualize)))
+
+;;;###autoload
 (defun org-brain-visualize-entry-at-pt ()
   "Use `org-brain-visualize' on the `org-brain-entry-at-pt'.
 Useful if wanting to visualize the current `org-mode' entry."
