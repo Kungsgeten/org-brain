@@ -2264,14 +2264,18 @@ If interactive, also prompt for ENTRY."
 
 ;;;###autoload
 (defun org-brain-ensure-ids-in-buffer ()
-  "Run `org-brain-get-id' on all headlines in current buffer.
+  "Run `org-brain-get-id' on all headlines in current buffer
+taking into account the ignore tags such as :childess:
 Only works if in an `org-mode' buffer inside `org-brain-path'.
 Suitable for use with `before-save-hook'."
   (interactive)
   (and (eq major-mode 'org-mode)
        (string-prefix-p (file-truename org-brain-path)
                         (file-truename (buffer-file-name)))
-       (org-map-entries #'org-brain-get-id t 'file)))
+       (let ((match (format "-%s-%s|-%s+TAGS={%s}"  ; "-nobrain-childless|-nobrain+TAGS={childless}"
+                            org-brain-exclude-tree-tag org-brain-exclude-children-tag
+                            org-brain-exclude-tree-tag org-brain-exclude-children-tag)))
+         (org-map-entries #'org-brain-get-id match 'file))))
 
 ;;;###autoload
 (defun org-brain-agenda ()
