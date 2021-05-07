@@ -2874,11 +2874,60 @@ point before the buffer was reverted."
 
 ;;;;; Drawing helpers
 
+(defun org-brain--visually-sort (lst)
+  "Sort LST destructively according to org-brain-visualize-sort-function."
+  (sort lst org-brain-visualize-sort-function))
+
+(defun org-brain--visually-sorted (lst)
+  "Sorted LST according to org-brain-visualize-sort-function."
+  (org-brain--visually-sort (copy-sequence lst)))
+
+(defun org-brain--maybe-visually-sort (entry lst)
+  "Sorted LST unless ENTRY has a :nosort: tag."
+  (if (member org-brain-no-sort-children-tag (org-brain-get-tags entry))
+      lst
+    (org-brain--visually-sort lst)))
+
+(defun org-brain--visually-sorted-parents (entry)
+  "List of parents, sorted unless ENTRY has a :nosort: tag."
+  (org-brain--maybe-visually-sort entry (org-brain-parents entry)))
+
+(defun org-brain--visually-sorted-children (entry)
+  "List of children, sorted unless ENTRY has a :nosort: tag."
+  (org-brain--maybe-visually-sort entry (org-brain-children entry)))
+
+(defun org-brain--visually-sorted-friends (entry)
+  "List of friends, sorted unless ENTRY has a :nosort: tag."
+  (org-brain--maybe-visually-sort entry (org-brain-friends entry)))
+
+(defun org-brain--visually-sorted-siblings (entry)
+  "List of siblings, sorted unless ENTRY has a :nosort: tag."
+  (let ((siblings (org-brain-siblings entry)))
+    (if (member org-brain-no-sort-children-tag (org-brain-get-tags entry))
+	siblings
+      (sort siblings (lambda (x y)
+		       (funcall org-brain-visualize-sort-function
+				(car x) (car y)))))))
+
+(defun org-brain--visually-sorted-siblings-from (pair)
+  "List of siblings for a parent, sorted unless the parent in PAIR has a :nosort: tag, or empty list if the parent has a :nosiblings: tag."
+  (let ((parent (car pair)))
+    (unless (member org-brain-exclude-siblings-tag (org-brain-get-tags parent))
+      (org-brain--maybe-visually-sort parent (cdr pair)))))
+
+(defun org-brain--visually-sorted-pins ()
+  "List of pins visually sorted."
+  (org-brain--visually-sorted org-brain-pins))
+
+(defun org-brain--visually-sorted-selected ()
+  "Visually sorted selection list."
+  (org-brain--visually-sorted org-brain-selected))
+
 (defun org-brain--vis-pinned ()
   "Insert pinned entries.
 Helper function for `org-brain-visualize'."
   (insert "PINNED:")
-  (dolist (pin (sort (copy-sequence org-brain-pins) org-brain-visualize-sort-function))
+  (dolist (pin (org-brain--visually-sorted-pins))
     (insert "  ")
     (org-brain-insert-visualize-button pin 'org-brain-pinned 'pinned))
   (insert "\n"))
@@ -2888,7 +2937,7 @@ Helper function for `org-brain-visualize'."
 Helper function for `org-brain-visualize'."
   (unless (null org-brain-selected)
     (insert "SELECTED:")
-    (dolist (selection (sort (copy-sequence org-brain-selected) org-brain-visualize-sort-function))
+    (dolist (selection (org-brain--visually-sorted-selected))
       (insert "  ")
       (org-brain-insert-visualize-button selection 'org-brain-selected-list))
     (insert "\n")))
@@ -2925,15 +2974,11 @@ Helper function for `org-brain-visualize'."
 (defun org-brain--vis-parents-siblings (entry)
   "Insert parents and siblings of ENTRY.
 Helper function for `org-brain-visualize'."
-  (when-let ((siblings (org-brain-siblings entry)))
+  (when-let ((siblings (org-brain--visually-sorted-siblings entry)))
     (let ((parent-positions nil)
           (max-width 0))
-      (dolist (parent (sort siblings (lambda (x y)
-                                       (funcall org-brain-visualize-sort-function
-                                                (car x) (car y)))))
-        (let* ((parent-tags (org-brain-get-tags (car parent)))
-               (children-links (unless (member org-brain-exclude-siblings-tag parent-tags)
-                                 (cdr parent)))
+      (dolist (parent siblings)
+        (let* ((children-links (org-brain--visually-sorted-siblings-from parent))
                (sibling-middle (ceiling (/ (length children-links) 2.0)))
                (base-line (if org-brain-show-history 5 4))
                (col-start (+ 3 max-width))
@@ -2951,9 +2996,7 @@ Helper function for `org-brain-visualize'."
                 'org-brain-sibling) 'sibling)
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
-           (if (member org-brain-no-sort-children-tag parent-tags)
-               children-links
-             (sort children-links org-brain-visualize-sort-function)))
+	   children-links)
           (org-goto-line base-line)
           (forward-line (1- sibling-middle))
           (picture-forward-column col-start)
@@ -3011,15 +3054,13 @@ Helper function for `org-brain-visualize'."
   "Insert children of ENTRY.
 Helper function for `org-brain-visualize'."
   (let ((tags (org-brain-get-tags entry t)))
-    (when-let ((children (org-brain-children entry))
+    (when-let ((children (org-brain--visually-sorted-children entry))
                (fill-col (if (member org-brain-each-child-on-own-line-tag
                                      (org-brain-get-tags entry))
                              0
                            (eval org-brain-child-linebreak-sexp))))
       (insert "\n\n")
-      (dolist (child (if (member org-brain-no-sort-children-tag tags)
-                         children
-                       (sort children org-brain-visualize-sort-function)))
+      (dolist (child children)
         (let ((child-title (org-brain-title child))
               (face (if (member entry (org-brain-local-parent child))
                         'org-brain-local-child
@@ -3032,9 +3073,9 @@ Helper function for `org-brain-visualize'."
 (defun org-brain--vis-friends (entry)
   "Insert friends of ENTRY.
 Helper function for `org-brain-visualize'."
-  (when-let ((friends (org-brain-friends entry)))
+  (when-let ((friends (org-brain--visually-sorted-friends entry)))
     (org-brain--insert-wire " <-> ")
-    (dolist (friend (sort friends org-brain-visualize-sort-function))
+    (dolist (friend friends)
       (let ((column (current-column)))
         (org-brain-insert-visualize-button friend 'org-brain-friend 'friend)
         (picture-move-down 1)
@@ -3090,7 +3131,8 @@ Each button is indented, starting at level determined by INDENT."
   (insert (org-brain-map-create-indentation indent))
   (org-brain-insert-visualize-button entry 'org-brain-child (if (> max-level 0) 'grandchild 'child))
   (insert "\n")
-  (dolist (child (and (> max-level 0) (sort (org-brain-children entry) org-brain-visualize-sort-function)))
+  (dolist (child (and (> max-level 0)
+		      (org-brain--visually-sorted-children entry)))
     (org-brain-insert-recursive-child-buttons child (1- max-level) (1+ indent))))
 
 (defun org-brain-tree-depth (tree)
@@ -3124,7 +3166,7 @@ raw entry data."
 Also insert buttons for grand-parents, up to MAX-LEVEL.
 Each button is indented, starting at level determined by INDENT."
   (dolist (parent (and (> max-level 0)
-                       (sort (org-brain-parents entry) org-brain-visualize-sort-function)))
+                       (org-brain--visually-sorted-parents entry)))
     (org-brain-insert-recursive-parent-buttons parent (1- max-level) (1- indent)))
   (insert (org-brain-map-create-indentation indent))
   (org-brain-insert-visualize-button entry 'org-brain-parent (if (> max-level 0) 'grandparent 'parent))
@@ -3137,30 +3179,25 @@ Will also insert grand-parents up to PARENT-MAX-LEVEL, and
 children up to CHILDREN-MAX-LEVEL.
 Return the position of ENTRY in the buffer."
   (insert "FRIENDS:")
-  (dolist (friend (sort (org-brain-friends entry) org-brain-visualize-sort-function))
+  (dolist (friend (org-brain--visually-sorted-friends entry))
     (insert "  ")
     (org-brain-insert-visualize-button friend 'org-brain-friend 'friend))
   (setq-local org-brain--visualize-header-end-pos (point))
   (insert "\n\n")
   (let ((indent (1- (org-brain-tree-depth (org-brain-recursive-parents entry parent-max-level))))
         (entry-pos))
-    (dolist (parent (sort (org-brain-siblings entry) (lambda (x y)
-                                                       (funcall org-brain-visualize-sort-function
-                                                                (car x) (car y)))))
+    (dolist (parent (org-brain--visually-sorted-siblings entry))
       (org-brain-insert-recursive-parent-buttons (car parent) (1- parent-max-level) (1- indent))
-      (let* ((parent-tags (org-brain-get-tags (car parent)))
-             (children-links (unless (member org-brain-exclude-siblings-tag parent-tags)
-                               (cdr parent))))
-        (dolist (sibling (sort children-links org-brain-visualize-sort-function))
-          (insert (org-brain-map-create-indentation indent))
-          (org-brain-insert-visualize-button sibling 'org-brain-sibling 'sibling)
-          (insert "\n"))))
+      (dolist (sibling (org-brain--visually-sorted-siblings-from parent))
+        (insert (org-brain-map-create-indentation indent))
+        (org-brain-insert-visualize-button sibling 'org-brain-sibling 'sibling)
+        (insert "\n")))
     (insert (org-brain-map-create-indentation indent))
     (setq entry-pos (point))
     (insert (propertize (org-brain-title entry)
                         'face 'org-brain-title
                         'aa2u-text t) "\n")
-    (dolist (child (sort (org-brain-children entry) org-brain-visualize-sort-function))
+    (dolist (child (org-brain--visually-sorted-children entry))
       (org-brain-insert-recursive-child-buttons child (1- children-max-level) (1+ indent)))
     entry-pos))
 
