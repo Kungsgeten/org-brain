@@ -2794,11 +2794,26 @@ point before the buffer was reverted."
       (revert-buffer)
       (when button-entry (org-brain-jump-to-visualize-button button-entry)))))
 
+(defun org-brain--bookmark-handler (bookmark)
+  "Visualize the entry stored in BOOKMARK."
+  (org-brain-visualize (cdr (assoc 'brain-entry bookmark)) nil)
+  (switch-to-buffer "*org-brain*"))
+
+(defun org-brain-make-bookmark-record ()
+  "Make a bookmark out of `org-brain--vis-entry'.
+Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
+  (if-let ((entry org-brain--vis-entry))
+      (cons (org-brain-title org-brain--vis-entry)
+            `((handler . org-brain--bookmark-handler)
+              (brain-entry . ,org-brain--vis-entry)))
+    (user-error "For some reason `org-brain--vis-entry' is nil")))
+
 (define-derived-mode org-brain-visualize-mode
   special-mode  "Org-brain Visualize"
   "Major mode for `org-brain-visualize'.
 \\{org-brain-visualize-mode-map}"
-  (setq-local revert-buffer-function #'org-brain-visualize-revert))
+  (setq-local revert-buffer-function #'org-brain-visualize-revert)
+  (setq-local bookmark-make-record-function #'org-brain-make-bookmark-record))
 
 ;;;;; Keybindings
 
