@@ -50,21 +50,25 @@
 `org-mode' files placed in this directory, or its subdirectories,
 will be considered org-brain entries."
   :group 'org-brain
+  :local t
   :type '(directory))
 
 (defcustom org-brain-scan-directories-recursively t
   "If subdirectories inside `org-brain-path' are considered part of the brain or not."
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-files-extension "org"
   "The extension for entry files in `org-brain-path'."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-ignored-resource-links '("fuzzy" "radio" "brain-child" "brain-parent" "brain-friend")
   "`org-link-types' which shouldn't be shown as resources in `org-brain-visualize'."
   :group 'org-brain
+  :local t
   :type '(repeat string))
 
 (defcustom org-brain-backlink nil
@@ -76,6 +80,7 @@ variable to non-nil would also create A as a resource in B.
 If this variable is a string it will be added as a prefix in the backlink.
 Example: \"<--\" would add \"<--A\" in the example above."
   :group 'org-brain
+  :local t
   :type '(restricted-sexp :match-alternatives
            (stringp 't 'nil)))
 
@@ -90,6 +95,7 @@ Example: Creating a brain-link in A to B and A is an org file with the headings:
 Setting this variable to t will create the following backlink in B:
 [[file:A.org::*Child][Parent header > Child]]."
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (make-obsolete-variable 'org-brain-suggest-stored-link-as-resource
@@ -99,6 +105,7 @@ Setting this variable to t will create the following backlink in B:
 (defcustom org-brain-data-file (file-truename (expand-file-name ".org-brain-data.el" org-brain-path))
   "Where org-brain data is saved."
   :group 'org-brain
+  :local t
   :type '(directory))
 
 (load org-brain-data-file t t)
@@ -109,6 +116,7 @@ If 'all, choose from all file and headline entries.
 If 'files, only choose from file entries.
 If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   :group 'org-brain
+  :local t
   :type '(choice
           (const :tag "All entries" all)
           (const :tag "Only file entries" files)
@@ -118,6 +126,7 @@ If 'root, only choose from file entries in `org-brain-path' (non-recursive)."
   "If set to nil `org-brain' is optimized for headline entries.
 Only headlines will be considered as entries when visualizing."
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (make-obsolete-variable
@@ -132,41 +141,49 @@ If nil, create the new entry as a file entry relative to `org-brain-path'.
 If set to a string it should be a file entry. That entry will be used as the
 local parent and the new entry will be a headline."
   :group 'org-brain
+  :local t
   :type '(choice string (const nil)))
 
 (defcustom org-brain-show-full-entry nil
   "Always show entire entry contents?"
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-show-resources t
   "Should entry resources be shown in `org-brain-visualize'?"
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-show-text t
   "Should the entry text be shown in `org-brain-visualize'?"
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-show-history t
   "Should the navigation history be shown in `org-brain-visualize'?"
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-show-icons t
   "Should icons from `org-agenda-category-icon-alist' be shown when visualizing?"
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-category-icon-width 2
   "The character width of icons."
   :group 'org-brain
+  :local t
   :type '(integer))
 
 (defcustom org-brain-quit-after-goto nil
   "Should the *org-brain* buffer window close itself after executing a goto command?"
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-headline-links-only-show-visible t
@@ -175,6 +192,7 @@ local parent and the new entry will be a headline."
 See the docstring for `org-brain-headline-at' for more info
 on how this is implemented."
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-file-entries-use-title t
@@ -182,6 +200,7 @@ on how this is implemented."
 This can potentially be slow.  If set to nil, the relative
 filenames will be shown instead, which is faster."
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-scan-for-header-entries t
@@ -190,6 +209,7 @@ Useful if you don't tend to use header entries in your workflow,
 since scanning can be slow in long file entries.
 This only affects selection prompts and not functions like `org-brain-headline-to-file'."
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-headline-entry-name-format-string "%s::%s"
@@ -197,6 +217,7 @@ This only affects selection prompts and not functions like `org-brain-headline-t
 This `format' string is used in `org-brain-entry-name' for headline entries.
 `format' gets two objects: the file and the headline."
   :group 'org-brain
+  :local t
   :type '(string))
 (defcustom org-brain-visualize-text-hook nil
   "Hook runs after inserting `org-brain-text' in `org-brain-visualize'.
@@ -204,22 +225,26 @@ This `format' string is used in `org-brain-entry-name' for headline entries.
 Can be used to prettify the entry text, e.g.
 `org-display-inline-images'."
   :group 'org-brain
+  :local t
   :type 'hook)
 
 (defcustom org-brain-after-visualize-hook nil
   "Hook run after `org-brain-visualize', but before `org-brain-text'.
 Can be used to prettify the buffer output, e.g. `ascii-art-to-unicode'."
   :group 'org-brain
+  :local t
   :type 'hook)
 
 (defcustom org-brain-new-entry-hook nil
   "Hook run after a new headline entry has been created."
   :group 'org-brain
+  :local t
   :type 'hook)
 
 (defcustom org-brain-visualize-follow-hook nil
   "Hook run after viewing an entry by means of `org-brain-visualize-follow'."
   :group 'org-brain
+  :local t
   :type 'hook)
 
 (defcustom org-brain-after-resource-button-functions nil
@@ -228,6 +253,7 @@ Insert a bullet, then run hook functions, then insert the actual button.
 Each function must take a single argument: the org link to the resource.
 Can for instance be used in combination with `all-the-icons'."
   :group 'org-brain
+  :local t
   :type 'hook)
 
 (defcustom org-brain-vis-title-prepend-functions '(org-brain-entry-icon)
@@ -236,6 +262,7 @@ Each function should take the entry as the only argument, and
 should return a string. The strings are prepended to the entry title."
   :group 'org-brain
   :type 'hook
+  :local t
   :options '(org-brain-entry-icon
              org-brain-entry-todo-state
              org-brain-entry-tags-string))
@@ -246,6 +273,7 @@ Each function should take the entry as the only argument, and
 should return a string. The strings are appended to the entry title."
   :group 'org-brain
   :type 'hook
+  :local t
   :options '(org-brain-entry-icon
              org-brain-entry-todo-state
              org-brain-entry-tags-string))
@@ -255,6 +283,7 @@ should return a string. The strings are appended to the entry title."
 First `org-brain-vis-title-prepend-functions' are ran, and then these."
   :group 'org-brain
   :type 'hook
+  :local t
   :options '(org-brain-entry-icon
              org-brain-entry-todo-state
              org-brain-entry-tags-string))
@@ -264,6 +293,7 @@ First `org-brain-vis-title-prepend-functions' are ran, and then these."
 First `org-brain-vis-title-append-functions' are ran, and then these."
   :group 'org-brain
   :type 'hook
+  :local t
   :options '(org-brain-entry-icon
              org-brain-entry-todo-state
              org-brain-entry-tags-string))
@@ -272,69 +302,82 @@ First `org-brain-vis-title-append-functions' are ran, and then these."
   "`org-mode' tag stopping `org-brain-visualize' from fetching entry text.
 Only applies to headline entries."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-exclude-resouces-tag "resourceless"
   "`org-mode' tag stopping `org-brain-visualize' from fetching entry resources.
 Only applies to headline entries."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-exclude-children-tag "childless"
   "`org-mode' tag which exclude the headline's children from org-brain's entries."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-show-children-tag "showchildren"
   "`org-mode' tag which get entire subtree from headline entry during `org-brain-text'."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-exclude-tree-tag "nobrain"
   "`org-mode' tag which exclude the headline and its children from org-brain's entries."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-exclude-siblings-tag "nosiblings"
   "`org-mode' tag which prevents the siblings of children of this node from being displayed."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-exclude-local-parent-tag "nolocalparent"
   "`org-mode' tag which prevents this node to be displayed as a local parent."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-each-child-on-own-line-tag "ownline"
   "`org-mode' tag which makes each child of the headline entry be listed on its own line."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-no-sort-children-tag "nosort"
   "`org-mode' tag which makes the children of the headline entry appear in file order rather than sorted."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-wander-interval 3
   "Seconds between randomized entries, when using `org-brain-visualize-wander'."
   :group 'org-brain
+  :local t
   :type 'integer)
 
 (defcustom org-brain-title-max-length 0
   "If a title is longer than this, it'll be capped during `org-brain-visualize'.
 If 0 or a negative value, the title won't be capped."
   :group 'org-brain
+  :local t
   :type 'integer)
 
 (defcustom org-brain-cap-mind-map-titles nil
   "Whether to cap entries longer than org-brain-title-max-length in mind map visualization mode."
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-entry-separator ";"
   "Can be used as a separator when adding children, parents, or friends.
 Doing so allows for adding multiple entries at once."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (make-obsolete-variable
@@ -351,11 +394,13 @@ Reasonable values include:
 '(window-width): lines will break at the width of the window
 'most-positive-fixnum: All children will be on one line"
   :group 'org-brain
+  :local t
   :type '(sexp))
 
 (defcustom org-brain-refile-max-level 1
   "The default max-level used by `org-brain-refile'."
   :group 'org-brain
+  :local t
   :type 'integer)
 
 (defcustom org-brain-child-link-name "brain-child"
@@ -363,6 +408,7 @@ Reasonable values include:
 Must be set before `org-brain' is loaded.
 Insert links using `org-insert-link'."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-parent-link-name "brain-parent"
@@ -370,6 +416,7 @@ Insert links using `org-insert-link'."
 Must be set before `org-brain' is loaded.
 Insert links using `org-insert-link'."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-friend-link-name "brain-friend"
@@ -377,46 +424,54 @@ Insert links using `org-insert-link'."
 Must be set before `org-brain' is loaded.
 Insert links using `org-insert-link'."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-children-property-name "BRAIN_CHILDREN"
   "The name for the org-mode property in which child relationships are stored.
 Must be set before `org-brain' is loaded."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-parents-property-name "BRAIN_PARENTS"
   "The name for the org-mode property in which brain relationships are stored.
 Must be set before `org-brain' is loaded."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-friends-property-name "BRAIN_FRIENDS"
   "The name for the org-mode property in which friend relationships are stored.
 Must be set before `org-brain' is loaded."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-edge-property-prefix-name "BRAIN_EDGE"
   "The prefix for the org-mode property in which edge annotations are stored.
 Must be set before `org-brain' is loaded."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-resources-drawer-name "RESOURCES"
   "The org-mode drawer name in which resources of an entry are stored.
 Must be set before `org-brain' is loaded."
   :group 'org-brain
+  :local t
   :type '(string))
 
 (defcustom org-brain-open-same-window nil
   "Should `org-brain-visualize' open up in the same window it was launched in?"
   :group 'org-brain
+  :local t
   :type '(boolean))
 
 (defcustom org-brain-completion-system 'default
   "The completion system to be used by `org-brain'."
   :group 'org-brain
+  :local t
   :type '(radio
           (const :tag "Ido" ido)
           (const :tag "Helm" helm)
@@ -567,6 +622,14 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 (defvar org-brain-headline-cache (make-hash-table :test 'equal)
   "Cache for headline entries. Updates when files have been saved.")
 
+(make-variable-buffer-local org-brain--vis-entry)
+(make-variable-buffer-local org-brain--vis-entry-keywords)
+(make-variable-buffer-local org-brain--vis-history)
+(make-variable-buffer-local org-brain-resources-start-re)
+(make-variable-buffer-local org-brain-keyword-regex )
+(make-variable-buffer-local org-brain-pins)
+(make-variable-buffer-local org-brain-selected)
+(make-variable-buffer-local org-brain-headline-cache)
 ;;;###autoload
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
