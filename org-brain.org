@@ -1131,7 +1131,6 @@
         (stringp entry))
     #+end_src
       
-      
 *** org-brain-save-data
     #+begin_src emacs-lisp
       
@@ -1152,7 +1151,6 @@
             (newline))))
     #+end_src
       
-      
 *** org-brain-path-entry-name
     #+begin_src emacs-lisp
       
@@ -1162,7 +1160,6 @@
                               (file-relative-name (file-truename path)
                                                   (file-truename org-brain-path))))
     #+end_src
-      
       
 *** org-brain-entry-path
     #+begin_src emacs-lisp
@@ -1186,7 +1183,6 @@
                                            org-brain-path))))
     #+end_src
       
-      
 *** org-brain-files
     #+begin_src emacs-lisp
       
@@ -1204,7 +1200,6 @@
              org-brain-path t (format "^[^.].*\\.%s$" org-brain-files-extension)))))
     #+end_src
       
-      
 *** org-brain-link-re
 
     #+begin_src emacs-lisp
@@ -1219,7 +1214,6 @@
       the old `org-bracket-link-regexp' had different match groups.
       The purpose of `org-brain-link-re' is protection against future changes.")
     #+end_src
-      
       
 *** org-brain-replace-links-with-visible-parts
     #+begin_src emacs-lisp
@@ -1241,7 +1235,6 @@
             (setq start (match-end 0)))
           (concat ret-str (substring-no-properties raw-str start nil))))
     #+end_src
-      
       
 *** org-brain-headline-at
     #+begin_src emacs-lisp
@@ -1265,7 +1258,6 @@
             (org-entry-get pom "ITEM"))))
     #+end_src
       
-      
 *** org-brain--headline-entry-at-point
     #+begin_src emacs-lisp
       
@@ -1277,7 +1269,6 @@
           (list (org-brain-path-entry-name buffer-file-name)
                 (org-brain-headline-at (point)) id)))
     #+end_src
-      
       
 *** org-brain-entry-at-point-excludedp
     #+begin_src emacs-lisp
@@ -1291,7 +1282,6 @@
                                 (org-get-tags nil t)))))))
     #+end_src
       
-      
 *** org-brain-id-exclude-taggedp
     #+begin_src emacs-lisp
       
@@ -1300,7 +1290,6 @@
         (org-with-point-at (org-id-find id t)
           (org-brain-entry-at-point-excludedp)))
     #+end_src
-      
       
 *** org-brain--name-and-id-at-point
     #+begin_src emacs-lisp
@@ -1313,7 +1302,6 @@
             (list (org-brain-headline-at (point)) id))))
     #+end_src
       
-      
 *** org-brain--nicknames-at-point
     #+begin_src emacs-lisp
       
@@ -1324,7 +1312,6 @@
                     (list 'nickname nickname id))
                   (org-entry-get-multivalued-property (point) "NICKNAMES"))))
     #+end_src
-      
       
 *** org-brain-headline-entries-in-file
     #+begin_src emacs-lisp
@@ -1357,7 +1344,6 @@
               (org-brain-headline-entries-in-file file t)))))
     #+end_src
       
-      
 *** org-brain-headline-entries
     #+begin_src emacs-lisp
       
@@ -1378,7 +1364,6 @@
                     (org-brain-files))))))
     #+end_src
       
-      
 *** org-brain-entry-from-id
     #+begin_src emacs-lisp
       
@@ -1391,7 +1376,6 @@
                 id)))
     #+end_src
       
-      
 *** org-brain-entry-identifier
     #+begin_src emacs-lisp
       
@@ -1403,7 +1387,6 @@
             (org-entry-protect-space entry)
           (nth 2 entry)))
     #+end_src
-      
       
 *** org-brain-entry-at-pt
     #+begin_src emacs-lisp
@@ -1446,7 +1429,6 @@
                (error "Not in org-mode or org-brain-visualize"))))
     #+end_src
       
-      
 *** org-brain-entry-name
     #+begin_src emacs-lisp
       
@@ -1460,7 +1442,6 @@
                   (org-brain-entry-name (car entry)) (cadr entry))))
     #+end_src
       
-      
 *** org-brain-entry-data
     #+begin_src emacs-lisp
       
@@ -1470,7 +1451,6 @@
           (insert (org-brain-text entry t))
           (org-element-parse-buffer)))
     #+end_src
-      
       
 *** org-brain--file-targets
     #+begin_src emacs-lisp
@@ -1501,7 +1481,6 @@
              (org-brain-headline-entries-in-file file t))))))
     #+end_src
       
-      
 *** org-brain--all-targets
     #+begin_src emacs-lisp
       
@@ -1519,7 +1498,6 @@
                   (org-brain-files t))))
     #+end_src
       
-      
 *** org-brain-completing-read
     #+begin_src emacs-lisp
       
@@ -1534,7 +1512,6 @@
                               (append args '("org-brain" "*org-brain-helm*")))))
               (funcall org-brain-completion-system prompt choices))))
     #+end_src
-      
       
 *** org-brain-get-entry-from-title
     #+begin_src emacs-lisp
@@ -1583,7 +1560,6 @@
     #+end_src
       
       
-      
 *** org-brain-add-entry
     #+begin_src emacs-lisp
       ;;;###autoload
@@ -1593,7 +1569,6 @@
         (message "Added new entry: '%s'"
                  (org-brain-entry-name (org-brain-get-entry-from-title title))))
     #+end_src
-      
       
 *** org-brain-choose-entries
     #+begin_src emacs-lisp
@@ -1622,7 +1597,6 @@
                     (list choices)))))
     #+end_src
       
-      
 *** org-brain-choose-entry
     #+begin_src emacs-lisp
       
@@ -1633,7 +1607,6 @@
         (let ((org-brain-entry-separator nil))
           (car (org-brain-choose-entries prompt entries predicate require-match initial-input hist def inherit-input-method))))
     #+end_src
-      
       
 *** org-brain-first-headline-position
     #+begin_src emacs-lisp
@@ -1647,7 +1620,6 @@
               (goto-char (point-max)))
           (point)))
     #+end_src
-      
       
 *** org-brain-keywords
     #+begin_src emacs-lisp
@@ -1667,7 +1639,6 @@
           (error "Only file entries have keywords")))
     #+end_src
       
-      
 *** org-brain-get-tags
     #+begin_src emacs-lisp
       
@@ -1683,7 +1654,6 @@
             (org-get-tags nil (not inherit)))))
     #+end_src
       
-      
 *** org-brain-entry-tags-string
     #+begin_src emacs-lisp
       
@@ -1694,7 +1664,6 @@
               ""
             (concat ":" tags ":"))))
     #+end_src
-      
       
 *** org-brain-entry-todo-state
     #+begin_src emacs-lisp
@@ -1708,7 +1677,6 @@
             (or (org-get-todo-state) ""))))
     #+end_src
       
-      
 *** org-brain--missing-id-error
     #+begin_src emacs-lisp
       
@@ -1717,7 +1685,6 @@
         (error "Couldn't find entry %s, try running org-brain-update-id-locations. "
                (org-brain-entry-name entry)))
     #+end_src
-      
       
 *** org-brain-entry-marker
     #+begin_src emacs-lisp
@@ -1737,7 +1704,6 @@
               (org-brain--missing-id-error entry))))
     #+end_src
       
-      
 *** org-brain-title
     #+begin_src emacs-lisp
       
@@ -1752,7 +1718,6 @@
               (concat (substring title 0 (1- org-brain-title-max-length)) "…")
             title)))
     #+end_src
-      
       
 *** org-brain-text-positions
     #+begin_src emacs-lisp
@@ -1798,7 +1763,6 @@
                   (list (point) end)))))))
     #+end_src
       
-      
 *** org-brain-text
     #+begin_src emacs-lisp
       
@@ -1829,7 +1793,6 @@
               (buffer-substring (point) (point-max))))))
     #+end_src
       
-      
 *** org-brain-parents
     #+begin_src emacs-lisp
       
@@ -1840,7 +1803,6 @@
          (append (org-brain--linked-property-entries entry org-brain-parents-property-name)
                  (org-brain-local-parent entry))))
     #+end_src
-      
       
 *** org-brain-local-parent
     #+begin_src emacs-lisp
@@ -1860,7 +1822,6 @@
             (list parent)))
     #+end_src
       
-      
 *** org-brain-children
     #+begin_src emacs-lisp
       
@@ -1870,7 +1831,6 @@
          (append (org-brain--linked-property-entries entry org-brain-children-property-name)
                  (org-brain-local-children entry))))
     #+end_src
-      
       
 *** org-brain-local-children
     #+begin_src emacs-lisp
@@ -1910,7 +1870,6 @@
                children)))))
     #+end_src
       
-      
 *** org-brain-descendants
     #+begin_src emacs-lisp
       
@@ -1927,7 +1886,6 @@
             (collect-descendants entry)
             checked)))
     #+end_src
-      
       
 *** org-brain-local-descendants
     #+begin_src emacs-lisp
@@ -1959,7 +1917,6 @@
                         (point))))))))))
     #+end_src
       
-      
 *** org-brain-siblings
     #+begin_src emacs-lisp
       
@@ -1973,7 +1930,6 @@
           (org-brain-parents entry))))
     #+end_src
       
-      
 *** org-brain-friends
     #+begin_src emacs-lisp
       
@@ -1981,7 +1937,6 @@
         "Get friends of ENTRY."
         (delete-dups (org-brain--linked-property-entries entry org-brain-friends-property-name)))
     #+end_src
-      
       
 *** org-brain-resources
     #+begin_src emacs-lisp
@@ -2020,7 +1975,6 @@
                                   (org-attach-file-list attach-dir)))))))))
     #+end_src
       
-      
 *** org-brain--choose-resource
     #+begin_src emacs-lisp
       
@@ -2038,7 +1992,6 @@
     #+end_src
       
       
-      
 *** org-brain-open-resource
     #+begin_src emacs-lisp
       ;;;###autoload
@@ -2054,7 +2007,6 @@
                                (org-brain-descendants entry)
                              (list entry))))))
     #+end_src
-      
       
 *** org-brain--linked-property-entries
     #+begin_src emacs-lisp
@@ -2077,7 +2029,6 @@
                   (org-entry-get-multivalued-property (org-brain-entry-marker entry) property)))))
           (if (equal propertylist '("")) nil propertylist)))
     #+end_src
-      
       
 *** org-brain-add-relationship
     #+begin_src emacs-lisp
@@ -2117,7 +2068,6 @@
           (org-save-all-org-buffers)))
     #+end_src
       
-      
 *** org-brain-delete-current-line
     #+begin_src emacs-lisp
       
@@ -2131,7 +2081,6 @@
           (delete-region (line-beginning-position)
                          (progn (forward-line 1) (point)))))
     #+end_src
-      
       
 *** org-brain-remove-relationship
     #+begin_src emacs-lisp
@@ -2205,7 +2154,6 @@
       
     #+end_src
     
-     
      
 *** org-brain-add-child-headline
     #+begin_src emacs-lisp
@@ -2348,7 +2296,6 @@
         (org-brain--revert-if-visualizing))
     #+end_src
         
-        
 *** org-brain--internal-add-friendship
     #+begin_src emacs-lisp
       
@@ -2377,7 +2324,6 @@
     #+end_src
         
       
-        
 *** org-brain-add-friendship
     #+begin_src emacs-lisp
       ;;;###autoload
@@ -2468,14 +2414,11 @@
         entry)
     #+end_src
       
-      
 *** 'org-brain-open
     #+begin_src emacs-lisp
       
       (define-obsolete-function-alias 'org-brain-open 'org-brain-goto "0.4")
     #+end_src
-      
-      
       
 *** org-brain-goto-other-window
     #+begin_src emacs-lisp
@@ -3856,7 +3799,6 @@
           (error "No further history")))
     #+end_src
       
-      
 *** org-brain-visualize-revert
     #+begin_src emacs-lisp
       
@@ -3864,7 +3806,6 @@
         "Revert function for `org-brain-visualize-mode'."
         (org-brain-visualize org-brain--vis-entry t))
     #+end_src
-      
       
 *** org-brain--revert-if-visualizing
     #+begin_src emacs-lisp
@@ -4559,7 +4500,6 @@
        :tail-mode 'host)
    #+end_src
      
-     
 ** org-brain-polymode
 
    #+begin_src emacs-lisp
@@ -4653,7 +4593,6 @@
             link))))
     #+end_src
      
-    
 *** org-brain-link-store  
     #+begin_src emacs-lisp
       
@@ -4707,7 +4646,6 @@
                     (nth 2 entry)))))
     #+end_src
   
- 
 *** org-brain--switch-and-visualize  
     #+begin_src emacs-lisp
       
@@ -4718,7 +4656,6 @@
         (org-brain-visualize (or (org-brain-entry-from-id entry) entry)))
     #+end_src
       
-     
 *** org-brain--switch-link-follow  
     #+begin_src emacs-lisp
       
@@ -4755,7 +4692,6 @@
         (org-brain--revert-if-visualizing))
     #+end_src
      
-     
 *** helm-brain--add-parents  
     #+begin_src emacs-lisp
       
@@ -4766,7 +4702,6 @@
         (org-brain--revert-if-visualizing))
     #+end_src
       
-     
 *** helm-brain--add-friends  
     #+begin_src emacs-lisp
       
@@ -4777,7 +4712,6 @@
         (org-brain--revert-if-visualizing))
     #+end_src
       
-     
 *** helm-brain--delete-entries  
     #+begin_src emacs-lisp
       
@@ -4786,7 +4720,6 @@
           (org-brain-delete-entry (or (org-brain-entry-from-id candidate) candidate))))
     #+end_src
       
-     
 *** helm-brain--archive  
     #+begin_src emacs-lisp
       
@@ -4795,7 +4728,6 @@
           (org-brain-archive (or (org-brain-entry-from-id candidate) candidate))))
     #+end_src
       
-     
 *** helm-brain--select  
     #+begin_src emacs-lisp
       
@@ -4804,7 +4736,6 @@
           (org-brain-select (or (org-brain-entry-from-id candidate) candidate) 1)))
     #+end_src
       
-     
 *** helm-brain--unselect  
     #+begin_src emacs-lisp
       
@@ -4813,7 +4744,6 @@
           (org-brain-select (or (org-brain-entry-from-id candidate) candidate) -1)))
     #+end_src
       
-     
 *** helm-brain--actions
  
     #+begin_src emacs-lisp
@@ -4831,7 +4761,6 @@
          "Unselect" 'helm-brain--unselect))
     #+end_src
       
-     
 *** helm-brain--source
  
     #+begin_src emacs-lisp
@@ -4842,7 +4771,6 @@
           :action 'helm-brain--actions))
     #+end_src
       
-     
 *** helm-brain--fallback-source
  
     #+begin_src emacs-lisp
@@ -4857,7 +4785,6 @@
                    "Add friends" 'helm-brain--add-friends)))
     #+end_src
       
-     
 *** helm-brain  
     #+begin_src emacs-lisp
       
