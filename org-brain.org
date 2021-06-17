@@ -294,6 +294,24 @@
       
     #+end_src
 
+    #+RESULTS:
+    : org-brain-quit-after-goto
+
+*** org-brain-goto-evil-normal
+
+   #+begin_src emacs-lisp
+     
+     (defcustom org-brain-goto-evil-normal t
+       "While in evil mode visit org-mode file node in normal rather than insert mode"
+       :group 'org-brain
+       :local t
+       :type '(boolean))
+     
+        #+end_src
+
+        #+RESULTS:
+        : org-brain-goto-evil-normal
+   
 *** org-brain-headline-links-only-show-visible
     #+begin_src emacs-lisp
       
@@ -2411,8 +2429,13 @@
           (when (org-at-heading-p)
             (org-show-entry)
             (org-show-subtree)))
+        (when (and org-brain-goto-evil-normal (memq 'evil-mode minor-mode-list))
+          (evil-normal-state))
         entry)
     #+end_src
+
+    #+RESULTS:
+    : org-brain-goto
       
 *** 'org-brain-open
     #+begin_src emacs-lisp
