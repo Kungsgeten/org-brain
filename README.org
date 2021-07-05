@@ -126,7 +126,7 @@ Most of the configuration below isn't necessary, but showcases some options.
 4. =org-brain= use =org-id= in order to speed things up. Because of this, the
    variable =org-id-track-globally= should be =t= (which it already is by default).
    You may want to modify =org-id-locations-file= too. If you add entries to
-   =org-brain= directly from =org-mode= you must assign headliens an ID. A
+   =org-brain= directly from =org-mode= you must assign headlines an ID. A
    comfortable way to do this is with the command
    =org-brain-ensure-ids-in-buffer=. Even more comfortable is to add that to
    =before-save-hook=, so that it runs when saving.
