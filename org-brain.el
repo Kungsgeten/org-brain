@@ -2384,6 +2384,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
     (setq-local indent-tabs-mode nil)
     (read-only-mode 1)
     (setq-local default-directory (file-name-directory (org-brain-entry-path entry)))
+    (setq list-buffers-directory (org-brain-vis-title entry))
     (org-brain-maybe-switch-brain)
     (unless (eq org-brain--vis-entry entry)
       (setq org-brain--vis-entry entry)
