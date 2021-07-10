@@ -42,9 +42,9 @@
   :prefix "org-brain-"
   :group 'org)
 
-;;;; Custom vars
+;;; Custom vars
 
-(defcustom org-brain-path (file-truename (expand-file-name "brain" org-directory))
+(defcustom org-brain-path (file-truename (expand-file-name "brain" org-directory)) 
   "The root directory of your org-brain.
 
 `org-mode' files placed in this directory, or its subdirectories,
@@ -82,7 +82,7 @@ Example: \"<--\" would add \"<--A\" in the example above."
   :group 'org-brain
   :local t
   :type '(restricted-sexp :match-alternatives
-           (stringp 't 'nil)))
+                          (stringp 't 'nil)))
 
 (defcustom org-brain-backlink-heading t
   "If the org heading should be used when creating a backlink.
@@ -102,7 +102,7 @@ Setting this variable to t will create the following backlink in B:
                         "org-brain-suggest-stored-link-as-resource isn't needed because of `org-insert-link-global'."
                         "0.6")
 
-(defcustom org-brain-data-file (file-truename (expand-file-name ".org-brain-data.el" org-brain-path))
+(defcustom org-brain-data-file (file-truename (expand-file-name ".org-brain-data.el" org-brain-path)) 
   "Where org-brain data is saved."
   :group 'org-brain
   :local t
@@ -186,6 +186,12 @@ local parent and the new entry will be a headline."
   :local t
   :type '(boolean))
 
+(defcustom org-brain-goto-evil-normal t
+  "While in evil mode visit org-mode file node in normal rather than insert mode"
+  :group 'org-brain
+  :local t
+  :type '(boolean))
+
 (defcustom org-brain-headline-links-only-show-visible t
   "Only show visible parts (descriptions) of headline links.
 
@@ -219,6 +225,7 @@ This `format' string is used in `org-brain-entry-name' for headline entries.
   :group 'org-brain
   :local t
   :type '(string))
+
 (defcustom org-brain-visualize-text-hook nil
   "Hook runs after inserting `org-brain-text' in `org-brain-visualize'.
 
@@ -261,8 +268,8 @@ Can for instance be used in combination with `all-the-icons'."
 Each function should take the entry as the only argument, and
 should return a string. The strings are prepended to the entry title."
   :group 'org-brain
-  :type 'hook
   :local t
+  :type 'hook
   :options '(org-brain-entry-icon
              org-brain-entry-todo-state
              org-brain-entry-tags-string))
@@ -272,8 +279,8 @@ should return a string. The strings are prepended to the entry title."
 Each function should take the entry as the only argument, and
 should return a string. The strings are appended to the entry title."
   :group 'org-brain
-  :type 'hook
   :local t
+  :type 'hook
   :options '(org-brain-entry-icon
              org-brain-entry-todo-state
              org-brain-entry-tags-string))
@@ -282,8 +289,8 @@ should return a string. The strings are appended to the entry title."
   "Like `org-brain-vis-title-prepend-functions' for the current visualized entry.
 First `org-brain-vis-title-prepend-functions' are ran, and then these."
   :group 'org-brain
-  :type 'hook
   :local t
+  :type 'hook
   :options '(org-brain-entry-icon
              org-brain-entry-todo-state
              org-brain-entry-tags-string))
@@ -292,8 +299,8 @@ First `org-brain-vis-title-prepend-functions' are ran, and then these."
   "Like `org-brain-vis-title-append-functions' for the current visualized entry.
 First `org-brain-vis-title-append-functions' are ran, and then these."
   :group 'org-brain
-  :type 'hook
   :local t
+  :type 'hook
   :options '(org-brain-entry-icon
              org-brain-entry-todo-state
              org-brain-entry-tags-string))
@@ -432,6 +439,7 @@ Insert links using `org-insert-link'."
 Must be set before `org-brain' is loaded."
   :group 'org-brain
   :local t
+  :local t
   :type '(string))
 
 (defcustom org-brain-parents-property-name "BRAIN_PARENTS"
@@ -479,7 +487,11 @@ Must be set before `org-brain' is loaded."
           (const :tag "Default" default)
           (function :tag "Custom function")))
 
-;;;;; Faces and face helper functions
+(mapcar 'make-variable-buffer-local
+        '(org-brain--vis-entry org-brain--vis-entry-keywords org-brain--vis-history org-brain-resources-start-re
+                               org-brain-keyword-regex org-brain-pins org-brain-selected org-brain-headline-cache))
+
+;;; Faces and face helper functions
 
 (defface org-brain-title
   '((t . (:inherit 'org-level-1)))
@@ -556,6 +568,7 @@ File entries also use this, but also applies `org-brain-file-face-template'.")
 to the visualized entry.")
 
 ;; This needs to be here or defface complains that it is undefined.
+
 (defun org-brain-specified-face-attrs (face &optional frame)
   "Return a plist of all face attributes of FACE that are not `unspecified'.
 If FRAME is not specified, `selected-frame' is used."
@@ -590,7 +603,7 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
   `((t . ,(org-brain-specified-face-attrs 'highlight)))
   "Attributes of this face are added to the faces of selected entries.")
 
-;;;; API
+;;; API
 
 ;; An entry is either a string or a list of three strings.
 ;; If a string, then the entry is a file.
@@ -622,14 +635,6 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 (defvar org-brain-headline-cache (make-hash-table :test 'equal)
   "Cache for headline entries. Updates when files have been saved.")
 
-(make-variable-buffer-local org-brain--vis-entry)
-(make-variable-buffer-local org-brain--vis-entry-keywords)
-(make-variable-buffer-local org-brain--vis-history)
-(make-variable-buffer-local org-brain-resources-start-re)
-(make-variable-buffer-local org-brain-keyword-regex )
-(make-variable-buffer-local org-brain-pins)
-(make-variable-buffer-local org-brain-selected)
-(make-variable-buffer-local org-brain-headline-cache)
 ;;;###autoload
 (defun org-brain-update-id-locations ()
   "Scan `org-brain-files' using `org-id-update-id-locations'."
@@ -710,7 +715,7 @@ If CHECK-TITLE is non-nil, consider that ENTRY might be a file entry title."
                       entry)
                 (car entry))))
     (file-truename (expand-file-name (org-link-unescape (format "%s.%s" name org-brain-files-extension))
-                      org-brain-path))))
+                                     org-brain-path))))
 
 (defun org-brain-files (&optional relative)
   "Get all org files (recursively) in `org-brain-path'.
@@ -1459,7 +1464,7 @@ Optionally only delete if matching MATCH-REGEX."
                                                 (org-brain-entry-identifier parent)))
   (org-save-all-org-buffers))
 
-;;;; Buffer commands
+;;; Buffer commands
 
 ;;;###autoload
 (defun org-brain-add-child (entry children &optional verbose)
@@ -1545,11 +1550,11 @@ If VERBOSE is non-nil then display a message."
                                (org-brain-choose-entry "Refile to parent: " linked-parents))))
             (org-brain-remove-relationship entry (org-brain-change-local-parent child new-parent)))
         (org-brain-delete-entry child))
-    (org-brain-remove-relationship entry child))
-  (if verbose (message "'%s' is no longer a child of '%s'."
-                       (org-brain-entry-name child)
-                       (org-brain-entry-name entry)))
-  (org-brain--revert-if-visualizing))
+    (org-brain-remove-relationship entry child)
+    (if verbose (message "'%s' is no longer a child of '%s'."
+                         (org-brain-entry-name child)
+                         (org-brain-entry-name entry)))
+    (org-brain--revert-if-visualizing))
 
 ;;;###autoload
 (defun org-brain-add-parent (entry parents &optional verbose)
@@ -1707,6 +1712,8 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
     (when (org-at-heading-p)
       (org-show-entry)
       (org-show-subtree)))
+  (when (and org-brain-goto-evil-normal (memq 'evil-mode minor-mode-list))
+    (evil-normal-state))
   entry)
 
 (define-obsolete-function-alias 'org-brain-open 'org-brain-goto "0.4")
@@ -2368,7 +2375,7 @@ function."
                (org-brain-path-entry-name file)
                (car (split-string (org-element-property :path link) "::"))))))))))
 
-;;;; Sorting
+;;; Sorting
 
 (defun org-brain-title< (entry1 entry2)
   "Return non-nil if title of ENTRY1 is less than ENTRY2 in lexicographic order.
@@ -2382,7 +2389,7 @@ The function returns t if the first entry is smaller than the second.
 
 If you don't want to sort the relationships, set this to `ignore'.")
 
-;;;; Visualize
+;;; Visualize
 
 (defvar org-brain--visualize-follow nil "Used by `org-brain-visualize-follow'.")
 
@@ -2828,10 +2835,11 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
           (org-set-property (org-brain-edge-prop-name target) annotation)
         (org-delete-property (org-brain-edge-prop-name target)))
       (save-buffer)))
-  (when two-way
-    (run-with-idle-timer 0.2 nil 'org-brain-annotate-edge
-                         target entry annotation nil))
-  (org-brain--revert-if-visualizing))
+
+(when two-way
+  (run-with-idle-timer 0.2 nil 'org-brain-annotate-edge
+                       target entry annotation nil))
+(org-brain--revert-if-visualizing))
 
 (defun org-brain-visualize-back ()
   "Go back to the previously visualized entry."
@@ -2878,7 +2886,8 @@ Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
   (setq-local revert-buffer-function #'org-brain-visualize-revert)
   (setq-local bookmark-make-record-function #'org-brain-make-bookmark-record))
 
-;;;;; Keybindings
+;;; Keybindings
+
 
 (define-key org-brain-visualize-mode-map "p" 'org-brain-add-parent)
 (define-key org-brain-visualize-mode-map "P" 'org-brain-remove-parent)
@@ -2950,7 +2959,7 @@ Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
           "" " " "<" ">" "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"
           [33554464])))
 
-;;;;; Drawing helpers
+;;; Drawing helpers
 
 (defun org-brain--visually-sort (lst)
   "Sort LST destructively according to org-brain-visualize-sort-function."
@@ -2982,10 +2991,10 @@ Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
   "List of siblings, sorted unless ENTRY has a :nosort: tag."
   (let ((siblings (org-brain-siblings entry)))
     (if (member org-brain-no-sort-children-tag (org-brain-get-tags entry))
-	siblings
+        siblings
       (sort siblings (lambda (x y)
-		       (funcall org-brain-visualize-sort-function
-				(car x) (car y)))))))
+                       (funcall org-brain-visualize-sort-function
+                                (car x) (car y)))))))
 
 (defun org-brain--visually-sorted-siblings-from (pair)
   "List of siblings for a parent, sorted unless the parent in PAIR has a :nosort: tag, or empty list if the parent has a :nosiblings: tag."
@@ -3074,7 +3083,7 @@ Helper function for `org-brain-visualize'."
                 'org-brain-sibling) 'sibling)
              (setq max-width (max max-width (current-column)))
              (newline (forward-line 1)))
-	   children-links)
+           children-links)
           (org-goto-line base-line)
           (forward-line (1- sibling-middle))
           (picture-forward-column col-start)
@@ -3117,7 +3126,7 @@ Helper function for `org-brain-visualize'."
           (move-to-column (/ (+ (cdar (last parent-positions))
                                 (cdar parent-positions))
                              2)
-			  t)
+                          t)
           (delete-char 1)
           (when (> (length parent-positions) 1)
             (org-brain--insert-wire "+")
@@ -3196,7 +3205,7 @@ Helper function for `org-brain-visualize'."
           (run-hooks 'org-brain-after-visualize-hook)))
     (run-hooks 'org-brain-after-visualize-hook)))
 
-;;;;; Mind-map
+;;; Mind-map
 
 (defun org-brain-map-create-indentation (level)
   "Return a string of spaces, length determined by indentation LEVEL."
@@ -3210,7 +3219,7 @@ Each button is indented, starting at level determined by INDENT."
   (org-brain-insert-visualize-button entry 'org-brain-child (if (> max-level 0) 'grandchild 'child))
   (insert "\n")
   (dolist (child (and (> max-level 0)
-		      (org-brain--visually-sorted-children entry)))
+                      (org-brain--visually-sorted-children entry)))
     (org-brain-insert-recursive-child-buttons child (1- max-level) (1+ indent))))
 
 (defun org-brain-tree-depth (tree)
@@ -3280,7 +3289,9 @@ Return the position of ENTRY in the buffer."
     entry-pos))
 
 (defvar org-brain-visualizing-mind-map nil)
+
 (defvar-local org-brain-mind-map-child-level 1)
+
 (defvar-local org-brain-mind-map-parent-level 1)
 
 (defun org-brain-visualize-mind-map ()
@@ -3290,7 +3301,7 @@ Return the position of ENTRY in the buffer."
     (setq org-brain-visualizing-mind-map (not org-brain-visualizing-mind-map))
     (org-brain-visualize org-brain--vis-entry)))
 
-;;;;; Show/hide nested levels
+;;; Show/hide nested levels
 (defun org-brain-show-descendant-level ()
   "Show one more level of descendant entries to the right in the mind-map visualization buffer."
   (interactive)
@@ -3330,7 +3341,7 @@ Return the position of ENTRY in the buffer."
 (define-obsolete-function-alias
   'org-brain-visualize-remove-grandparent 'org-brain-hide-ancestor-level "0.5")
 
-;;;;; Polymode
+;;; Polymode
 
 ;; This code has been adapted from Dustin Lacewell's project polybrain
 ;; Have a look at: https://github.com/dustinlacewell/polybrain.el/
@@ -3339,41 +3350,41 @@ Return the position of ENTRY in the buffer."
   (define-hostmode org-brain-poly-hostmode
     :mode 'org-brain-visualize-mode)
 
-  (define-innermode org-brain-poly-innermode
-    :mode 'org-mode
-    :head-matcher "^[─-]\\{3\\} Entry [─-]+\n"
-    :tail-matcher "\\'"
-    :head-mode 'host
-    :tail-mode 'host)
+(define-innermode org-brain-poly-innermode
+  :mode 'org-mode
+  :head-matcher "^[─-]\\{3\\} Entry [─-]+\n"
+  :tail-matcher "\\'"
+  :head-mode 'host
+  :tail-mode 'host)
 
-  (define-polymode org-brain-polymode
-    :hostmode 'org-brain-poly-hostmode
-    :innermodes '(org-brain-poly-innermode)
-    (setq-local polymode-move-these-vars-from-old-buffer
-                (delq 'buffer-read-only polymode-move-these-vars-from-old-buffer)))
+(define-polymode org-brain-polymode
+  :hostmode 'org-brain-poly-hostmode
+  :innermodes '(org-brain-poly-innermode)
+  (setq-local polymode-move-these-vars-from-old-buffer
+              (delq 'buffer-read-only polymode-move-these-vars-from-old-buffer)))
 
-  (defun org-brain-polymode-save ()
-    "Save entry text to the entry's file."
-    (interactive)
-    (when (buffer-modified-p)
-      (let ((text (save-excursion
-                    (goto-char org-brain--vis-entry-text-marker)
-                    (end-of-line)
-                    (buffer-substring (point) (point-max)))))
-        (find-file (org-brain-entry-path org-brain--vis-entry))
-        (seq-let (entry-min entry-max) (org-brain-text-positions org-brain--vis-entry)
-          (goto-char entry-min)
-          (delete-region entry-min entry-max)
-          (insert text)
-          (unless (looking-at-p "\n")
-            (insert "\n\n"))
-          (save-buffer)
-          (switch-to-buffer (other-buffer (current-buffer) 1))
-          (set-buffer-modified-p nil)))))
+(defun org-brain-polymode-save ()
+  "Save entry text to the entry's file."
+  (interactive)
+  (when (buffer-modified-p)
+    (let ((text (save-excursion
+                  (goto-char org-brain--vis-entry-text-marker)
+                  (end-of-line)
+                  (buffer-substring (point) (point-max)))))
+      (find-file (org-brain-entry-path org-brain--vis-entry))
+      (seq-let (entry-min entry-max) (org-brain-text-positions org-brain--vis-entry)
+        (goto-char entry-min)
+        (delete-region entry-min entry-max)
+        (insert text)
+        (unless (looking-at-p "\n")
+          (insert "\n\n"))
+        (save-buffer)
+        (switch-to-buffer (other-buffer (current-buffer) 1))
+        (set-buffer-modified-p nil)))))
 
-  (define-key org-brain-polymode-map "\C-x\C-s" 'org-brain-polymode-save))
+(define-key org-brain-polymode-map "\C-x\C-s" 'org-brain-polymode-save))
 
-;;;; Brain link
+;;; Brain link
 
 (defun org-brain-link-complete (&optional link-type)
   "Create an org-link target string to a file in `org-brain-path'.
@@ -3411,7 +3422,7 @@ LINK-TYPE will be \"brain\" by default."
                                              (ignore-errors (org-get-outline-path t)))))
                                   (concat "::* " (nth 0 (last outline-path)))))
               (concat (and (stringp org-brain-backlink) org-brain-backlink)
-		      (if (and org-brain-backlink-heading
+                      (if (and org-brain-backlink-heading
                                (ignore-errors (org-get-outline-path t)))
                           (string-join (org-get-outline-path t) " > ")
                         (file-name-base)))
@@ -3422,7 +3433,7 @@ LINK-TYPE will be \"brain\" by default."
           (push link org-insert-link-history)
         (push link org-link--insert-history))
       (push `(,link ,(org-brain-title choice)) org-stored-links)
-      link)))
+      link))))
 
 (defun org-brain-link-store ()
   "Store a brain: type link from an `org-brain-visualize-mode' buffer."
@@ -3449,7 +3460,7 @@ LINK-TYPE will be \"brain\" by default."
                          :complete (lambda () (org-brain-link-complete org-brain-friend-link-name))
                          :follow 'org-brain-goto)
 
-;;;; Brain switch link
+;;; Brain switch link
 
 (defun org-brain--switch-link-complete ()
   "Create an org-link target string to an org-brain and one of its entries."
@@ -3479,136 +3490,139 @@ ENTRY should be a string; an id in the case of an headline entry."
                          :complete 'org-brain--switch-link-complete
                          :follow 'org-brain--switch-link-follow)
 
-;;;; Helm integration
+;;; Helm integration
 
 (with-eval-after-load "helm"
-  (defun helm-brain--add-children (_c)
-    (dolist (candidate (helm-marked-candidates))
-      (org-brain-add-relationship
-       (org-brain-entry-at-pt) (or (org-brain-entry-from-id candidate) candidate)))
-    (org-brain--revert-if-visualizing))
 
-  (defun helm-brain--add-parents (_c)
-    (dolist (candidate (helm-marked-candidates))
-      (org-brain-add-relationship
-       (or (org-brain-entry-from-id candidate) candidate) (org-brain-entry-at-pt)))
-    (org-brain--revert-if-visualizing))
+(defun helm-brain--add-children (_c)
+  (dolist (candidate (helm-marked-candidates))
+    (org-brain-add-relationship
+     (org-brain-entry-at-pt) (or (org-brain-entry-from-id candidate) candidate)))
+  (org-brain--revert-if-visualizing))
 
-  (defun helm-brain--add-friends (_c)
-    (dolist (candidate (helm-marked-candidates))
-      (org-brain--internal-add-friendship
-       (org-brain-entry-at-pt) (or (org-brain-entry-from-id candidate) candidate)))
-    (org-brain--revert-if-visualizing))
+(defun helm-brain--add-parents (_c)
+  (dolist (candidate (helm-marked-candidates))
+    (org-brain-add-relationship
+     (or (org-brain-entry-from-id candidate) candidate) (org-brain-entry-at-pt)))
+  (org-brain--revert-if-visualizing))
 
-  (defun helm-brain--delete-entries (_c)
-    (dolist (candidate (helm-marked-candidates))
-      (org-brain-delete-entry (or (org-brain-entry-from-id candidate) candidate))))
+(defun helm-brain--add-friends (_c)
+  (dolist (candidate (helm-marked-candidates))
+    (org-brain--internal-add-friendship
+     (org-brain-entry-at-pt) (or (org-brain-entry-from-id candidate) candidate)))
+  (org-brain--revert-if-visualizing))
 
-  (defun helm-brain--archive (_c)
-    (dolist (candidate (helm-marked-candidates))
-      (org-brain-archive (or (org-brain-entry-from-id candidate) candidate))))
+(defun helm-brain--delete-entries (_c)
+  (dolist (candidate (helm-marked-candidates))
+    (org-brain-delete-entry (or (org-brain-entry-from-id candidate) candidate))))
 
-  (defun helm-brain--select (_c)
-    (dolist (candidate (helm-marked-candidates))
-      (org-brain-select (or (org-brain-entry-from-id candidate) candidate) 1)))
+(defun helm-brain--archive (_c)
+  (dolist (candidate (helm-marked-candidates))
+    (org-brain-archive (or (org-brain-entry-from-id candidate) candidate))))
 
-  (defun helm-brain--unselect (_c)
-    (dolist (candidate (helm-marked-candidates))
-      (org-brain-select (or (org-brain-entry-from-id candidate) candidate) -1)))
+(defun helm-brain--select (_c)
+  (dolist (candidate (helm-marked-candidates))
+    (org-brain-select (or (org-brain-entry-from-id candidate) candidate) 1)))
 
-  (defvar helm-brain--actions
-    (helm-make-actions
-     "Visualize" (lambda (x)
-                   (org-brain-visualize (or (org-brain-entry-from-id x) x)))
-     "Add children" 'helm-brain--add-children
-     "Add parents" 'helm-brain--add-parents
-     "Add friends" 'helm-brain--add-friends
-     "Delete" 'helm-brain--delete-entries
-     "Archive" 'helm-brain--archive
-     "Select" 'helm-brain--select
-     "Unselect" 'helm-brain--unselect))
+(defun helm-brain--unselect (_c)
+  (dolist (candidate (helm-marked-candidates))
+    (org-brain-select (or (org-brain-entry-from-id candidate) candidate) -1)))
 
-  (defvar helm-brain--source
-    (helm-make-source "Brain" 'helm-source-sync
-      :candidates #'org-brain--all-targets
-      :action 'helm-brain--actions))
+(defvar helm-brain--actions
+  (helm-make-actions
+   "Visualize" (lambda (x)
+                 (org-brain-visualize (or (org-brain-entry-from-id x) x)))
+   "Add children" 'helm-brain--add-children
+   "Add parents" 'helm-brain--add-parents
+   "Add friends" 'helm-brain--add-friends
+   "Delete" 'helm-brain--delete-entries
+   "Archive" 'helm-brain--archive
+   "Select" 'helm-brain--select
+   "Unselect" 'helm-brain--unselect))
 
-  (defvar helm-brain--fallback-source
-    (helm-make-source "New entry" 'helm-source-dummy
-      :action (helm-make-actions
-               "Visualize" (lambda (x)
-                             (org-brain-visualize (org-brain-get-entry-from-title x)))
-               "Add children" 'helm-brain--add-children
-               "Add parents" 'helm-brain--add-parents
-               "Add friends" 'helm-brain--add-friends)))
+(defvar helm-brain--source
+  (helm-make-source "Brain" 'helm-source-sync
+    :candidates #'org-brain--all-targets
+    :action 'helm-brain--actions))
 
-  (defun helm-brain ()
-    "Use `helm' to choose among your org-brain entries.
+(defvar helm-brain--fallback-source
+  (helm-make-source "New entry" 'helm-source-dummy
+    :action (helm-make-actions
+             "Visualize" (lambda (x)
+                           (org-brain-visualize (org-brain-get-entry-from-title x)))
+             "Add children" 'helm-brain--add-children
+             "Add parents" 'helm-brain--add-parents
+             "Add friends" 'helm-brain--add-friends)))
+
+(defun helm-brain ()
+  "Use `helm' to choose among your org-brain entries.
 Provides actions for visualizing, adding/removing relations, etc.
 Supports selecting multiple entries at once."
-    (interactive)
-    (helm :sources '(helm-brain--source helm-brain--fallback-source))))
+  (interactive)
+  (helm :sources '(helm-brain--source helm-brain--fallback-source))))
 
-;;;; Ivy integration
+;;; Ivy integration
 
 (with-eval-after-load "ivy"
-  (defun counsel-brain ()
-    "Use Ivy to choose among your org-brain entries.
+
+(defun counsel-brain ()
+  "Use Ivy to choose among your org-brain entries.
 Provides actions for visualizing, adding/removing relations, etc."
-    (interactive)
-    (let ((targets (org-brain--all-targets)))
-      (ivy-read "Org-brain: "
-                targets
-                :action (lambda (x)
-                          (org-brain-visualize
-                           (if (stringp x)
-                               (org-brain-get-entry-from-title x)
-                             (or (org-brain-entry-from-id (cdr x))
-                                 (cdr x)))))
-                :preselect (ignore-errors
-                             (org-brain-entry-name
-                              (org-brain-entry-at-pt)))
-                :caller 'counsel-brain)))
+  (interactive)
+  (let ((targets (org-brain--all-targets)))
+    (ivy-read "Org-brain: "
+              targets
+              :action (lambda (x)
+                        (org-brain-visualize
+                         (if (stringp x)
+                             (org-brain-get-entry-from-title x)
+                           (or (org-brain-entry-from-id (cdr x))
+                               (cdr x)))))
+              :preselect (ignore-errors
+                           (org-brain-entry-name
+                            (org-brain-entry-at-pt)))
+              :caller 'counsel-brain)))
 
-  (defun counsel-brain--add-child (child)
-    (org-brain-add-relationship (org-brain-entry-at-pt)
-                                (or (org-brain-entry-from-id (cdr child))
-                                    (cdr child)))
-    (org-brain--revert-if-visualizing))
+(defun counsel-brain--add-child (child)
+  (org-brain-add-relationship (org-brain-entry-at-pt)
+                              (or (org-brain-entry-from-id (cdr child))
+                                  (cdr child)))
+  (org-brain--revert-if-visualizing))
 
-  (defun counsel-brain--add-parent (parent)
-    (org-brain-add-relationship (or (org-brain-entry-from-id (cdr parent))
-                                    (cdr parent))
-                                (org-brain-entry-at-pt))
-    (org-brain--revert-if-visualizing))
+(defun counsel-brain--add-parent (parent)
+  (org-brain-add-relationship (or (org-brain-entry-from-id (cdr parent))
+                                  (cdr parent))
+                              (org-brain-entry-at-pt))
+  (org-brain--revert-if-visualizing))
 
-  (defun counsel-brain--add-friend (friend)
-    (org-brain--internal-add-friendship (org-brain-entry-at-pt)
-                                        (or (org-brain-entry-from-id (cdr friend))
-                                            (cdr friend)))
-    (org-brain--revert-if-visualizing))
+(defun counsel-brain--add-friend (friend)
+  (org-brain--internal-add-friendship (org-brain-entry-at-pt)
+                                      (or (org-brain-entry-from-id (cdr friend))
+                                          (cdr friend)))
+  (org-brain--revert-if-visualizing))
 
-  (defun counsel-brain--delete (x)
-    (org-brain-delete-entry (or (org-brain-entry-from-id (cdr x)) (cdr x))))
+(defun counsel-brain--delete (x)
+  (org-brain-delete-entry (or (org-brain-entry-from-id (cdr x)) (cdr x))))
 
-  (defun counsel-brain--archive (x)
-    (org-brain-archive (or (org-brain-entry-from-id (cdr x)) (cdr x))))
+(defun counsel-brain--archive (x)
+  (org-brain-archive (or (org-brain-entry-from-id (cdr x)) (cdr x))))
 
-  (defun counsel-brain--select (x)
-    (org-brain-select (or (org-brain-entry-from-id (cdr x)) (cdr x)) 1))
+(defun counsel-brain--select (x)
+  (org-brain-select (or (org-brain-entry-from-id (cdr x)) (cdr x)) 1))
 
-  (defun counsel-brain--unselect (x)
-    (org-brain-select (or (org-brain-entry-from-id (cdr x)) (cdr x)) -1))
+(defun counsel-brain--unselect (x)
+  (org-brain-select (or (org-brain-entry-from-id (cdr x)) (cdr x)) -1))
 
-  (ivy-set-actions
-   'counsel-brain
-   '(("c" counsel-brain--add-child "add as child")
-     ("p" counsel-brain--add-parent "add as parent")
-     ("f" counsel-brain--add-friend "add as friend")
-     ("d" counsel-brain--delete "delete")
-     ("a" counsel-brain--archive "archive")
-     ("s" counsel-brain--select "select")
-     ("S" counsel-brain--unselect "unselect"))))
+(ivy-set-actions
+ 'counsel-brain
+ '(("c" counsel-brain--add-child "add as child")
+   ("p" counsel-brain--add-parent "add as parent")
+   ("f" counsel-brain--add-friend "add as friend")
+   ("d" counsel-brain--delete "delete")
+   ("a" counsel-brain--archive "archive")
+   ("s" counsel-brain--select "select")
+   ("S" counsel-brain--unselect "unselect"))))
 
+;;; winding up
 (provide 'org-brain)
 ;;; org-brain.el ends here

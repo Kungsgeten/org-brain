@@ -18,6 +18,8 @@
     
   #+end_src
 
+  #+RESULTS:
+
 * Commentary:
 
   #+begin_src emacs-lisp
@@ -41,6 +43,8 @@
     
   #+end_src
 
+  #+RESULTS:
+
 * Code:
   #+begin_src emacs-lisp
     
@@ -62,17 +66,22 @@
     
   #+end_src
 
+  #+RESULTS:
+  : org-brain
+
 ** Custom vars
    #+begin_src emacs-lisp
      
      ;;; Custom vars
      
    #+end_src
+
+   #+RESULTS:
    
 *** org-brain-path
     #+begin_src emacs-lisp
       
-      (defcustom org-brain-path (file-truename (expand-file-name "brain" org-directory))
+      (defcustom org-brain-path (file-truename (expand-file-name "brain" org-directory)) 
         "The root directory of your org-brain.
       
       `org-mode' files placed in this directory, or its subdirectories,
@@ -81,6 +90,9 @@
         :local t
         :type '(directory))
     #+end_src
+
+    #+RESULTS:
+    : org-brain-path
 
 *** org-brain-scan-directories-recursively
     #+begin_src emacs-lisp
@@ -93,6 +105,9 @@
       
     #+end_src
 
+    #+RESULTS:
+    : org-brain-scan-directories-recursively
+
 *** org-brain-files-extension
     #+begin_src emacs-lisp
       
@@ -104,6 +119,9 @@
       
     #+end_src
 
+    #+RESULTS:
+    : org-brain-files-extension
+
 *** org-brain-ignored-resource-links
     #+begin_src emacs-lisp
       
@@ -114,6 +132,9 @@
         :type '(repeat string))
       
     #+end_src
+
+    #+RESULTS:
+    : org-brain-ignored-resource-links
 
 *** org-brain-backlink
     #+begin_src emacs-lisp
@@ -131,6 +152,9 @@
         :type '(restricted-sexp :match-alternatives
                                 (stringp 't 'nil)))
     #+end_src
+
+    #+RESULTS:
+    : org-brain-backlink
 
 *** org-brain-backlink-heading
     #+begin_src emacs-lisp
@@ -155,10 +179,13 @@
       
     #+end_src
 
+    #+RESULTS:
+    : org-brain-suggest-stored-link-as-resource
+
 *** org-brain-data-file
     #+begin_src emacs-lisp
       
-      (defcustom org-brain-data-file (file-truename (expand-file-name ".org-brain-data.el" org-brain-path))
+      (defcustom org-brain-data-file (file-truename (expand-file-name ".org-brain-data.el" org-brain-path)) 
         "Where org-brain data is saved."
         :group 'org-brain
         :local t
@@ -167,6 +194,9 @@
       (load org-brain-data-file t t)
       
     #+end_src
+
+    #+RESULTS:
+    : org-brain-data-file
 
 *** org-brain-visualize-default-choices
     #+begin_src emacs-lisp
@@ -299,18 +329,18 @@
 
 *** org-brain-goto-evil-normal
 
-   #+begin_src emacs-lisp
-     
-     (defcustom org-brain-goto-evil-normal t
-       "While in evil mode visit org-mode file node in normal rather than insert mode"
-       :group 'org-brain
-       :local t
-       :type '(boolean))
-     
-        #+end_src
+    #+begin_src emacs-lisp
+      
+      (defcustom org-brain-goto-evil-normal t
+        "While in evil mode visit org-mode file node in normal rather than insert mode"
+        :group 'org-brain
+        :local t
+        :type '(boolean))
+      
+    #+end_src
 
-        #+RESULTS:
-        : org-brain-goto-evil-normal
+    #+RESULTS:
+    : org-brain-goto-evil-normal
    
 *** org-brain-headline-links-only-show-visible
     #+begin_src emacs-lisp
@@ -798,9 +828,9 @@
 *** make them buffer local
 
     #+begin_src emacs-lisp
-            (mapcar 'make-variable-buffer-local
-                   '(org-brain--vis-entry org-brain--vis-entry-keywords org-brain--vis-history org-brain-resources-start-re
-                                          org-brain-keyword-regex org-brain-pins org-brain-selected org-brain-headline-cache))
+      (mapcar 'make-variable-buffer-local
+              '(org-brain--vis-entry org-brain--vis-entry-keywords org-brain--vis-history org-brain-resources-start-re
+                                     org-brain-keyword-regex org-brain-pins org-brain-selected org-brain-headline-cache))
     #+end_src
    
 ** Faces and face helper functions
@@ -2252,7 +2282,7 @@
                                (org-brain-entry-name child)
                                (org-brain-entry-name entry)))
           (org-brain--revert-if-visualizing))
-    #+end_src
+      #+end_src
         
 *** org-brain-add-parent
     #+begin_src emacs-lisp
