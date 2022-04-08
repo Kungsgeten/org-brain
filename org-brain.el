@@ -1320,7 +1320,8 @@ PROPERTY could for instance be `org-brain-children-property-name'."
   (goto-char (point-min))
   (when-let (property-range (org-get-property-block))
     (goto-char (cdr property-range))
-    (line-move 1)))
+    (line-move 1)
+    (beginning-of-visual-line)))
 
 (defun org-brain-add-relationship (parent child)
   "Add external relationship between PARENT and CHILD."
