@@ -2708,17 +2708,20 @@ See `org-brain-add-resource'."
 
 ;;;; Capture Templates
 
-(defvar org-brain-visualize-use-capture-templates nil
+(defcustom org-brain-visualize-use-capture-templates nil
   "Add useful capture templates to your org-brain setup.
 This variable is nil by default, since we are modifying
-`org-capture-templates' which can have undesirable effects.
-Set this to t to activate org-brain related capture templates.
-These templates only work in the `org-brain-visualize-mode' and
-are keyed off `org-brain-visualize-capture-prefix-key'.")
+`org-capture-templates' which can have undesirable effects. Set
+this to t to activate org-brain related capture templates. These
+templates are keyed off `org-brain-visualize-capture-prefix-key'."
+  :group 'org-brain
+  :type '(boolean))
 
-(defvar org-brain-visualize-capture-prefix-key "b"
+(defcustom org-brain-visualize-capture-prefix-key "b"
   "The default prefix key for org-brain capture templates.
-Change this value if you already use 'b' for a different capture template.")
+Change this value if you already use 'b' for a different capture template."
+  :group 'org-brain
+  :type '(string))
 
 (defvar org-brain-visualize--capture-templates-registered-p nil
   "A helper var.
@@ -2754,8 +2757,6 @@ Set up the capture templates we need in `org-brain-visualize-mode'."
                 ,org-brain-todo-capture-template
                 :clock-keep t)
               org-capture-templates)
-        (push '("b" ((in-mode . "org-brain-visualize-mode")))
-              org-capture-templates-contexts)
         (setq org-brain-visualize--capture-templates-registered-p t)))))
 
 ;;;; Back to Visualize
