@@ -2741,14 +2741,14 @@ Set up the capture templates we need in `org-brain-visualize-mode'."
                 "Templates when working with org-brain")
               org-capture-templates)
         (push `(,(concat org-brain-visualize-capture-prefix-key "b")
-                "Brain Note"
+                "Add note to new / existing Brain Entry"
                 plain
                 (function org-brain-goto-end)
-                "* %i%?"
+                "%i%?"
                 :empty-lines 1)
               org-capture-templates)
         (push `(,(concat org-brain-visualize-capture-prefix-key "t")
-                "Brain Todo"
+                "Add TODO to the current Brain Entry"
                 entry
                 (function org-brain-goto-current)
                 ,org-brain-todo-capture-template
