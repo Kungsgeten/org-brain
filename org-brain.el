@@ -1315,6 +1315,14 @@ PROPERTY could for instance be `org-brain-children-property-name'."
             (org-entry-get-multivalued-property (org-brain-entry-marker entry) property)))))
     (if (equal propertylist '("")) nil propertylist)))
 
+(defun org-brain--file-point-min ()
+  "Move point to begining skipping the property drawer if it exists."
+  (goto-char (point-min))
+  (when-let (property-range (org-get-property-block))
+    (goto-char (cdr property-range))
+    (line-move 1)
+    (beginning-of-visual-line)))
+
 (defun org-brain-add-relationship (parent child)
   "Add external relationship between PARENT and CHILD."
   (when (equal parent child)
@@ -1324,7 +1332,7 @@ PROPERTY could for instance be `org-brain-children-property-name'."
     (if (org-brain-filep parent)
         ;; Parent = File
         (org-with-point-at (org-brain-entry-marker parent)
-          (goto-char (point-min))
+          (org-brain--file-point-min)
           (if (re-search-forward (concat "^#\\+" org-brain-children-property-name ":.*$") nil t)
               (insert (concat " " (org-brain-entry-identifier child)))
             (insert (concat "#+" org-brain-children-property-name ": "
@@ -1337,7 +1345,7 @@ PROPERTY could for instance be `org-brain-children-property-name'."
     (if (org-brain-filep child)
         ;; Child = File
         (org-with-point-at (org-brain-entry-marker child)
-          (goto-char (point-min))
+          (org-brain--file-point-min)
           (if (re-search-forward (concat "^#\\+" org-brain-parents-property-name ":.*$") nil t)
               (insert (concat " " (org-brain-entry-identifier parent)))
             (insert (concat "#+" org-brain-parents-property-name ": "
@@ -1551,7 +1559,7 @@ If ONEWAY is t, add ENTRY2 as friend of ENTRY1, but not the other way around."
     (if (org-brain-filep entry1)
         ;; Entry1 = File
         (org-with-point-at (org-brain-entry-marker entry1)
-          (goto-char (point-min))
+          (org-brain--file-point-min)
           (if (re-search-forward (concat "^#\\+" org-brain-friends-property-name ":.*$") nil t)
               (insert (concat " " (org-brain-entry-identifier entry2)))
             (insert (concat "#+" org-brain-friends-property-name ": "
@@ -2144,7 +2152,7 @@ If run interactively, get ENTRY from context and prompt for TITLE."
   (if (org-brain-filep entry)
       ;; File entry
       (org-with-point-at (org-brain-entry-marker entry)
-        (goto-char (point-min))
+        (org-brain--file-point-min)
         (when (assoc "TITLE" (org-brain-keywords entry))
           (re-search-forward "^#\\+TITLE:")
           (org-brain-delete-current-line))
@@ -2168,7 +2176,7 @@ If run interactively, get ENTRY from context."
       (org-with-point-at (org-brain-entry-marker entry)
         (let ((tag-str (read-string "FILETAGS: "
                                     (mapconcat #'identity org-file-tags ":"))))
-          (goto-char (point-min))
+          (org-brain--file-point-min)
           (when (assoc "FILETAGS" (org-brain-keywords entry))
             (re-search-forward "^#\\+FILETAGS:")
             (org-brain-delete-current-line))
@@ -2195,7 +2203,7 @@ If run interactively use `org-brain-entry-at-pt' and prompt for NICKNAME."
   (if (org-brain-filep entry)
       (let ((nickname (org-entry-protect-space nickname)))
         (org-with-point-at (org-brain-entry-marker entry)
-          (goto-char (point-min))
+          (org-brain--file-point-min)
           (if (re-search-forward "^#\\+NICKNAMES:.*$" nil t)
               (insert (concat " " nickname))
             (insert (format "#+NICKNAMES: %s\n" nickname)))
