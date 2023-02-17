@@ -3273,7 +3273,7 @@ Return the position of ENTRY in the buffer."
 ;; This code has been adapted from Dustin Lacewell's project polybrain
 ;; Have a look at: https://github.com/dustinlacewell/polybrain.el/
 
-(with-eval-after-load "polymode"
+(with-eval-after-load 'polymode
   (define-hostmode org-brain-poly-hostmode
     :mode 'org-brain-visualize-mode)
 
@@ -3419,7 +3419,7 @@ ENTRY should be a string; an id in the case of an headline entry."
 
 ;;;; Helm integration
 
-(with-eval-after-load "helm"
+(with-eval-after-load 'helm
   (defun helm-brain--add-children (_c)
     (dolist (candidate (helm-marked-candidates))
       (org-brain-add-relationship
@@ -3489,7 +3489,7 @@ Supports selecting multiple entries at once."
 
 ;;;; Ivy integration
 
-(with-eval-after-load "ivy"
+(with-eval-after-load 'ivy
   (defun counsel-brain ()
     "Use Ivy to choose among your org-brain entries.
 Provides actions for visualizing, adding/removing relations, etc."
