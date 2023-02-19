@@ -28,14 +28,6 @@
 
 ;;; Code:
 
-(require 'org-element)
-(require 'org-attach)
-(require 'org-agenda)
-(require 'org-macs)
-(require 'org-id)
-(require 'picture)
-(require 'subr-x)
-(require 'seq)
 (require 'ivy)
 (require 'org-brain)
 
