@@ -109,9 +109,14 @@ Most of the configuration below isn't necessary, but showcases some options.
           org-brain-file-entries-use-title nil))
 
   ;; Allows you to edit entries directly from org-brain-visualize
-  (use-package polymode
-    :config
-    (add-hook 'org-brain-visualize-mode-hook #'org-brain-polymode))
+  (use-package! org-brain-polymode
+    :hook (org-brain-visualize-mode . org-brain-polymode))
+
+  (use-package! org-brain-helm
+    :after helm)
+
+  (use-package! org-brain-ivy
+    :after ivy)
 #+END_SRC
 
 1. =org-brain= requires Emacs 25 and org-mode 9. These need to be part of your
