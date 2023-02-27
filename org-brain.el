@@ -2707,6 +2707,109 @@ See `org-brain-add-resource'."
 
 (defalias 'org-brain-visualize-paste-resource #'org-brain-paste-resource)
 
+;;;; Capture Templates
+
+(defcustom org-brain-visualize-use-capture-templates nil
+  "Add useful capture templates to your org-brain setup.
+This variable is nil by default, since we are modifying
+`org-capture-templates' which can have undesirable effects. Set
+this to t to activate org-brain related capture templates. These
+templates are keyed off `org-brain-visualize-capture-prefix-key'."
+  :group 'org-brain
+  :type '(boolean))
+
+(defcustom org-brain-visualize-capture-prefix-key "b"
+  "The default prefix key for org-brain capture templates.
+Change this value if you already use 'b' for a different capture template."
+  :group 'org-brain
+  :type '(string))
+
+(defvar org-brain-visualize--capture-templates-registered-p nil
+  "A helper var.
+Track if we've added the necessary org-brain capture templates to
+`org-capture'.")
+
+(defvar org-brain-todo-capture-template
+  "* TODO %^{Description} :nobrain: \nDEADLINE: %^{When should this be done by?}t\n%U\n%i%?"
+  "The default template for capturing a TODO task against the current brain entry.
+Customize this to use a different template when creating new TODO tasks.")
+
+(defun org-brain-visualize--register-capture-templates ()
+  "A helper function.
+Set up the capture templates we need in `org-brain-visualize-mode'."
+  (with-eval-after-load 'org-capture
+    (progn
+      (when (and org-brain-visualize-use-capture-templates
+                 (not org-brain-visualize--capture-templates-registered-p))
+        (push `(,org-brain-visualize-capture-prefix-key
+                "Templates when working with org-brain")
+              org-capture-templates)
+        (push `(,(concat org-brain-visualize-capture-prefix-key "b")
+                "Add note to new / existing Brain Entry"
+                plain
+                (function org-brain-goto-end)
+                "%i%?"
+                :empty-lines 1)
+              org-capture-templates)
+        (push `(,(concat org-brain-visualize-capture-prefix-key "t")
+                "Add TODO to the current Brain Entry"
+                entry
+                (function org-brain-goto-current)
+                ,org-brain-todo-capture-template
+                :clock-keep t)
+              org-capture-templates)
+        (setq org-brain-visualize--capture-templates-registered-p t)))))
+
+;;;; Back to Visualize
+
+(defun org-brain-add-todo (entry)
+  "Add a todo item to the ENTRY.
+If called interactively, select ENTRY with
+`org-brain-choose-entry', give a preference to
+`org-brain-entry-at-pt', if any."
+  (interactive
+   (let ((def-choice (ignore-errors
+                       (org-brain-entry-name (org-brain-entry-at-pt)))))
+     (list (org-brain-choose-entry "Add a TODO item to: "
+                                   'all nil nil def-choice))))
+  (when (not org-brain-visualize-use-capture-templates)
+    (user-error "The appropriate capture templates have not been set up. Check the README for instructions"))
+  (if (org-brain-filep entry)
+      ;; Entry = File
+      (user-error "Only headline entries support adding a TODO item")
+    ;; Entry = Headline
+    (org-capture nil (concat org-brain-visualize-capture-prefix-key "t"))))
+
+(defun org-brain-visualize-add-todo ()
+  "Add a todo item to the currently active entry."
+  (interactive)
+  (if (eq major-mode 'org-brain-visualize-mode)
+      (org-brain-add-todo (org-brain-entry-at-pt))
+    (user-error "Not in org-brain-visualize")))
+
+(defun org-brain-add-note (entry)
+  "Add a note to the ENTRY.
+If called interactively, select ENTRY with
+`org-brain-choose-entry', give a preference to
+`org-brain-entry-at-pt', if any."
+  (interactive
+   (let ((def-choice (ignore-errors
+                       (org-brain-entry-name (org-brain-entry-at-pt)))))
+     (list (org-brain-choose-entry "Add a note to: " 'all nil nil def-choice))))
+  (if (org-brain-filep entry)
+      ;; Entry = File
+      (user-error "Only headline entries support adding a note")
+    ;; Entry = Headline
+    (org-with-point-at (org-brain-entry-marker entry)
+      (org-add-note))))
+
+(defun org-brain-visualize-add-note ()
+  "Add a note to the currently active entry."
+  (interactive)
+  (if (eq major-mode 'org-brain-visualize-mode)
+      (org-brain-add-note (org-brain-entry-at-pt))
+    (user-error "Not in org-brain-visualize")))
+
 ;;;###autoload
 (defun org-brain-select-button ()
   "Toggle selection of the entry linked to by the button at point."
@@ -2814,7 +2917,8 @@ Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
   "Major mode for `org-brain-visualize'.
 \\{org-brain-visualize-mode-map}"
   (setq-local revert-buffer-function #'org-brain-visualize-revert)
-  (setq-local bookmark-make-record-function #'org-brain-make-bookmark-record))
+  (setq-local bookmark-make-record-function #'org-brain-make-bookmark-record)
+  (org-brain-visualize--register-capture-templates))
 
 ;;;;; Keybindings
 
@@ -2857,6 +2961,9 @@ Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
 (define-key org-brain-visualize-mode-map "e" 'org-brain-annotate-edge)
 (define-key org-brain-visualize-mode-map "\C-c\C-w" 'org-brain-refile)
 (define-key org-brain-visualize-mode-map "\C-c\C-x\C-v" 'org-toggle-inline-images)
+(define-key org-brain-visualize-mode-map (kbd "C-c t") 'org-brain-visualize-add-todo)
+(define-key org-brain-visualize-mode-map (kbd "C-c z") 'org-brain-visualize-add-note)
+(define-key org-brain-visualize-mode-map (kbd "C-c C-z") 'org-brain-visualize-add-note)
 
 (define-prefix-command 'org-brain-select-map)
 (define-key org-brain-select-map "s" 'org-brain-clear-selected)
