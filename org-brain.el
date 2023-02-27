@@ -198,6 +198,7 @@ This `format' string is used in `org-brain-entry-name' for headline entries.
 `format' gets two objects: the file and the headline."
   :group 'org-brain
   :type '(string))
+
 (defcustom org-brain-visualize-text-hook nil
   "Hook runs after inserting `org-brain-text' in `org-brain-visualize'.
 
@@ -423,6 +424,11 @@ Must be set before `org-brain' is loaded."
           (const :tag "Ivy" ivy)
           (const :tag "Default" default)
           (function :tag "Custom function")))
+
+(defcustom org-brain-narrow-to-entry nil
+  "On `org-brain-goto', whether to narrow the buffer to the specific entry or not."
+  :group 'org-brain
+  :type '(boolean))
 
 ;;;;; Faces and face helper functions
 
@@ -1629,12 +1635,17 @@ If VERBOSE is non-nil then display a message."
 ;;;###autoload
 (defun org-brain-goto (&optional entry goto-file-func)
   "Goto buffer and position of org-brain ENTRY.
-If ENTRY isn't specified, ask for the ENTRY.
-Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the entry."
+If ENTRY isn't specified, ask for the ENTRY. Unless
+GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for
+opening the entry.
+
+If `org-brain-narrow-to-entry' is t, narrow the focus to only
+the org-brain-entry after visiting the buffer."
   (interactive)
   (org-brain-stop-wandering)
   (unless entry (setq entry (org-brain-choose-entry "Goto entry: " 'all)))
-  (when (and org-brain-quit-after-goto (eq 'major-mode 'org-brain-visualize-mode))
+  (when (and org-brain-quit-after-goto
+             (eq 'major-mode 'org-brain-visualize-mode))
     (org-brain-visualize-quit))
   (let ((marker (org-brain-entry-marker entry)))
     (apply (or goto-file-func #'pop-to-buffer-same-window)
@@ -1643,7 +1654,9 @@ Unless GOTO-FILE-FUNC is nil, use `pop-to-buffer-same-window' for opening the en
     (goto-char (marker-position marker))
     (when (org-at-heading-p)
       (org-show-entry)
-      (org-show-subtree)))
+      (org-show-subtree)
+      (when org-brain-narrow-to-entry
+        (org-narrow-to-subtree))))
   entry)
 
 (define-obsolete-function-alias 'org-brain-open 'org-brain-goto "0.4")
