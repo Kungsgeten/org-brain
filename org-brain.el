@@ -3283,7 +3283,9 @@ Return the position of ENTRY in the buffer."
     :head-matcher "^[─-]\\{3\\} Entry [─-]+\n"
     :tail-matcher "\\'"
     :head-mode 'host
-    :tail-mode 'host)
+    :tail-mode 'host
+    :init-functions '((lambda (_)
+                        (setq-local org-fold-core-style 'overlays))))
 
   (define-polymode org-brain-polymode
     :hostmode 'org-brain-poly-hostmode
