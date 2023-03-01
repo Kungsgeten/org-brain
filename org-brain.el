@@ -3125,12 +3125,12 @@ Helper function for `org-brain-visualize'."
               (run-hooks 'org-brain-after-visualize-hook)
               (insert (with-temp-buffer
                         (insert text)
-                        (let ((org-fold-core-style 'overlays))
-                          (delay-mode-hooks
-                            (org-mode)
-                            (setq-local org-pretty-entities t)
-                            (font-lock-ensure (point-min) (point-max))
-                            (buffer-string)))))
+                        (delay-mode-hooks
+                          (org-mode)
+                          (setq-local org-pretty-entities t
+                                      org-fold-core-style 'overlays)
+                          (font-lock-ensure (point-min) (point-max))
+                          (buffer-string))))
               (run-hooks 'org-brain-visualize-text-hook))
           (run-hooks 'org-brain-after-visualize-hook)))
     (run-hooks 'org-brain-after-visualize-hook)))
