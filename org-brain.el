@@ -3127,7 +3127,8 @@ Helper function for `org-brain-visualize'."
                         (insert text)
                         (delay-mode-hooks
                           (org-mode)
-                          (setq-local org-pretty-entities t)
+                          (setq-local org-pretty-entities t
+                                      org-fold-core-style 'overlays)
                           (font-lock-ensure (point-min) (point-max))
                           (buffer-string))))
               (run-hooks 'org-brain-visualize-text-hook))
@@ -3282,7 +3283,9 @@ Return the position of ENTRY in the buffer."
     :head-matcher "^[─-]\\{3\\} Entry [─-]+\n"
     :tail-matcher "\\'"
     :head-mode 'host
-    :tail-mode 'host)
+    :tail-mode 'host
+    :init-functions '((lambda (_)
+                        (setq-local org-fold-core-style 'overlays))))
 
   (define-polymode org-brain-polymode
     :hostmode 'org-brain-poly-hostmode
