@@ -1033,7 +1033,7 @@ Only works on headline entries."
 (defun org-brain--missing-id-error (entry)
   "Error message to be shown if id of ENTRY isn't found by `org-id-find'."
   (error "Couldn't find entry %s, try running org-brain-update-id-locations. "
-         (org-brain-entry-name entry)))
+         (when entry (org-brain-entry-name entry))))
 
 (defun org-brain-entry-marker (entry)
   "Get marker to ENTRY."
