@@ -576,6 +576,29 @@ EDGE determines if `org-brain-edge-annotation-face-template' should be used."
 ;;;###autoload
 (defun org-brain-get-id ()
   "Get ID of headline at point, creating one if it doesn't exist.
+Run `org-brain-new-entry-hook' if a new ID is created, and update the cache."
+  (interactive)
+  (let* ((file (abbreviate-file-name (file-truename (buffer-file-name))))
+         (id (or (org-id-get)
+                 (progn
+                   (run-hooks 'org-brain-new-entry-hook)
+                   (org-id-get nil t))))
+         (entry (org-brain--name-and-id-at-point))
+         (cached (gethash file org-brain-headline-cache nil))
+         (file-entry (org-brain-path-entry-name file))
+	 (existing-entries (cdr cached)))
+    (unless (member (cons file-entry entry) existing-entries)
+      ;; Update the cache with the new entry
+      (puthash file
+               (cons (file-attribute-modification-time
+                      (file-attributes file))
+                     (cons (cons file-entry entry) (cdr cached)))
+               org-brain-headline-cache))
+    id))
+
+;; [Ric] Keeping the original fun for future ref
+(defun org-brain-original-get-id ()
+  "Get ID of headline at point, creating one if it doesn't exist.
 Run `org-brain-new-entry-hook' if a new ID is created."
   (interactive)
   (or (org-id-get)
@@ -750,18 +773,30 @@ If NO-TEMP-BUFFER is non-nil, run the scanning in the current buffer instead."
   (if no-temp-buffer
       (let ((cached (gethash file org-brain-headline-cache nil)))
         (if (or (not cached)
-                (not (equal (car cached)
-                            (file-attribute-modification-time
-                             (file-attributes file)))))
+                nil
+		;; [Ric] Removing condition to check for file modification to update the cache
+		;; Currently this means new entries in existing files won't show up
+		;; To revert, remove the "nil" and uncomment below:
+		;; (not (equal (car cached)
+                    ;;         (file-attribute-modification-time
+                    ;;          (file-attributes file))))
+		)
             (let ((file-entry (org-brain-path-entry-name file)))
               (insert-file-contents file nil nil nil 'replace)
-              (cdr (puthash file (cons (file-attribute-modification-time
-                                        (file-attributes file))
-                                       (apply #'append
-                                              (mapcar (lambda (entry) (cons file-entry entry))
-                                                      (remove nil (org-map-entries
-                                                                   #'org-brain--name-and-id-at-point)))
-                                              (remove nil (org-map-entries #'org-brain--nicknames-at-point))))
+              (cdr (puthash file
+			    ;; [ric] start of part to consider commenting
+			    ;; To investigate a different way to update the cache without
+			    ;; relying of file modification properties
+			    ;; Could be better to find a way to update only
+			    ;; the entries that changed.
+			    (cons (file-attribute-modification-time
+                                   (file-attributes file))
+				  ;; end of part of consider commeting above
+                                  (apply #'append
+                                         (mapcar (lambda (entry) (cons file-entry entry))
+                                                 (remove nil (org-map-entries
+                                                              #'org-brain--name-and-id-at-point)))
+                                         (remove nil (org-map-entries #'org-brain--nicknames-at-point))))
                             org-brain-headline-cache)))
           (cdr cached)))
     (with-temp-buffer
@@ -3342,7 +3377,7 @@ LINK-TYPE will be \"brain\" by default."
               (cl-concatenate 'string
                               "file:"
                               (file-relative-name
-                               (buffer-file-name)
+                               (file-truename (buffer-file-name))
                                (file-name-directory (org-brain-entry-path choice)))
                               (if-let ((outline-path
                                         (and org-brain-backlink-heading
