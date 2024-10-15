@@ -427,11 +427,11 @@ Must be set before `org-brain' is loaded."
 ;;;;; Faces and face helper functions
 
 (defface org-brain-title
-  '((t . (:inherit 'org-level-1)))
+  '((t . (:inherit org-level-1)))
   "Face for the currently selected entry.")
 
 (defface org-brain-wires
-  `((t . (:inherit 'font-lock-comment-face :italic nil)))
+  '((t . (:inherit font-lock-comment-face :italic nil)))
   "Face for the wires connecting entries.")
 
 (defface org-brain-button
