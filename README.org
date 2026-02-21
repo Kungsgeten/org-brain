@@ -100,18 +100,24 @@ Most of the configuration below isn't necessary, but showcases some options.
     (setq org-id-track-globally t)
     (setq org-id-locations-file "~/.emacs.d/.org-id-locations")
     (add-hook 'before-save-hook #'org-brain-ensure-ids-in-buffer)
-    (push '("b" "Brain" plain (function org-brain-goto-end)
-            "* %i%?" :empty-lines 1)
-          org-capture-templates)
+    (setq org-brain-visualize-use-capture-templates t)
     (setq org-brain-visualize-default-choices 'all)
     (setq org-brain-title-max-length 12)
     (setq org-brain-include-file-entries nil
           org-brain-file-entries-use-title nil))
 
   ;; Allows you to edit entries directly from org-brain-visualize
-  (use-package polymode
-    :config
-    (add-hook 'org-brain-visualize-mode-hook #'org-brain-polymode))
+  (use-package org-brain-polymode
+    :straight nil
+    :hook (org-brain-visualize-mode . org-brain-polymode))
+
+  (use-package org-brain-helm
+    :straight nil
+    :after helm)
+
+  (use-package org-brain-ivy
+    :straight nil
+    :after ivy)
 #+END_SRC
 
 1. =org-brain= requires Emacs 25 and org-mode 9. These need to be part of your
@@ -133,9 +139,14 @@ Most of the configuration below isn't necessary, but showcases some options.
 5. =org-brain-prefix-map= can be bound to a key to make =org-brain= commands more
    accessable if you edit entries from =org-mode=. See /Editing from org-mode/ under
    /Usage/ below.
-6. You might want to add information at the end of an entry, without visiting
-   the file. A way to do this is to use a [[http://orgmode.org/manual/Capture.html][capture]] template, such as the one
-   presented above.
+6. You can create new entries or add information to the end of an
+   entry without visiting the file / entry. =org-brain= sets up
+   convenience [[http://orgmode.org/manual/Capture.html][capture]] templates if you set
+   =org-brain-visualize-use-capture-templates= to =t=, as shown above.
+   =org-brain= uses the prefix key =b= for it's capture templates. If
+   you wish to change the prefix key to something else, you can do so
+   by customizing the variable
+   =org-brain-visualize-capture-prefix-key=.
 7. If you have a lot of entries, it might take some time to gather information
    about all entries when using =org-brain-visualize=. You could change the
    value of =org-brain-visualize-default-choices= (which is ='all= by default)
@@ -275,11 +286,12 @@ available in =org-brain-visualize=:
 | S           | =org-brain-select-map=               | Prefix key to do batch processing with selected entries.                          |
 | t           | =org-brain-set-title=                | Change the title of the entry.                                                    |
 | T           | =org-brain-set-tags=                 | Change the tags of the entry.                                                     |
+| G           | =org-brain-set-category=             | Change the category of the entry.                                                 |
 | d           | =org-brain-delete-entry=             | Choose an entry to delete.                                                        |
 | l           | =org-brain-visualize-add-resource=   | Add a new resource link in entry                                                  |
 | r           | =org-brain-open-resource=            | Choose and open a resource from the entry.                                        |
 | C-y         | =org-brain-visualize-paste-resource= | Add a new resource link from clipboard                                            |
-| a           | =org-brain-visualize-attach=         | Run =org-attach= on entry (headline entries only)                                   |
+| a           | =org-brain-visualize-attach=         | Run =org-attach= on entry ([[#headline-and-file-entries][org-brain headline entries]] only)                         |
 | A           | =org-brain-archive=                  | Archive the entry (headline entries only)                                         |
 | o           | =org-brain-goto-current=             | Open current entry for editing                                                    |
 | O           | =org-brain-goto=                     | Choose and edit one of your =org-brain= entries                                     |
