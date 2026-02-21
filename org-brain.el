@@ -898,48 +898,56 @@ If ENTRY is file, then the identifier is the relative file name."
 (defun org-brain-entry-at-pt (&optional create-id)
   "Get current org-brain entry.
 CREATE-ID asks to create an ID öif  there isn't  one already."
-  (cond ((eq major-mode 'org-mode)
-         (unless (string-prefix-p (file-truename org-brain-path)
-                                  (file-truename (buffer-file-name)))
-           (error "Not in a brain file"))
-         (if org-brain-scan-for-header-entries
-             (if (ignore-errors (org-get-heading))
-                 (or (org-brain--headline-entry-at-point)
-                     (when create-id
-                       (let ((closest-parent
-                              (save-excursion
-                                (let ((e))
-                                  (while (and (not e) (org-up-heading-safe))
-                                    (setq e (org-brain--headline-entry-at-point)))
-                                  (or e
-                                      (when org-brain-include-file-entries
-                                        (org-brain-path-entry-name (buffer-file-name))))))))
-                         (if (y-or-n-p
-                              (format "'%s' has no ID, create one%s? "
-                                      (org-brain-headline-at)
-                                      (if closest-parent
-                                          (format " [else use local parent '%s']"
-                                                  (org-brain-title closest-parent))
-                                        "")))
-                             (org-brain--headline-entry-at-point t)
-                           (or (org-brain-entry-at-pt) (error "No entry at pt"))))))
-               (if org-brain-include-file-entries
-                   (org-brain-path-entry-name (buffer-file-name))
-                 (error "Not under an org headline, and org-brain-include-file-entries is nil")))
-           (org-brain-path-entry-name (buffer-file-name))))
-        ((eq major-mode 'org-brain-visualize-mode)
-         org-brain--vis-entry)
-        (t
-         (error "Not in org-mode or org-brain-visualize"))))
+  (let ((entry
+         (cond ((eq major-mode 'org-mode)
+                (unless (string-prefix-p (file-truename org-brain-path)
+                                         (file-truename (buffer-file-name)))
+                  (error "Not in a brain file"))
+                (if org-brain-scan-for-header-entries
+                    (if (ignore-errors (org-get-heading))
+                        (or (org-brain--headline-entry-at-point)
+                            (when create-id
+                              (let ((closest-parent
+                                     (save-excursion
+                                       (let ((e))
+                                         (while (and (not e) (org-up-heading-safe))
+                                           (setq e (org-brain--headline-entry-at-point)))
+                                         (or e
+                                             (when org-brain-include-file-entries
+                                               (org-brain-path-entry-name (buffer-file-name))))))))
+                                (if (y-or-n-p
+                                     (format "'%s' has no ID, create one%s? "
+                                             (org-brain-headline-at)
+                                             (if closest-parent
+                                                 (format " [else use local parent '%s']"
+                                                         (org-brain-title closest-parent))
+                                               "")))
+                                    (org-brain--headline-entry-at-point t)
+                                  (or (org-brain-entry-at-pt) (error "No entry at pt"))))))
+                      (if org-brain-include-file-entries
+                          (org-brain-path-entry-name (buffer-file-name))
+                        (error "Not under an org headline, and org-brain-include-file-entries is nil")))
+                  (org-brain-path-entry-name (buffer-file-name))))
+               ((eq major-mode 'org-brain-visualize-mode)
+                org-brain--vis-entry)
+               (t
+                (error "Not in org-mode or org-brain-visualize")))))
+    (unless (or (not create-id) entry)
+      (error "org-brain: Could not find or create entry at point"))
+    (or entry
+        (error "org-brain: Unexpected nil entry at point"))))
 
 (defun org-brain-entry-name (entry)
   "Get name string of ENTRY."
-  (if (org-brain-filep entry)
-      (if org-brain-file-entries-use-title
-          (concat (file-name-directory entry) (org-brain-title entry))
-        entry)
+  (cond
+   ((null entry) "nil")
+   ((org-brain-filep entry)
+    (if org-brain-file-entries-use-title
+        (concat (file-name-directory entry) (org-brain-title entry))
+      entry))
+   (t
     (format org-brain-headline-entry-name-format-string
-            (org-brain-entry-name (car entry)) (cadr entry))))
+            (org-brain-entry-name (car entry)) (cadr entry)))))
 
 (defun org-brain-entry-data (entry)
   "Run `org-element-parse-buffer' on ENTRY text."
@@ -1034,6 +1042,7 @@ If TARGETS is nil then use `org-brain--all-targets'."
                  (goto-char (point-max))
                  (insert (concat "\n* " (or (cadr id) (car id))))
                  (let ((new-id (org-brain-get-id)))
+                   (unless new-id (error "org-brain: Could not create ID for new entry"))
                    (save-buffer)
                    (list entry-file (or (cadr id) (car id)) new-id))))
            entry-file))))))
@@ -1131,6 +1140,7 @@ Only works on headline entries."
 
 (defun org-brain-entry-marker (entry)
   "Get marker to ENTRY."
+  (unless entry (error "org-brain: Cannot get marker for nil entry"))
   (if (org-brain-filep entry)
       (let ((path (org-brain-entry-path entry)))
         (if (file-exists-p path)
@@ -1140,18 +1150,20 @@ Only works on headline entries."
           ;; If file doesn't exists, it is probably an id
           (or (org-id-find entry t)
               (org-brain--missing-id-error entry))))
-    (or (org-id-find (nth 2 entry) t)
-        (org-brain--missing-id-error entry))))
+    (let ((id (nth 2 entry)))
+      (or (org-id-find id t)
+          (org-brain--missing-id-error entry)))))
 
 (defun org-brain-get-category (entry)
   "Get category of ENTRY."
   (if (org-brain-filep entry)
       (ignore-errors
         (cdr (assoc "CATEGORY" (org-brain-keywords entry))))
-    (org-with-point-at (org-brain-entry-marker entry)
-      (let* ((local (org--property-local-values "CATEGORY" nil))
-	     (value (and local (mapconcat #'identity (delq nil local) " "))))
-	(org-not-nil value)))))
+    (when-let ((marker (ignore-errors (org-brain-entry-marker entry))))
+      (org-with-point-at marker
+        (let* ((local (org--property-local-values "CATEGORY" nil))
+	       (value (and local (mapconcat #'identity (delq nil local) " "))))
+	  (org-not-nil value))))))
 
 (defun org-brain-title (entry &optional capped)
   "Get title of ENTRY.  If CAPPED is t, max length is `org-brain-title-max-length'."
@@ -1234,8 +1246,9 @@ Only get the body text, unless ALL-DATA is t."
   "Get parents of ENTRY.
 Often you want the siblings too, then use `org-brain-siblings' instead."
   (delete-dups
-   (append (org-brain--linked-property-entries entry org-brain-parents-property-name)
-           (org-brain-local-parent entry))))
+   (delq nil
+         (append (org-brain--linked-property-entries entry org-brain-parents-property-name)
+                 (org-brain-local-parent entry)))))
 
 (defun org-brain-local-parent (entry)
   "Get file local parent of ENTRY, as a list."
@@ -1254,42 +1267,44 @@ Often you want the siblings too, then use `org-brain-siblings' instead."
 (defun org-brain-children (entry)
   "Get children of ENTRY."
   (delete-dups
-   (append (org-brain--linked-property-entries entry org-brain-children-property-name)
-           (org-brain-local-children entry))))
+   (delq nil
+         (append (org-brain--linked-property-entries entry org-brain-children-property-name)
+                 (org-brain-local-children entry)))))
 
 (defun org-brain-local-children (entry)
   "Get file local children of ENTRY."
   (remove
    entry
-   (if (org-brain-filep entry)
-       ;; File entry
-       (with-temp-buffer
-         (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
-         (org-element-map (org-element-parse-buffer 'headline) 'headline
-           (lambda (headline)
-             (when-let ((id (org-element-property :ID headline)))
-               (unless (org-brain-id-exclude-taggedp id)
-                 (org-brain-entry-from-id id))))
-           nil nil 'headline))
-     ;; Headline entry
-     (org-with-point-at (org-brain-entry-marker entry)
-       (let (children)
-         (deactivate-mark)
-         (org-mark-subtree)
-         (org-goto-first-child)
-         (setq children
-               (org-map-entries
-                (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
-                t 'region-start-level
-                (lambda ()
-                  (let ((id (org-entry-get nil "ID")))
-                    (when (or (not id)
-                              (org-brain-id-exclude-taggedp id))
-                      (save-excursion
-                        (outline-next-heading)
-                        (point)))))))
-         (deactivate-mark)
-         children)))))
+   (delq nil
+         (if (org-brain-filep entry)
+             ;; File entry
+             (with-temp-buffer
+               (ignore-errors (insert-file-contents (org-brain-entry-path entry)))
+               (org-element-map (org-element-parse-buffer 'headline) 'headline
+                 (lambda (headline)
+                   (when-let ((id (org-element-property :ID headline)))
+                     (unless (org-brain-id-exclude-taggedp id)
+                       (org-brain-entry-from-id id))))
+                 nil nil 'headline))
+           ;; Headline entry
+           (org-with-point-at (org-brain-entry-marker entry)
+             (let (children)
+               (deactivate-mark)
+               (org-mark-subtree)
+               (org-goto-first-child)
+               (setq children
+                     (org-map-entries
+                      (lambda () (org-brain-entry-from-id (org-entry-get nil "ID")))
+                      t 'region-start-level
+                      (lambda ()
+                        (let ((id (org-entry-get nil "ID")))
+                          (when (or (not id)
+                                    (org-brain-id-exclude-taggedp id))
+                            (save-excursion
+                              (outline-next-heading)
+                              (point)))))))
+               (deactivate-mark)
+               children))))))
 
 (defun org-brain-descendants (entry)
   "Get all entries which descend from ENTRY.
@@ -1341,7 +1356,7 @@ Return an alist where key = parent, value = siblings from that parent."
 
 (defun org-brain-friends (entry)
   "Get friends of ENTRY."
-  (delete-dups (org-brain--linked-property-entries entry org-brain-friends-property-name)))
+  (delete-dups (delq nil (org-brain--linked-property-entries entry org-brain-friends-property-name))))
 
 (defun org-brain-resources (entry)
   "Get alist of links in ENTRY, excluding `org-brain-ignored-resource-links'.
@@ -2555,6 +2570,7 @@ Unless WANDER is t, `org-brain-stop-wandering' will be run."
                 (mapcar #'org-brain-path-entry-name
                         (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
          nil nil def-choice)))))
+  (unless entry (user-error "No entry to visualize"))
   (unless wander (org-brain-stop-wandering))
   (with-current-buffer (get-buffer-create "*org-brain*")
     (setq-local indent-tabs-mode nil)
@@ -3070,7 +3086,8 @@ TWO-WAY will be t unless called with `\\[universal-argument\\]'."
   "Revert buffer if in `org-brain-visualize-mode'.
 Unless IGNORE-BUTTON-AT-PT is non nil, jump to the button at
 point before the buffer was reverted."
-  (when (eq major-mode 'org-brain-visualize-mode)
+  (when (and (eq major-mode 'org-brain-visualize-mode)
+             org-brain--vis-entry)
     (let ((button-entry
            (unless ignore-button-at-pt
              (car (ignore-errors (org-brain-button-at-point))))))
@@ -3180,8 +3197,9 @@ Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
 ;;; Drawing helpers
 
 (defun org-brain--visually-sort (lst)
-  "Sort LST destructively according to org-brain-visualize-sort-function."
-  (sort lst org-brain-visualize-sort-function))
+  "Sort LST destructively according to org-brain-visualize-sort-function.
+Filter out nil entries."
+  (sort (delq nil lst) org-brain-visualize-sort-function))
 
 (defun org-brain--visually-sorted (lst)
   "Sorted LST according to org-brain-visualize-sort-function."
@@ -3207,7 +3225,7 @@ Used as `bookmark-make-record-function' in `org-brain-visualize-mode'."
 
 (defun org-brain--visually-sorted-siblings (entry)
   "List of siblings, sorted unless ENTRY has a :nosort: tag."
-  (let ((siblings (org-brain-siblings entry)))
+  (let ((siblings (delq nil (org-brain-siblings entry))))
     (if (member org-brain-no-sort-children-tag (org-brain-get-tags entry))
         siblings
       (sort siblings (lambda (x y)
@@ -3254,6 +3272,7 @@ WIDTH and TO-DRAW are state parameters.
 WIDTH represents the width of the line comprising the elements in TO-DRAW.
 Assumes elements will be drawn with a two-character padding between them.
 Helper function for `org-brain--vis-history'."
+  (setq hist (delq nil hist))
   (if (null hist)
       to-draw
     (let* ((entry-title-width (string-width (org-brain-vis-title (car hist))))
